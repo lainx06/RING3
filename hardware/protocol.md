@@ -10,7 +10,7 @@ source of truth; if they disagree, the header wins and this page is a bug. Test 
 - UART at **115200 baud, 8N1, no flow control.** On WSL2 the Uno is `/dev/ttyACM0` (attached with usbipd). QEMU
   gives it to the guest as COM3.
 - **Opening the port resets the Uno** (DTR). The firmware then boots into the **safe state** (fan off, servo
-  parked at 90°, LCD `SAFE - waiting for kernel`) and starts sending `STATE`. The bootloader (optiboot 4.4 in
+  parked at 90°, LCD `HALTED` / `no kernel link`, D-46) and starts sending `STATE`. The bootloader (optiboot 4.4 in
   `arduino:avr` 1.8.8) first waits about 1 s for an upload (its watchdog timeout) `[UNVERIFIED: measure]`, so a
   host must wait for the first valid `STATE` frame before it sends anything.
 

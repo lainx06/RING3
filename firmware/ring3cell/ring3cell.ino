@@ -3,7 +3,7 @@
 // Link: COM3 frames over USB serial, hardware/protocol.md + protocol.h. Pins: pins.h / hardware/wiring.md.
 //
 // Rules this file keeps (docs/tasks/T-06.md, ARCHITECTURE §3a, D-43):
-// - Boots into the safe state: fan off, servo 90, LCD "SAFE - waiting for kernel".
+// - Boots into the safe state: fan off, servo 90, LCD "HALTED" / "no kernel link" (D-46).
 // - Own clamps (servo 15-165, fan <= 80 %), reported with the CLAMP flag; bad frames rejected and flagged.
 // - E-stop on INT0: the ISR latches and cuts the fan with digitalWrite (which also stops the Timer0 PWM); every
 //   fan write happens with interrupts off and only while unlatched; every loop pass re-forces the fan off while
@@ -176,7 +176,7 @@ static void update_line0() {
   } else if (link_lost && link_ever) {
     line_fill_F(d, F("LINK LOST - STOP"));
   } else if (!link_ever) {
-    line_fill_F(d, F("SAFE - waiting"));
+    line_fill_F(d, F("HALTED"));
   } else if (kernel_line0_set) {
     line_fill(d, kernel_line0, CELL_LCD_COLS);
   } else {
@@ -567,8 +567,8 @@ void setup() {
       lcd_shown[l][i] = ' ';
     }
   }
-  line_fill_F(lcd_want[0], F("SAFE - waiting"));
-  line_fill_F(lcd_want[1], F("for kernel"));
+  line_fill_F(lcd_want[0], F("HALTED"));
+  line_fill_F(lcd_want[1], F("no kernel link"));
 
   Serial.begin(CELL_BAUD);
 
