@@ -70,7 +70,7 @@ Parts: breadboard power module, USB phone charger + cable, 3 jumper wires. Optio
 2. Find the two voltage jumpers on the module. `[UNVERIFIED]`: on most of these modules each side has positions
    marked `5V`, `OFF` and `3.3V`; check the silkscreen printed on **your** module.
    - Top side (**MOTOR**): jumper on **5V**.
-   - Bottom side (**LOGIC**): jumper on **OFF**, or pull it out and keep it somewhere safe. Pulling it out is the
+   - Bottom side (**LOGIC**): jumper on **OFF**, or pull it out and keep it where you can find it. Pulling it out is the
      surest way to keep the module from driving this rail.
 3. Wires:
    - Uno **5V** → LOGIC **+** (bottom red line). *This is the jumper you pull out while wiring.*

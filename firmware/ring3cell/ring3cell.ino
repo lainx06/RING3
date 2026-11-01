@@ -174,7 +174,7 @@ static void update_line0() {
   } else if (presence_fault) {
     line_fill_F(d, presence_by_no_echo ? F("STOP: NO ECHO") : F("STOP: PRESENCE"));
   } else if (link_lost && link_ever) {
-    line_fill_F(d, F("LINK LOST - SAFE"));
+    line_fill_F(d, F("LINK LOST - STOP"));
   } else if (!link_ever) {
     line_fill_F(d, F("SAFE - waiting"));
   } else if (kernel_line0_set) {

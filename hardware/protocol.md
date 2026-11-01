@@ -49,7 +49,7 @@ limit (the COM2 limit) to exercise COBS runs of 253/254/255 bytes; `frame_parse`
 |---|---|---|---|
 | `0x01` | `PING` | none (0) | Keeps the link watchdog fed; nothing else. |
 | `0x02` | `FAN` | `duty u8` % (1) | Sets the fan PWM. Any value accepted; **clamped to 0–80 %** (`CELL_FAN_MAX`), `CLAMP` flag set if changed. Refused (fan stays 0) while the E-stop is latched or the button is pressed. With a valid clear reading (≥ 100 mm, not `0xFFFF`), clears a latched presence fault (the fan starts only if `duty > 0`). |
-| `0x03` | `SERVO` | `deg u8` (1) | Moves the servo. Any value accepted; **clamped to 15–165°**, `CLAMP` flag set if changed. |
+| `0x03` | `SERVO` | `deg u8` (1) | Moves the servo. Any value accepted; **clamped to 15–165°**, `CLAMP` flag set if changed. **Held (not moved)** while the E-stop is latched or pressed, or without a valid clear reading (second layer of the interlock); `servo_cmd` then keeps the old angle. |
 | `0x04` | `LCD` | `line u8` (0 or 1), then 0–16 bytes of text, printable ASCII `0x20`–`0x7E` (1–17) | Writes that LCD line, space-padded to 16. Other line numbers or bytes: rejected (`field`). |
 | `0x05` | `ALARM` | `pattern u8` (1): 0 = off, 1 = one short beep (denial), 2 = repeating (fault) | Buzzer + RGB. Other values: rejected (`field`). |
 | `0x06` | `ESTOP_RESET` | none (0) | Clears the E-stop latch **only if the button has read released for ≥ 50 ms** (`CELL_ESTOP_RELEASE_MS`); otherwise the latch stays and the frame is still accepted (it feeds the link watchdog). |
@@ -96,14 +96,26 @@ when any of these holds, checked in this order. The name is the error used in th
 accepted frames feed the link watchdog; a rejected frame never changes device state.
 
 ## Device behaviour visible on the link (firmware layer; the kernel's own limits are tighter)
-- **Safe state** at boot and after the link watchdog: fan 0, servo 90°, alarm on, LCD shows why.
-- **Link watchdog:** 1 s (`CELL_LINK_TIMEOUT_MS`) without an accepted kernel frame → safe state + alarm +
-  `LINK_LOST`. The kernel sends `PING` every 250 ms while healthy (ARCHITECTURE §3a).
-- **E-stop** (D2, INT0, normally-open button, pressed = LOW): the interrupt cuts the fan and sets the latch. While
-  latched or pressed, `fan_duty` reads 0 and `FAN` commands don't start the fan.
+- **Safe state** at boot and after the link watchdog: fan 0 (and `fan_cmd` forgotten, so nothing restarts by
+  itself), servo parked at 90°, LCD shows why.
+- **Link watchdog:** 1 s (`CELL_LINK_TIMEOUT_MS`) without an accepted kernel frame → safe state + `LINK_LOST`; if
+  a link had been up, 3 beeps and red blinking. Before the first kernel frame after boot the light is blue and the
+  buzzer stays quiet (the flag is still set after 1 s). The kernel sends `PING` every 250 ms while healthy.
+- **E-stop** (D2, INT0, normally-open button, pressed = LOW): the interrupt cuts the fan (`digitalWrite`, which
+  also stops the PWM) and sets the latch; every loop pass forces the fan off again while latched or pressed. While
+  latched or pressed, `fan_duty` reads 0, `FAN` commands don't start the fan and `SERVO` is held. A button held at
+  power-up latches too. On a new latch: one long beep, LCD `E-STOP LATCHED` / `reset at console`.
 - **Presence cutoff:** distance < 100 mm (`CELL_PRESENCE_MM`), or no echo on 3 readings in a row
-  (`CELL_NO_ECHO_LIMIT`) while the fan runs → fan 0 within one loop pass, latched as `PRESENCE_FAULT`. Echo
-  timeout 30 ms. The kernel treats `0xFFFF` as not clear too (INV-13).
+  (`CELL_NO_ECHO_LIMIT`) while the fan runs or is commanded → fan 0 in the same loop pass, latched as
+  `PRESENCE_FAULT`, 2 beeps. A `FAN` with duty > 0 that arrives without a valid clear reading is refused and also
+  latches the fault. Readings every 50 ms, echo timeout 30 ms; ECHO has the internal pull-up, so an unplugged
+  wire reads high = no echo. The kernel treats `0xFFFF` as not clear too (INV-13).
+- **Stack light / buzzer** (always with LCD text): red steady = E-stop latched; red blinking = presence fault, lost
+  link or `ALARM 2`; yellow (red + green) = fan running; green = linked, idle; blue = waiting for the kernel.
+  `ALARM 1` = one short beep; `ALARM 2` = a beep every second until `ALARM 0` or an accepted `ESTOP_RESET`.
+- **LCD:** line 1 shows a local condition (E-stop, presence, lost link, waiting) if there is one, else the
+  kernel's `LCD` line 0 text, else `LINK F<duty> S<deg>`. Line 2 shows the last command (`> FAN 80 clamp`) or the
+  kernel's `LCD` line 1 text, whichever came last. Lines are rewritten only when they change.
 - **Hardware watchdog:** a firmware hang resets the Uno; the next boot reports `WDT_RESET`.
 
 ## Examples (from `link_vectors.txt`)
