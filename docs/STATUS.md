@@ -17,6 +17,7 @@ milestone.
 ## T-01 progress (builder adds one line per milestone)
 | Milestone | Time | State | Next / open bug |
 |---|---|---|---|
+| M1 | 2026-11-01 13:35 ET | Boot (Multiboot, `-kernel`), COM1 printk, GDT/IDT/TSS, PIC/PIT 100 Hz, CPL-0 panic dump + QEMU exit codes (33 pass / 35 fail / 37 panic), pytest harness `tests/qemu.py`, 3 boot tests green, ruff clean. `.claude/settings.json` NOT written (permission classifier blocks self-modification; proposed content handed to the user). | Step 8: frame allocator, paging (CR0.WP), ring-3 entry, syscalls, embedded programs, kill check K1–K4 |
 
 ## Plan (see RING3_CONTEXT.md §5; v0.4 after the kickoff review, D-37, D-38, D-42)
 | When (ET) | Card | Model | Goal |

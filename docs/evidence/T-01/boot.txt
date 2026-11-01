@@ -1,0 +1,9 @@
+$ qemu-system-i386 -kernel build/kernel.elf -m 64 -display none -serial stdio -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -append testexit
+# exit code 33, 0.3 s
+
+RING3 0.1.0 build nogit
+memory: 65023 KiB usable
+init: gdt idt pic pit ok, interrupts on
+TIMER t0=0
+TIMER t1=25
+KERNEL ALIVE uptime=25

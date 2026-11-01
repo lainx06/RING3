@@ -1,0 +1,15 @@
+$ qemu-system-i386 -kernel build/kernel.elf -m 64 -display none -serial stdio -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -append 'testexit panic'
+# exit code 37, 0.3 s
+
+RING3 0.1.0 build nogit
+memory: 65023 KiB usable
+init: gdt idt pic pit ok, interrupts on
+TIMER t0=0
+TIMER t1=25
+deliberate CPL-0 fault (test)
+
+PANIC: CPL-0 exception vector=6 err=0x00000000
+  eip=0x001014e3 cs=0x0008 eflags=0x00000202 cr2=0x00000000
+  eax=0x00000000 ebx=0x00009500 ecx=0x0000000a edx=0x0010314a
+  esi=0x00000000 edi=0x0000fb80 ebp=0x001089a0 esp=0x00108998
+  ds=0x0010 es=0x0010 fs=0x0010 gs=0x0010
