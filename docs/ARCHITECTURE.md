@@ -147,10 +147,11 @@ Built only from the ELEGOO Super Starter Kit on a breadboard and the desk. **No 
 | Push button on D2 (INT0), normally open (D-42: unlike a real normally-closed E-stop, a broken wire doesn't trigger it; documented) | **Emergency stop** | E-stop |
 | LCD1602 (+ potentiometer for contrast) | Local status panel: state, last command, who denied it and why | operator panel (HMI) |
 | Active buzzer, RGB LED | Alarm on denial / E-stop; state colour (always with LCD text, never colour alone) | stack light |
-Exact pins and wiring: `hardware/wiring.md` (T-06). **Pin budget (D-39b):** 18 usable I/O pins (D0/D1 are the USB
-serial link), about 17 needed (LCD 6, L293D 3, servo 1, HC-SR04 2, E-stop 1, buzzer 1, RGB 3). The Servo library
-uses Timer1, so D10 can't do PWM; the fan's PWM goes on D5, D6, D3 or D11; the RGB LED uses plain digital pins.
-T-06 writes the pin table before any firmware.
+Exact pins and wiring: `hardware/wiring.md` (T-06). **Pin budget (D-39b, D-43):** 18 usable I/O pins (D0/D1 are
+the USB serial link), 15 needed: E-stop D2 (INT0), HC-SR04 ECHO D3 (INT1) + TRIG, servo D9, fan PWM on D5 or D6
+(Timer0; L293D IN1/IN2 hard-wired, one direction), LCD 6 (RW hard-wired to GND), buzzer 1, RGB 3 (plain digital).
+No `tone()` (Timer2), and D10 has no PWM (Servo uses Timer1). T-06 writes the pin table before any firmware.
+The presence sensor faces a fixed backstop on the desk (20–40 cm), so "clear" is a real reading.
 The Uno is attached as the guest's COM3 (QEMU `-serial /dev/ttyACM0` after `usbipd attach --wsl`). Same frame
 format as §4, 115200 baud. Opening the port resets the Uno; firmware boots into the **safe state**: fan off, servo
 parked at 90°, LCD "SAFE - waiting for kernel".
@@ -167,9 +168,11 @@ telemetry. **The safety lease is evaluated on every timer tick, not only on sysc
 reading is older than 500 ms, shows presence, or reports E-stop while anything is moving, the kernel sends
 `FAN 0` / holds the servo **on its own** (`AUTO_HALT`) even while the executor is waiting for the model.
 
-**Power (D-31).** The fan motor (L293D motor supply) and the servo run from the **breadboard power module**, not
-the Uno's USB 5 V; **common ground** with the Uno. USB 5 V feeds only the ATmega328P, sensor, LCD, buzzer and LED.
-This prevents brownouts that reset the Uno or drop `/dev/ttyACM0` mid-demo.
+**Power (D-31, D-43).** The fan motor (L293D pin 8 VCC2) and the servo run from the **breadboard power module** on
+one rail set to 5 V; the module's other rail jumper is **off** and that rail is fed from the Uno's 5 V pin for logic
+(L293D pin 16 VCC1, sensor, LCD, buzzer, LED). **All grounds common.** The two 5 V supplies are never connected
+together. This prevents brownouts that reset the Uno or drop `/dev/ttyACM0` mid-demo. The L293D drops about 2 V,
+so the fan's minimum spinning duty is measured in T-06 bring-up and the demo duties are set from it.
 
 **Device syscalls:** `cell_status`, `cell_fan`, `cell_servo`, `cell_halt`, `cell_lcd` (table in §3). The buzzer
 and RGB light are driven by the kernel's own decisions, not by the executor.
@@ -179,9 +182,9 @@ confirmation), like any destructive action (INV-05).
 **Kernel safety policy (D-21, D-25)**, every decision audited:
 - Servo: 30-150°, ≤ 30° per command, ≥ 200 ms apart (`DENY_LIMIT`).
 - Fan: 0-80 % duty, ramp ≤ 20 %/s (`DENY_LIMIT`); duty > 0 needs confirmation the first time per request.
-- **Presence interlock:** no motion command (fan > 0 or servo move) while the latest distance is < 100 mm *(prov.)*
-  or older than 500 ms (`DENY_INTERLOCK`, `DENY_STALE`); if presence appears while the fan runs, the kernel
-  commands fan 0 itself.
+- **Presence interlock:** no motion command (fan > 0 or servo move) while the latest distance is < 100 mm *(prov.)*,
+  is "no echo" (`0xFFFF`, treated as not clear, D-43), or is older than 500 ms (`DENY_INTERLOCK`, `DENY_STALE`); if
+  presence appears while the fan runs, the kernel commands fan 0 itself.
 - **E-stop latch:** when the device reports E-stop, the kernel revokes `CAP_DEV_MOVE` from every process, refuses
   motion with `DENY_ESTOP`, and keeps it latched until a human at the console resets it **and** the button is
   released.
@@ -189,10 +192,12 @@ confirmation), like any destructive action (INV-05).
 
 **Firmware** (`firmware/ring3cell/ring3cell.ino`, hand-written, trusted, user-flashed) is the second layer:
 clamps (servo 15-165°, fan ≤ 80 %), rejects bad frames, **enforces the presence cutoff locally** (distance
-< 100 mm → fan off within one loop, < 10 ms *(prov.)*, reported as a latched fault), **E-stop on INT0 cuts the fan
-in the interrupt itself and latches** until `ESTOP_RESET` with the button released, **AVR hardware watchdog** for firmware hangs, and a link
-watchdog (1 s without a valid kernel frame → safe state + alarm). Non-blocking design: no `delay()`, echo timing
-without blocking the loop.
+< 100 mm, or no echo on 3 readings in a row while the fan runs → fan off within one loop, < 10 ms *(prov.)*,
+reported as a latched fault), **E-stop on INT0 cuts the fan in the interrupt itself** (with `digitalWrite`, which
+also stops the PWM output) **and latches** until `ESTOP_RESET` with the button released, **AVR hardware watchdog**
+for firmware hangs (reset cause captured before `setup()`), and a link watchdog (1 s without a valid kernel frame →
+safe state + alarm). Non-blocking design: no `delay()`, `pulseIn()`, `tone()` or `lcd.clear()` in the loop; echo
+timed on INT1 (D-43).
 
 **Model ops** (complete allowlist): `cell_status{}`, `fan_set{duty}`, `servo_set{deg}`, `halt{}`, `lcd_show{line,text}`,
 `list_objects{}`, `read_object{name}`, `write_object{name,text}`, `witness{}` (asks the bridge for a camera check,
