@@ -41,6 +41,7 @@ milestone.
 | Card | Started | Model / effort | Done | Evidence |
 |---|---|---|---|---|
 | T-01 | 2026-11-01 13:06 ET | Fable 5.1 / high | 2026-11-01 13:30 ET; K1–K4 pass 13:22 ET; A1–A8 pass | `docs/evidence/T-01/README.md` |
+| T-06 | 2026-11-01 16:58 ET | Opus 5.5 / high | in progress. 17:07 M1: pin table (15/18 pins) + wiring guide + `bringup` (compiles, 32 % flash, 15 % RAM). User wiring part by part. Protocol/frame/host tests in progress; `ring3cell` + `cellctl.py` next | `docs/evidence/T-06/` (pending) |
 
 ## Last evidence
 `docs/evidence/T-01/` (isolation transcript, ktest, panic dump, build, pytest, toolchain, skills byte-check).
