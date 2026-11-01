@@ -1,0 +1,65 @@
+# Vendored skills byte-check, 2026-11-01T18:30Z
+# upstream pins: addyosmani/agent-skills aeac41d4d005999432bb7312f7ff06383a91d59d, mattpocock/skills 49dd158d1076134a641b33efb035946536778336, DietrichGebert/ponytail 96608e078b2d5ea607c5c3b8b5a54d1c1fba6846
+OK   .claude/skills/test-driven-development/SKILL.md
+OK   .agents/skills/test-driven-development/SKILL.md
+OK   .claude/skills/test-driven-development/LICENSE
+OK   .agents/skills/test-driven-development/LICENSE
+OK   .claude/skills/debugging-and-error-recovery/SKILL.md
+OK   .agents/skills/debugging-and-error-recovery/SKILL.md
+OK   .claude/skills/debugging-and-error-recovery/LICENSE
+OK   .agents/skills/debugging-and-error-recovery/LICENSE
+OK   .claude/skills/code-review-and-quality/SKILL.md
+OK   .agents/skills/code-review-and-quality/SKILL.md
+OK   .claude/skills/code-review-and-quality/LICENSE
+OK   .agents/skills/code-review-and-quality/LICENSE
+OK   .claude/references/testing-patterns.md
+OK   .agents/references/testing-patterns.md
+OK   .claude/references/security-checklist.md
+OK   .agents/references/security-checklist.md
+OK   .claude/references/performance-checklist.md
+OK   .agents/references/performance-checklist.md
+OK   .claude/references/LICENSE
+OK   .agents/references/LICENSE
+OK   .claude/skills/grilling/SKILL.md
+OK   .agents/skills/grilling/SKILL.md
+OK   .claude/skills/grilling/agents/openai.yaml
+OK   .agents/skills/grilling/agents/openai.yaml
+OK   .claude/skills/grilling/LICENSE
+OK   .agents/skills/grilling/LICENSE
+OK   .claude/skills/grill-with-docs/SKILL.md
+OK   .agents/skills/grill-with-docs/SKILL.md
+OK   .claude/skills/grill-with-docs/agents/openai.yaml
+OK   .agents/skills/grill-with-docs/agents/openai.yaml
+OK   .claude/skills/grill-with-docs/LICENSE
+OK   .agents/skills/grill-with-docs/LICENSE
+OK   .claude/skills/ponytail/SKILL.md
+OK   .agents/skills/ponytail/SKILL.md
+OK   .claude/skills/ponytail/LICENSE
+OK   .agents/skills/ponytail/LICENSE
+OK   .claude/skills/ponytail-review/SKILL.md
+OK   .agents/skills/ponytail-review/SKILL.md
+OK   .claude/skills/ponytail-review/LICENSE
+OK   .agents/skills/ponytail-review/LICENSE
+result: ALL IDENTICAL
+
+# sha256 of vendored files (.claude copy; .agents is identical)
+6f202f8bd568cd730dbb2b0d1f8e243bc74c2fa1f64dbce9b2c7ea08bd5c9fd7  .claude/references/LICENSE
+fffc38b8f3b328a973aab8b1a2efdd72b65710d8f4b57f28f8374ddae7f8a88b  .claude/references/performance-checklist.md
+37774056502fe8970dcd2fd27dca5fa31f2a55232649fc3056c89c3af7d62755  .claude/references/security-checklist.md
+f0bf05acd0edcadc27297ad5b74f104c8103ccfedba1a05cd6d6ae4af8364c56  .claude/references/testing-patterns.md
+6f202f8bd568cd730dbb2b0d1f8e243bc74c2fa1f64dbce9b2c7ea08bd5c9fd7  .claude/skills/code-review-and-quality/LICENSE
+2db1e850379f255fd3091ef278cde24cd6c7d2ba23e360cc52ea522c40d4396e  .claude/skills/code-review-and-quality/SKILL.md
+6f202f8bd568cd730dbb2b0d1f8e243bc74c2fa1f64dbce9b2c7ea08bd5c9fd7  .claude/skills/debugging-and-error-recovery/LICENSE
+21f3960f5d7ae2cc95c40896545004dbbcbbd752ea65fc2d53962554d4174220  .claude/skills/debugging-and-error-recovery/SKILL.md
+0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5  .claude/skills/grill-with-docs/LICENSE
+7de372c13488f1ee96cc11cd8907b56b6809cc93eef776eeddd37de6b6cbe3fe  .claude/skills/grill-with-docs/SKILL.md
+94cd0ab161fb468a836349f5ed482ba58ce8e709a05c57ce533d739dbd35cca9  .claude/skills/grill-with-docs/agents/openai.yaml
+0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5  .claude/skills/grilling/LICENSE
+befdff1e27a1dfe2a294d5871169ac1afe16d983911daa4f32627514a48c1e15  .claude/skills/grilling/SKILL.md
+1411d7df7d99b7e621a1ff8283c8133cc2464be63d064e52d8ce169c6800ee9b  .claude/skills/grilling/agents/openai.yaml
+fb1bc6909ac3ef82d5c22106e32ef682b0cff66788fa915fb9b53b15c9d2f3ab  .claude/skills/ponytail-review/LICENSE
+33fe4ebe22a460924e5d4a261e223df22e409cc94ab76182bee9fb91a3ef022e  .claude/skills/ponytail-review/SKILL.md
+fb1bc6909ac3ef82d5c22106e32ef682b0cff66788fa915fb9b53b15c9d2f3ab  .claude/skills/ponytail/LICENSE
+9badd22a32e19cb884e46dfa8d3aae82bb81dfa5484105b8b4f0262df823a509  .claude/skills/ponytail/SKILL.md
+6f202f8bd568cd730dbb2b0d1f8e243bc74c2fa1f64dbce9b2c7ea08bd5c9fd7  .claude/skills/test-driven-development/LICENSE
+a3aa6ba95638497025577469eda10ed17918698209615aeafbc26f131bf2469d  .claude/skills/test-driven-development/SKILL.md
