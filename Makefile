@@ -4,7 +4,7 @@ BUILD_HASH := $(shell git rev-parse --short HEAD 2>/dev/null || echo nogit)
 
 CC      := clang
 LD      := ld.lld
-OBJCOPY := llvm-objcopy
+OBJCOPY := $(shell command -v llvm-objcopy || command -v llvm-objcopy-18 || echo objcopy)
 QEMU    := qemu-system-i386
 TARGET  := --target=i686-unknown-none-elf
 
@@ -29,7 +29,7 @@ KSRC_S := $(wildcard kernel/arch/i386/*.S)
 KOBJ   := $(patsubst %.c,$(BUILD)/%.o,$(KSRC_C)) $(patsubst %.S,$(BUILD)/%.o,$(KSRC_S))
 
 # User programs: flat binaries in the D-41 layout, embedded into the kernel image.
-UPROGS  := hello kwrite priv spin badptr
+UPROGS  := hello kwrite ticks priv spin badptr
 UCFLAGS := $(TARGET) -std=c11 -ffreestanding -nostdlib -fno-pic -fno-stack-protector -mno-sse -mno-mmx -mno-80387 \
            -fno-asynchronous-unwind-tables -O2 -g -Wall -Wextra -Werror -Iuser/libu
 UBIN    := $(patsubst %,build/user/%.bin,$(UPROGS))
@@ -38,6 +38,7 @@ QEMU_BASE := $(QEMU) -m 64 -display none -serial stdio -monitor none \
              -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot
 
 .PHONY: all clean run test-kernel user
+.SECONDARY: $(patsubst %,build/user/%.elf,$(UPROGS))
 all: $(KERNEL)
 
 user: $(UBIN)
@@ -54,7 +55,7 @@ $(BUILD)/%.o: %.S
 	@mkdir -p $(dir $@)
 	$(CC) $(ASFLAGS) -MMD -MP -c $< -o $@
 
-$(BUILD)/user/progs.o: user/progs.S
+$(BUILD)/user/progs.o: user/progs.S $(UBIN)
 	@mkdir -p $(dir $@)
 	$(CC) $(ASFLAGS) -c $< -o $@
 

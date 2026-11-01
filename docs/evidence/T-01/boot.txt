@@ -1,9 +1,53 @@
 $ qemu-system-i386 -kernel build/kernel.elf -m 64 -display none -serial stdio -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -append testexit
-# exit code 33, 0.3 s
+# exit code 33, 1.4 s
 
-RING3 0.1.0 build nogit
+RING3 0.1.0 build b85d899
 memory: 65023 KiB usable
-init: gdt idt pic pit ok, interrupts on
+init: gdt idt pic pit pmm paging ok, interrupts on, 3819 frames free
 TIMER t0=0
 TIMER t1=25
-KERNEL ALIVE uptime=25
+RUN pid=1 name=hello uptime=25
+SYSCALL pid=1 nr=1 cpl=3
+hello from ring 3
+hello: g_counter=42 g_bss[2]=43 g_bss[0]=0
+EXIT pid=1 code=0
+END pid=1 EXIT ticks=0 uptime=25
+RUN pid=2 name=kwrite uptime=25
+SYSCALL pid=2 nr=1 cpl=3
+kwrite: writing to 0x00100000
+PROC_FAULT pid=2 vector=14 eip=0x40000040 err=0x7 cs=0x1b
+END pid=2 FAULT ticks=0 uptime=25
+RUN pid=3 name=ticks uptime=25
+SYSCALL pid=3 nr=10 cpl=3
+ticks: t0=25 t1=30
+EXIT pid=3 code=0
+END pid=3 EXIT ticks=5 uptime=30
+RUN pid=4 name=priv uptime=30
+SYSCALL pid=4 nr=1 cpl=3
+priv: executing cli
+PROC_FAULT pid=4 vector=13 eip=0x40000040 err=0x0 cs=0x1b
+END pid=4 FAULT ticks=0 uptime=30
+RUN pid=5 name=badptr uptime=30
+SYSCALL pid=5 nr=2 cpl=3
+badptr case 1 EFAULT ok: kernel address 0x00100000
+badptr case 2 EFAULT ok: above USER_TOP 0xC0000000
+badptr case 3 EFAULT ok: unmapped user address 0x50000000
+badptr case 4 EFAULT ok: mapped stack page running into the unmapped page above it
+badptr case 5 EFAULT ok: wrap-around length
+badptr case 6 EFAULT ok: uread into own read-only code page
+badptr case 7 EFAULT ok: guard page below the stack
+badptr case 8 EFAULT ok: buffer starting in the guard page running into the stack
+badptr: all cases EFAULT
+EXIT pid=5 code=0
+END pid=5 EXIT ticks=0 uptime=30
+RUN pid=6 name=spin uptime=30
+SYSCALL pid=6 nr=1 cpl=3
+spin: looping forever
+LIMIT pid=6 ticks=100
+END pid=6 LIMIT ticks=100 uptime=130
+RUN pid=7 name=ticks uptime=130
+SYSCALL pid=7 nr=10 cpl=3
+ticks: t0=130 t1=135
+EXIT pid=7 code=0
+END pid=7 EXIT ticks=5 uptime=135
+KERNEL ALIVE uptime=135
