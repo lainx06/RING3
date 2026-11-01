@@ -7,7 +7,7 @@
 #define PIN_ECHO 3     // HC-SR04 ECHO. INT1 (CHANGE). Timer2 PWM pin, PWM unused.
 #define PIN_TRIG 4     // HC-SR04 TRIG.
 #define PIN_FAN_EN 5   // L293D pin 1 (EN1,2). PWM on Timer0 (OC0B). IN1/IN2 hard-wired.
-#define PIN_BUZZER 7   // Active buzzer +, switched with digitalWrite (no tone()).
+#define PIN_BUZZER 7   // Active buzzer +, switched with digitalWrite (the tone function is not used).
 #define PIN_LCD_RS 8   // LCD1602 pin 4.
 #define PIN_SERVO 9    // SG90 signal. Servo library takes Timer1 (D9/D10 lose PWM).
 #define PIN_LCD_E 10   // LCD1602 pin 6. Plain digital (Timer1 PWM lost to Servo; not needed).
