@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(make)",
+      "Bash(make *)",
+      "Bash(uv sync *)",
+      "Bash(uv run pytest *)",
+      "Bash(uv run ruff *)",
+      "Bash(qemu-system-i386 *)",
+      "Bash(tools/check-toolchain.sh *)",
+      "Bash(tools/check-paths.sh *)",
+      "Bash(arduino-cli compile *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git status)",
+      "Bash(git status *)",
+      "Bash(git diff)",
+      "Bash(git diff *)",
+      "Bash(git log)",
+      "Bash(git log *)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Bash(git push)",
+      "Bash(git push *)",
+      "Bash(git add .env*)",
+      "Bash(arduino-cli upload)",
+      "Bash(arduino-cli upload *)",
+      "Bash(avrdude *)"
+    ]
+  }
+}
