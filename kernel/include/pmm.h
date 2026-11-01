@@ -9,6 +9,9 @@
 #define PMM_LIMIT (16u * 1024 * 1024)   /* (prov.) matches the identity map in paging.c */
 
 void pmm_init(const struct multiboot_info *mbi);
+/* Pure memory-map parsing (no side effects): usable RAM in KiB, and frames inside the allocator window. */
+uint32_t pmm_mmap_usable_kib(const struct multiboot_info *mbi);
+uint32_t pmm_mmap_window_frames(const struct multiboot_info *mbi);
 uint32_t pmm_alloc(void);               /* physical address of a frame, or 0 when out of frames */
 void pmm_free(uint32_t paddr);          /* panics on double free or on a frame it never handed out */
 uint32_t pmm_free_frames(void);

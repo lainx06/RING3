@@ -4,10 +4,11 @@ Updated: 2026-11-01 (lead, kickoff review). The builder updates this at the end 
 milestone.
 
 ## Now
-- Phase: **setup done** (WSL, tools, Git identity, key, docs in `~/dev/RING3`, VS Code Remote-WSL, Claude Code,
-  private GitHub repo `RING3`). Planning docs revised (D-37 to D-42). No commits yet.
-- Next card: **T-01** (Fable 5.1 / high, new terminal). M1 by Nov 1 2 PM ET; **kill check K1–K4 by Nov 1 9 PM ET**
-  (D-14, D-37). Plan B in D-37.
+- Phase: **T-01 done through M3** (2026-11-01 13:40 ET). Kernel boots, ring-3 isolation slice works, **kill check
+  K1–K4 passed at 13:22 ET** (well before the 9 PM deadline; Plan B not needed). 13 ktests, 5 pytest tests, ~6 s.
+- Open from T-01: `.claude/settings.json` must be installed by the user (the builder session can't edit its own
+  permissions); skill vendoring (step 12) see the T-01 progress table.
+- Next card: **T-02** (Fable 5.1 / high).
 - Second terminal Nov 1: **T-06** (Opus 5.5 / high) once T-01 has made its first commit (D-42).
 - User, while T-01 runs: `SETUP.md` step 8 (usbipd + Uno + arduino-cli in Ubuntu), then wiring per
   `hardware/wiring.md` in the afternoon.
@@ -18,7 +19,8 @@ milestone.
 | Milestone | Time | State | Next / open bug |
 |---|---|---|---|
 | M1 | 2026-11-01 13:15 ET | Boot (Multiboot, `-kernel`), COM1 printk, GDT/IDT/TSS, PIC/PIT 100 Hz, CPL-0 panic dump + QEMU exit codes (33 pass / 35 fail / 37 panic), pytest harness `tests/qemu.py`, 3 boot tests green, ruff clean. `.claude/settings.json` NOT written (permission classifier blocks self-modification; proposed content handed to the user). | Step 8: frame allocator, paging (CR0.WP), ring-3 entry, syscalls, embedded programs, kill check K1–K4 |
-| M2 (kill check) | 2026-11-01 13:50 ET | **K1–K4 PASS.** Bitmap frame allocator, paging with CR0.WP (16 MiB supervisor-only identity map), ring-3 entry via iret (IOPL 0), saved-context abandon path with EOI first, syscalls exit/cons_write/uread/uptime behind the ordered `uaccess` check. Transcript: hello (CPL 3, exit 0, data+bss ok), kwrite → PROC_FAULT 14, priv → PROC_FAULT 13, badptr 8/8 EFAULT, spin → LIMIT at 100 ticks, KERNEL ALIVE. `tests/test_isolation.py` green, evidence `docs/evidence/T-01/isolation.txt`. | Steps 9–11: kmalloc, CRC-16/COBS, ktests, evidence README, M3 |
+| M2 (kill check) | 2026-11-01 13:22 ET | **K1–K4 PASS.** Bitmap frame allocator, paging with CR0.WP (16 MiB supervisor-only identity map), ring-3 entry via iret (IOPL 0), saved-context abandon path with EOI first, syscalls exit/cons_write/uread/uptime behind the ordered `uaccess` check. Transcript: hello (CPL 3, exit 0, data+bss ok), kwrite → PROC_FAULT 14, priv → PROC_FAULT 13, badptr 8/8 EFAULT, spin → LIMIT at 100 ticks, KERNEL ALIVE. `tests/test_isolation.py` green, evidence `docs/evidence/T-01/isolation.txt`. | Steps 9–11: kmalloc, CRC-16/COBS, ktests, evidence README, M3 |
+| M3 | 2026-11-01 13:40 ET | kmalloc/kfree (headers, 16-byte alignment, coalescing, double-free + corruption panics), CRC-16/CCITT-FALSE, COBS encode/decode with bounds, 13 ktests (`make test-kernel`), `tests/test_ktest.py`, evidence files + `docs/evidence/T-01/README.md`. A1–A8 pass. Suite ~6 s. | Step 12 (skill vendoring) attempted next; T-02 next card |
 
 ## Plan (see RING3_CONTEXT.md §5; v0.4 after the kickoff review, D-37, D-38, D-42)
 | When (ET) | Card | Model | Goal |

@@ -3,6 +3,8 @@
 #include "idt.h"
 #include "io.h"
 #include "kernel.h"
+#include "kmalloc.h"
+#include "ktest.h"
 #include "kstring.h"
 #include "multiboot.h"
 #include "paging.h"
@@ -19,23 +21,6 @@ static char cmdline[256];
 int boot_opt(const char *word)
 {
     return str_has_word(cmdline, word);
-}
-
-static uint32_t total_ram_kib(const struct multiboot_info *mbi)
-{
-    uint32_t kib = 0;
-    if (mbi->flags & MBI_FLAG_MMAP) {
-        uint32_t p = mbi->mmap_addr, end = mbi->mmap_addr + mbi->mmap_length;
-        while (p < end) {
-            const struct multiboot_mmap_entry *e = (const struct multiboot_mmap_entry *)(uintptr_t)p;
-            if (e->type == MULTIBOOT_MEMORY_AVAILABLE)
-                kib += (uint32_t)(e->len / 1024);
-            p += e->size + 4;
-        }
-    } else if (mbi->flags & MBI_FLAG_MEM) {
-        kib = mbi->mem_lower + mbi->mem_upper;
-    }
-    return kib;
 }
 
 static void wait_ticks(uint32_t n)
@@ -97,7 +82,7 @@ void kmain(uint32_t magic, uint32_t mbi_addr)
         strncpy(cmdline, (const char *)(uintptr_t)mbi->cmdline, sizeof cmdline - 1);
 
     printk("RING3 %s build %s\n", RING3_VERSION, BUILD_HASH);
-    printk("memory: %u KiB usable\n", total_ram_kib(mbi));
+    printk("memory: %u KiB usable\n", pmm_mmap_usable_kib(mbi));
 
     gdt_init();
     pic_init();
@@ -105,6 +90,7 @@ void kmain(uint32_t magic, uint32_t mbi_addr)
     pit_init();
     pmm_init(mbi);
     paging_init();
+    kmalloc_init();
     sti();
     printk("init: gdt idt pic pit pmm paging ok, interrupts on, %u frames free\n", pmm_free_frames());
 
@@ -112,6 +98,13 @@ void kmain(uint32_t magic, uint32_t mbi_addr)
     printk("TIMER t0=%u\n", t0);
     wait_ticks(25);
     printk("TIMER t1=%u\n", ticks_now());
+
+#ifdef KTEST
+    if (boot_opt("ktest")) {
+        ktest_run_all();                 /* exits QEMU with the pass/fail code */
+        finish();
+    }
+#endif
 
     if (boot_opt("panic")) {
         printk("deliberate CPL-0 fault (test): write to unmapped 0xFFFFF000\n");

@@ -1,0 +1,16 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0 -- <repo>/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: <repo>
+configfile: pyproject.toml
+testpaths: tests
+collecting ... collected 5 items
+
+tests/test_boot.py::test_boot_banner_and_ticks PASSED                    [ 20%]
+tests/test_boot.py::test_banner_within_5s PASSED                         [ 40%]
+tests/test_boot.py::test_deliberate_cpl0_panic_dumps_and_exits PASSED    [ 60%]
+tests/test_isolation.py::test_isolation_transcript PASSED                [ 80%]
+tests/test_ktest.py::test_ktests_pass PASSED                             [100%]
+
+============================== 5 passed in 5.86s ===============================
+suite wall time: 6.0 s

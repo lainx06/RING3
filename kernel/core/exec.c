@@ -3,6 +3,7 @@
 #include "exec.h"
 #include "gdt.h"
 #include "io.h"
+#include "kctx.h"
 #include "kstring.h"
 #include "paging.h"
 #include "panic.h"
@@ -11,12 +12,7 @@
 #include "pmm.h"
 #include "printk.h"
 
-struct kctx {
-    uint32_t esp, ebp, ebx, esi, edi, eip;
-};
 void user_enter(uint32_t entry, uint32_t user_esp) __attribute__((noreturn));
-int kctx_save(struct kctx *c) __attribute__((returns_twice));
-void kctx_resume(struct kctx *c, int val) __attribute__((noreturn));
 
 /* Flat image header written by user/crt0.S (sizes come from user/user.ld symbols, D-41d). */
 struct uprog_header {

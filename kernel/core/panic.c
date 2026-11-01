@@ -4,6 +4,13 @@
 #include "printk.h"
 #include "qemu.h"
 
+#ifdef KTEST
+#include "kctx.h"
+static struct kctx *test_trap;
+void panic_arm_test_trap(struct kctx *c) { test_trap = c; }
+void panic_disarm_test_trap(void) { test_trap = 0; }
+#endif
+
 void qemu_exit(unsigned code)
 {
     outw(QEMU_EXIT_PORT, (uint16_t)code);
@@ -27,6 +34,13 @@ void panic(const char *fmt, ...)
     vprintk(fmt, ap);
     va_end(ap);
     printk("\n");
+#ifdef KTEST
+    if (test_trap) {
+        struct kctx *c = test_trap;
+        test_trap = 0;
+        kctx_resume(c, 1);
+    }
+#endif
     halt_forever();
 }
 

@@ -1,1 +1,1 @@
-qemu-system-i386 -kernel build/kernel.elf -m 64 -display none -serial stdio -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -append testexit
+qemu-system-i386 -kernel build/kernel-ktest.elf -m 64 -display none -serial stdio -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -append 'ktest testexit'

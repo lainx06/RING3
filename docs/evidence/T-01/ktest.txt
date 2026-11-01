@@ -1,0 +1,27 @@
+$ qemu-system-i386 -kernel build/kernel-ktest.elf -m 64 -display none -serial stdio -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -append 'ktest testexit'
+# exit code 33, 0.3 s
+
+RING3 0.1.0 build 0e39698
+memory: 65023 KiB usable
+init: gdt idt pic pit pmm paging ok, interrupts on, 3751 frames free
+TIMER t0=0
+TIMER t1=25
+KTEST begin
+KTEST crc16_check_value PASS
+KTEST cobs_zero_bytes PASS
+KTEST cobs_runs_253_254_255 PASS
+KTEST cobs_max_frame PASS
+KTEST cobs_rejects_malformed PASS
+KTEST pmm_alloc_free PASS
+
+PANIC: pmm_free: double free of 0x00159000
+KTEST pmm_double_free_detected PASS
+KTEST mmap_parsing PASS
+KTEST kmalloc_reuse_after_free PASS
+
+PANIC: kfree: double free of 0x00113280
+KTEST kmalloc_double_free_detected PASS
+KTEST uaccess_bounds PASS
+KTEST string_helpers PASS
+KTEST printk_formats PASS
+KTEST SUMMARY pass=13 fail=0

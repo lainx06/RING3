@@ -1,9 +1,9 @@
 $ qemu-system-i386 -kernel build/kernel.elf -m 64 -display none -serial stdio -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -append testexit
 # exit code 33, 1.4 s
 
-RING3 0.1.0 build b85d899
+RING3 0.1.0 build 0e39698
 memory: 65023 KiB usable
-init: gdt idt pic pit pmm paging ok, interrupts on, 3819 frames free
+init: gdt idt pic pit pmm paging ok, interrupts on, 3754 frames free
 TIMER t0=0
 TIMER t1=25
 RUN pid=1 name=hello uptime=25

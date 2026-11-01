@@ -1,15 +1,15 @@
 $ qemu-system-i386 -kernel build/kernel.elf -m 64 -display none -serial stdio -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -append 'testexit panic'
 # exit code 37, 0.3 s
 
-RING3 0.1.0 build b85d899
+RING3 0.1.0 build 0e39698
 memory: 65023 KiB usable
-init: gdt idt pic pit pmm paging ok, interrupts on, 3819 frames free
+init: gdt idt pic pit pmm paging ok, interrupts on, 3754 frames free
 TIMER t0=0
 TIMER t1=25
 deliberate CPL-0 fault (test): write to unmapped 0xFFFFF000
 
 PANIC: CPL-0 exception vector=14 err=0x00000002
-  eip=0x00101ca3 cs=0x0008 eflags=0x00000202 cr2=0xfffff000
-  eax=0x00000000 ebx=0x0000fb80 ecx=0x0000000a edx=0x0010417f
-  esi=0x00000000 edi=0x00000014 ebp=0x00114570 esp=0x0011454c
+  eip=0x00101ea3 cs=0x0008 eflags=0x00000202 cr2=0xfffff000
+  eax=0x00000000 ebx=0x00009500 ecx=0x0000000a edx=0x001041ad
+  esi=0x00000000 edi=0x00001000 ebp=0x00155570 esp=0x0015554c
   ds=0x0010 es=0x0010 fs=0x0010 gs=0x0010
