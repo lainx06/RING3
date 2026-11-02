@@ -26,4 +26,18 @@ static inline uint32_t read_eflags(void)
     __asm__ volatile("pushfl; popl %0" : "=r"(v));
     return v;
 }
+/* Interrupt-state save/restore: code that runs from both the kernel loop (IF = 1) and syscall handling
+ * (IF = 0, F1/D-50) must never turn interrupts on behind the caller's back. */
+#define EFLAGS_IF 0x200u
+static inline uint32_t irq_save(void)
+{
+    uint32_t f = read_eflags();
+    cli();
+    return f;
+}
+static inline void irq_restore(uint32_t f)
+{
+    if (f & EFLAGS_IF)
+        sti();
+}
 #endif

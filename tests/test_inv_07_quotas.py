@@ -32,3 +32,20 @@ def test_action_and_request_quotas():
         run = s.close()
     record_evidence("quotas.txt", run)
     assert run.exit_code == EXIT_PASS
+
+
+def test_quota_kill_while_kernel_drains_audit():
+    """F1 (D-50): a LIMIT tick that lands while the kernel is in ring 0 (draining the audit ring for the
+    program's own audited syscalls) must still end the request with LIMIT, and the next request runs."""
+    with Session(timeout=40) as s:
+        s.expect(r"^policy: .*$")
+        t = s.run_prog("audspin", timeout=20)
+        assert re.search(r"decision=LIMIT reason=action_quota", t), t
+        assert "EXIT pid=" not in t, f"the program outlived the LIMIT decision:\n{t}"
+        m = re.search(r"^END pid=\d+ (\S+) ticks=(\d+)", t, re.M)
+        assert m and m.group(1) == "LIMIT" and 100 <= int(m.group(2)) < 150, t
+        t = s.run_prog("ticks")
+        assert "code=0" in t, t
+        run = s.close()
+    record_evidence("quota-kill-in-ring0.txt", run, "T-02F")
+    assert run.exit_code == EXIT_PASS

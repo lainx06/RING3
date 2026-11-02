@@ -206,14 +206,15 @@ class Session:
             self.proc.wait()
 
 
-def record_evidence(name: str, run: Run) -> None:
-    """Write a COM1 transcript (and the exact QEMU command) under docs/evidence/T-02/."""
-    EVIDENCE.mkdir(parents=True, exist_ok=True)
+def record_evidence(name: str, run: Run, card: str = "T-02") -> None:
+    """Write a COM1 transcript (and the exact QEMU command) under docs/evidence/<card>/."""
+    folder = EVIDENCE.parent / card
+    folder.mkdir(parents=True, exist_ok=True)
     cmd = " ".join(shlex.quote(c) for c in run.cmd)
-    (EVIDENCE / name).write_text(
+    (folder / name).write_text(
         f"$ {cmd}\n# exit code {run.exit_code}, {run.seconds:.1f} s\n\n{run.output}", encoding="utf-8"
     )
-    (EVIDENCE / "qemu-command.txt").write_text(f"{cmd}\n", encoding="utf-8")
+    (folder / "qemu-command.txt").write_text(f"{cmd}\n", encoding="utf-8")
 
 
 def audit_lines(text: str) -> list[dict[str, str]]:

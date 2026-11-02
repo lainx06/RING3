@@ -32,4 +32,5 @@ UPROG objs
 UPROG fan
 UPROG multi
 UPROG lcd
+UPROG audspin
 #endif

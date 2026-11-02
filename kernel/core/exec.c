@@ -156,9 +156,9 @@ void exec_action_boundary(void)
 {
     struct pol_event ev = { EV_ACTION_BOUNDARY, 0, 0, 0, ticks_now(), 0, { 0, 0, 0, 0 } };
     struct pol_decision d;
-    cli();
+    uint32_t fl = irq_save();
     audit_feed(&ev, &d);
-    sti();
+    irq_restore(fl);
 }
 
 void exec_on_exit(int code)
@@ -211,7 +211,7 @@ void exec_abandon_limit(void)
 #define LEN(sym) (uint32_t)(uprog_##sym##_end - uprog_##sym##_start)
 UPROG(hello) UPROG(kwrite) UPROG(ticks) UPROG(priv) UPROG(spin) UPROG(badptr) UPROG(null) UPROG(hlt)
 UPROG(ud) UPROG(div0) UPROG(stack) UPROG(dflag) UPROG(fuzz) UPROG(taint) UPROG(confirmw) UPROG(nocap)
-UPROG(objs) UPROG(fan) UPROG(multi) UPROG(lcd)
+UPROG(objs) UPROG(fan) UPROG(multi) UPROG(lcd) UPROG(audspin)
 static struct uprog progs[] = {
     ENTRY(hello, PROG_TEST_CONSOLE), ENTRY(kwrite, PROG_TEST_CONSOLE), ENTRY(ticks, PROG_TEST_CONSOLE),
     ENTRY(priv, PROG_TEST_CONSOLE),  ENTRY(spin, PROG_TEST_CONSOLE),   ENTRY(badptr, PROG_TEST_CONSOLE),
@@ -219,7 +219,7 @@ static struct uprog progs[] = {
     ENTRY(div0, PROG_TEST_CONSOLE),  ENTRY(stack, PROG_TEST_CONSOLE),  ENTRY(dflag, PROG_TEST_CONSOLE),
     ENTRY(fuzz, PROG_TEST_CONSOLE),  ENTRY(taint, PROG_TEST_OBJ),      ENTRY(confirmw, PROG_TEST_OBJ),
     ENTRY(nocap, PROG_TEST_NOCAP),   ENTRY(objs, PROG_TEST_OBJ),       ENTRY(fan, PROG_TEST_FULL),
-    ENTRY(multi, PROG_TEST_CONSOLE), ENTRY(lcd, PROG_TEST_FULL),
+    ENTRY(multi, PROG_TEST_CONSOLE), ENTRY(lcd, PROG_TEST_FULL),     ENTRY(audspin, PROG_TEST_CONSOLE),
 };
 
 static void fill_lengths(void)
@@ -230,7 +230,7 @@ static void fill_lengths(void)
     done = 1;
     uint32_t lens[] = { LEN(hello), LEN(kwrite), LEN(ticks), LEN(priv), LEN(spin), LEN(badptr), LEN(null),
                         LEN(hlt), LEN(ud), LEN(div0), LEN(stack), LEN(dflag), LEN(fuzz), LEN(taint),
-                        LEN(confirmw), LEN(nocap), LEN(objs), LEN(fan), LEN(multi), LEN(lcd) };
+                        LEN(confirmw), LEN(nocap), LEN(objs), LEN(fan), LEN(multi), LEN(lcd), LEN(audspin) };
     for (unsigned i = 0; i < sizeof progs / sizeof progs[0]; i++)
         progs[i].image_len = lens[i];
 }
@@ -266,8 +266,8 @@ void exec_inject_telemetry(int32_t distance_mm, int32_t estop, int valid)
     struct pol_event ev = { EV_TELEMETRY, 0, valid ? EVF_TELE_VALID : 0, 0, ticks_now(), 0,
                             { distance_mm, estop, 0, 0 } };
     struct pol_decision d;
-    cli();
+    uint32_t fl = irq_save();
     audit_feed(&ev, &d);
-    sti();
+    irq_restore(fl);
 }
 #endif

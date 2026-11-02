@@ -55,7 +55,7 @@ ifeq ($(TEST),1)
   CFLAGS  += -DRING3_TEST=1
   ASFLAGS += -DRING3_TEST=1
   UPROGS  := hello kwrite ticks priv spin badptr null hlt ud div0 stack dflag fuzz taint confirmw nocap objs \
-             fan multi lcd
+             fan multi lcd audspin
 else
   UPROGS  :=
 endif

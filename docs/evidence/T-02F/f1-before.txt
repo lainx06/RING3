@@ -1,0 +1,32 @@
+# F1 before the fix (Nov 1 kernel + the new audspin program): the LIMIT tick lands in ring 0 during the
+# audit drain, the kill is only flagged, the program keeps running (every later call is refused with
+# -EPERM, including exit) and the test times out waiting for END. Excerpt of the pytest log.
+
+E               RUN pid=1 name=audspin prog=2 caps=0x1 uptime=26
+E               SYSCALL pid=1 nr=1 cpl=3
+E               audspin: audited syscalls forever
+E               a
+E               a
+E               a
+E               a
+E               a
+E               a
+E               a
+E               a
+E               a
+E               a
+[... 4802 AUDIT lines ...]
+E               AUDIT seq=4801 tick=125 sys=cons_write target=1073743885 decision=ALLOW reason=none result=2 tainted=0
+E               TAPE k=6 s=0 f=0 t=126 nr=0 a0=0 a1=0 a2=0 a3=0
+E               AUDIT seq=4802 tick=126 sys=tick target=100 decision=LIMIT reason=action_quota result=0 tainted=0
+
+tests/qemu.py:160: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_inv_07_quotas.py::test_quota_kill_while_kernel_drains_audit
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+1 failed in 20.55s
+
+>               raise AssertionError(f"timeout waiting for {pattern!r}; output so far:\n{text}")
+E               AssertionError: timeout waiting for '^END pid=\\d+ \\S+ ticks=\\d+ uptime=\\d+$'; output so far:
+FAILED tests/test_inv_07_quotas.py::test_quota_kill_while_kernel_drains_audit
+1 failed in 20.55s

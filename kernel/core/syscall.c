@@ -66,7 +66,7 @@ static int32_t execute(uint32_t nr, uint32_t b, uint32_t c, uint32_t d)
 
 static int logged_pid;
 
-void syscall_dispatch(struct trap_frame *f)
+static void dispatch(struct trap_frame *f)
 {
     uint32_t nr = f->eax, b = f->ebx, c = f->ecx, d = f->edx, s = f->esi;
     int pid = exec_current_pid();
@@ -144,4 +144,14 @@ void syscall_dispatch(struct trap_frame *f)
     audit_set_result(idx, r);
     f->eax = (uint32_t)r;
     audit_flush(0);
+}
+
+void syscall_dispatch(struct trap_frame *f)
+{
+    dispatch(f);
+    /* F1 (D-50): a quota tick that arrived while this call was in ring 0 (a confirmation wait, a drain)
+     * could only flag the kill. The single ring-0 -> ring-3 return path for a syscall is here, so the
+     * request ends here instead of resuming the program (R2, INV-07). */
+    if (exec_kill_pending())
+        exec_abandon_limit();                    /* does not return */
 }
