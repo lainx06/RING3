@@ -74,6 +74,7 @@ ISR_NOERR 128
 
     .globl isr_common
 isr_common:
+    cld                    /* ring 3 may enter with DF = 1; kernel string loops assume DF = 0 (skeptic #3) */
     pushal
     pushl %ds
     pushl %es

@@ -1,6 +1,8 @@
 /* Common trap dispatcher. CPL-0 exception -> panic (INV-12). CPL-3 exception -> exec_on_user_fault (INV-6).
- * Timer -> tick + per-program budget check when the IRQ arrived while CPL = 3 (INV-7). int 0x80 -> syscall. */
+ * NMI, #DF and #MC are never user faults. Timer -> tick + a policy tick event (quotas, lease; R2). int 0x80 ->
+ * syscall. */
 #include "trap.h"
+#include "audit.h"
 #include "panic.h"
 #include "pic.h"
 #include "pit.h"
@@ -11,7 +13,8 @@
 void isr_dispatch(struct trap_frame *f)
 {
     if (f->vector < 32) {
-        if (trap_from_user(f))
+        int machine = f->vector == 2 || f->vector == 8 || f->vector == 18;
+        if (trap_from_user(f) && !machine)
             exec_on_user_fault(f);            /* does not return */
         panic_trap(f);                        /* does not return */
     }
@@ -25,8 +28,7 @@ void isr_dispatch(struct trap_frame *f)
         uint8_t irq = (uint8_t)(f->vector - IRQ_BASE);
         if (irq == 0) {
             pit_on_tick();
-            if (trap_from_user(f))
-                exec_on_tick_user(f);         /* may not return (LIMIT): sends EOI itself first */
+            audit_on_tick(f);                 /* may not return (LIMIT from ring 3): sends EOI itself first */
         }
         pic_eoi(irq);
         return;

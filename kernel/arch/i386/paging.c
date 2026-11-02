@@ -37,6 +37,7 @@ void paging_init(void)
             ident_tables[t][i] = ((t * 1024 + i) * PAGE_SIZE) | PTE_P | PTE_W;   /* supervisor only */
         page_dir[t] = (uint32_t)(uintptr_t)ident_tables[t] | PTE_P | PTE_W;
     }
+    ident_tables[0][0] = 0;                          /* page 0 unmapped: a kernel null dereference panics */
     uint32_t cr0;
     __asm__ volatile("mov %0, %%cr3" : : "r"((uint32_t)(uintptr_t)page_dir) : "memory");
     __asm__ volatile("mov %%cr0, %0" : "=r"(cr0));
@@ -80,7 +81,9 @@ uint32_t paging_lookup(uint32_t vaddr)
     if (!(pde & PTE_P))
         return 0;
     const uint32_t *pt = (const uint32_t *)(uintptr_t)PTE_ADDR(pde);
-    return pt[(vaddr >> 12) & 1023];
+    uint32_t pte = pt[(vaddr >> 12) & 1023];
+    /* R3: a user access needs P|U (and W for writes) at both levels; fold the PDE's bits into the answer. */
+    return (pte & ~(PTE_U | PTE_W)) | (pte & pde & (PTE_U | PTE_W));
 }
 
 void paging_flush_tlb(void)

@@ -1,9 +1,8 @@
-"""A3: in-kernel unit tests (KTEST=1 build) all pass and cover the required areas."""
+"""In-kernel unit tests (KTEST=1 build) all pass and cover the required areas."""
 
 import re
-import subprocess
 
-from tests.qemu import EXIT_PASS, KERNEL_KTEST, REPO, record_evidence, run_qemu
+from tests.qemu import EXIT_PASS, KERNEL_KTEST, record_evidence, run_qemu
 
 REQUIRED = {
     "crc16_check_value",
@@ -17,13 +16,15 @@ REQUIRED = {
     "kmalloc_reuse_after_free",
     "kmalloc_double_free_detected",
     "uaccess_bounds",
+    "uaccess_pde_bits",
+    "uaccess_copy_string",
+    "objstore_audit_log_keeps_newest",
     "string_helpers",
     "printk_formats",
 }
 
 
 def test_ktests_pass():
-    subprocess.run(["make", "-s", "KTEST=1"], cwd=REPO, check=True)
     run = run_qemu(KERNEL_KTEST, append="ktest testexit", timeout=20, expect_panic=True)
     record_evidence("ktest.txt", run)
     # The only acceptable PANIC lines are the ones the double-free tests deliberately provoke and trap.

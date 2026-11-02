@@ -8,4 +8,5 @@ void serial_init(void);           /* COM1: 115200 8N1, IER = 0 (polled) */
 void serial_putc(char c);
 void serial_write(const char *s, uint32_t n);
 int serial_getc_nonblock(void);   /* -1 if no byte waiting */
+int serial_at_line_start(void);   /* 1 when the last byte written was a newline (or nothing yet) */
 #endif

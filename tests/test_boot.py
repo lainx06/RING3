@@ -1,31 +1,43 @@
-"""T-01 boot tests: banner, timer, deliberate CPL-0 panic dump (A4), INV-12 panic check."""
+"""Boot tests: banner with the policy hash, timer, the `ring3> ` prompt, CPL-0 panic dump, INV-12."""
 
 import re
 
-from tests.qemu import EXIT_PANIC, EXIT_PASS, record_evidence, run_qemu
+from tests.qemu import EXIT_PANIC, EXIT_PASS, KERNEL, KERNEL_TEST, Session, record_evidence, run_qemu
 
 
-def test_boot_banner_and_ticks():
-    run = run_qemu(timeout=15)
+def test_boot_banner_prompt_and_exit():
+    with Session(KERNEL, append="") as s:  # the production image: no test programs, no options
+        s.expect(r"^RING3 \d+\.\d+\.\d+ build \S+$")
+        m = s.expect(r"^policy: (\S+) sha256=([0-9a-f]{64})$")
+        assert m.group(1) == "default"
+        s.expect(r"^memory: \d+ KiB usable$")
+        t0 = int(s.expect(r"^TIMER t0=(\d+)$").group(1))
+        t1 = int(s.expect(r"^TIMER t1=(\d+)$").group(1))
+        assert t1 > t0, "ticks did not advance"
+        assert s.proc.poll() is None
+        s.prompt()
+        s.send("run hello")  # not a production command
+        s.expect(r"^unknown command: run hello$")
+        s.prompt()
+        s.send("help")
+        s.expect(r"^commands: .*$")
+        run = s.close()
     record_evidence("boot.txt", run)
     assert run.exit_code == EXIT_PASS, run.output
-    assert run.seconds < 5.0 or "RING3 " in run.output
-    assert re.search(r"^RING3 \d+\.\d+\.\d+ build \S+$", run.output, re.M), run.output
-    assert re.search(r"^memory: \d+ KiB usable$", run.output, re.M)
-    t0 = int(re.search(r"^TIMER t0=(\d+)$", run.output, re.M).group(1))
-    t1 = int(re.search(r"^TIMER t1=(\d+)$", run.output, re.M).group(1))
-    assert t1 > t0, "ticks did not advance"
-    assert re.search(r"^KERNEL ALIVE uptime=(\d+)$", run.output, re.M)
+    assert re.search(r"^KERNEL ALIVE uptime=\d+$", run.output, re.M)
+    assert "PERMISSIVE" not in run.output
 
 
 def test_banner_within_5s():
-    run = run_qemu(timeout=15)
-    assert "RING3 " in run.output
-    assert run.seconds < 5.0, f"boot took {run.seconds:.1f} s"
+    with Session(KERNEL_TEST) as s:
+        s.expect(r"^RING3 ", timeout=5)
+        s.prompt(timeout=5)
+        run = s.close()
+    assert run.exit_code == EXIT_PASS
 
 
 def test_deliberate_cpl0_panic_dumps_and_exits():
-    run = run_qemu(append="testexit panic", timeout=15, expect_panic=True)
+    run = run_qemu(KERNEL_TEST, append="testexit panic", timeout=15, expect_panic=True)
     record_evidence("panic.txt", run)
     assert run.exit_code == EXIT_PANIC, run.output
     assert run.has_panic()

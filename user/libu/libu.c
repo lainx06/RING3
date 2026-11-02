@@ -7,8 +7,29 @@ void u_exit(int code)
 }
 
 int u_write(const char *s, size_t n) { return syscall2(SYS_CONS_WRITE, (uint32_t)(uintptr_t)s, (uint32_t)n); }
-int u_uread(void *buf, size_t n) { return syscall2(SYS_UREAD, (uint32_t)(uintptr_t)buf, (uint32_t)n); }
+int u_uread(void *buf, size_t n) { return syscall2(SYS_TEST_UREAD, (uint32_t)(uintptr_t)buf, (uint32_t)n); }
 uint32_t u_uptime(void) { return (uint32_t)syscall2(SYS_UPTIME, 0, 0); }
+int u_obj_list(char *buf, size_t n) { return syscall2(SYS_OBJ_LIST, (uint32_t)(uintptr_t)buf, (uint32_t)n); }
+int u_obj_read(int id, void *buf, size_t n)
+{
+    return syscall4(SYS_OBJ_READ, (uint32_t)id, (uint32_t)(uintptr_t)buf, (uint32_t)n, 0);
+}
+int u_obj_write(int id, const void *buf, size_t n)
+{
+    return syscall4(SYS_OBJ_WRITE, (uint32_t)id, (uint32_t)(uintptr_t)buf, (uint32_t)n, 0);
+}
+int u_cell_fan(int duty) { return syscall2(SYS_CELL_FAN, (uint32_t)duty, 0); }
+int u_cell_servo(int deg) { return syscall2(SYS_CELL_SERVO, (uint32_t)deg, 0); }
+int u_cell_halt(void) { return syscall2(SYS_CELL_HALT, 0, 0); }
+int u_cell_lcd(int line, const char *text)
+{
+    return syscall2(SYS_CELL_LCD, (uint32_t)line, (uint32_t)(uintptr_t)text);
+}
+int u_test_tele(int distance_mm, int estop, int valid)
+{
+    return syscall4(SYS_TEST_TELE, (uint32_t)distance_mm, (uint32_t)estop, (uint32_t)valid, 0);
+}
+int u_test_boundary(void) { return syscall2(SYS_TEST_BOUNDARY, 0, 0); }
 
 size_t u_strlen(const char *s)
 {
@@ -45,6 +66,21 @@ void u_putdec(int v)
         b[n - 1 - i] = t;
     }
     u_write(b, (size_t)n);
+}
+
+int u_expect(const char *label, int r, int expect)
+{
+    u_puts(label);
+    u_puts("=");
+    u_putdec(r);
+    if (r != expect) {
+        u_puts(" UNEXPECTED (wanted ");
+        u_putdec(expect);
+        u_puts(")\n");
+        return 1;
+    }
+    u_puts(" ok\n");
+    return 0;
 }
 
 /* clang may emit calls to these for struct/array initialisation */

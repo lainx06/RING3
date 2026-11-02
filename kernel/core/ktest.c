@@ -8,6 +8,7 @@
 #include "kmalloc.h"
 #include "kstring.h"
 #include "multiboot.h"
+#include "objstore.h"
 #include "paging.h"
 #include "panic.h"
 #include "pmm.h"
@@ -283,6 +284,73 @@ static void t_uaccess(void)
     end();
 }
 
+/* R3: PDE-level bits are honoured; R5: len == 0 validates the page at ptr; R6: bounded string copies. */
+static void t_uaccess_more(void)
+{
+    begin("uaccess_pde_bits");
+    uint32_t f = pmm_alloc();
+    paging_map_user(USER_BASE, f, 1);
+    paging_flush_tlb();
+    CHECK((paging_lookup(USER_BASE) & (PTE_P | PTE_U | PTE_W)) == (PTE_P | PTE_U | PTE_W));
+    CHECK(uaccess_check(USER_BASE, 16, 1) == 0);
+    /* the identity map: present and writable at the PTE but supervisor at both levels */
+    CHECK((paging_lookup(0x00100000) & PTE_U) == 0 && (paging_lookup(0x00100000) & PTE_P));
+    CHECK(paging_lookup(0) == 0);                                   /* page 0 unmapped: kernel null faults */
+    CHECK(uaccess_check(USER_BASE, 0, 0) == 0);                     /* R5: len 0 on a mapped page */
+    CHECK(uaccess_check(USER_BASE + PAGE_SIZE, 0, 0) == -EFAULT);   /* R5: len 0 on an unmapped page */
+    CHECK(uaccess_check(USER_TOP, 0, 0) == -EFAULT);
+    CHECK(uaccess_check(USER_TOP - 1, 1, 0) == -EFAULT);            /* top page is unmapped here */
+    CHECK(paging_unmap_user(USER_BASE) == f);
+    paging_flush_tlb();
+    pmm_free(f);
+    end();
+
+    begin("uaccess_copy_string");
+    char dst[LCD_TEXT_MAX + 1];
+    f = pmm_alloc();
+    paging_map_user(USER_BASE, f, 1);
+    paging_flush_tlb();
+    char *page = (char *)(uintptr_t)USER_BASE;
+    memcpy(page, "hello", 6);
+    CHECK(uaccess_copy_string(USER_BASE, dst, LCD_TEXT_MAX) == 5 && strncmp(dst, "hello", 6) == 0);
+    memcpy(page, "0123456789abcdef", 17);
+    CHECK(uaccess_copy_string(USER_BASE, dst, LCD_TEXT_MAX) == 16);
+    memcpy(page, "0123456789abcdefg", 18);
+    CHECK(uaccess_copy_string(USER_BASE, dst, LCD_TEXT_MAX) == -EINVAL);
+    memset(page + PAGE_SIZE - 8, 'A', 8);                           /* runs off the page into unmapped memory */
+    CHECK(uaccess_copy_string(USER_BASE + PAGE_SIZE - 8, dst, LCD_TEXT_MAX) == -EFAULT);
+    page[PAGE_SIZE - 1] = 0;
+    CHECK(uaccess_copy_string(USER_BASE + PAGE_SIZE - 8, dst, LCD_TEXT_MAX) == 7);
+    CHECK(uaccess_copy_string(USER_BASE + PAGE_SIZE, dst, LCD_TEXT_MAX) == -EFAULT);
+    CHECK(uaccess_copy_string(0x00100000, dst, LCD_TEXT_MAX) == -EFAULT);
+    CHECK(uaccess_copy_string(USER_TOP - 2, dst, LCD_TEXT_MAX) == -EFAULT);
+    CHECK(paging_unmap_user(USER_BASE) == f);
+    paging_flush_tlb();
+    pmm_free(f);
+    end();
+
+    begin("objstore_audit_log_keeps_newest");
+    objstore_init();
+    char line[64];
+    for (int i = 0; i < 200; i++) {
+        ksnprintf(line, sizeof line, "AUDIT seq=%d line of text for the bounded log\n", i);
+        objstore_audit_append(line);
+    }
+    static char out[OBJ_DATA_MAX + 1];
+    uint32_t n = objstore_read(OBJ_AUDIT_LOG, out, OBJ_DATA_MAX);
+    out[n] = 0;
+    CHECK(n <= OBJ_DATA_MAX && n > OBJ_DATA_MAX - 64);
+    CHECK(strncmp(out, "AUDIT seq=", 10) == 0);                      /* starts on a line boundary */
+    CHECK(out[n - 1] == '\n');
+    const char *last = "AUDIT seq=199 ";
+    int found = 0;
+    for (uint32_t i = 0; i + 14 <= n; i++)
+        if (memcmp(out + i, last, 14) == 0)
+            found = 1;
+    CHECK(found && memcmp(out, "AUDIT seq=0 ", 12) != 0);          /* newest kept, oldest dropped */
+    end();
+}
+
 /* ---- lib ---- */
 static void t_lib(void)
 {
@@ -321,6 +389,7 @@ void ktest_run_all(void)
     t_mmap();
     t_kmalloc();
     t_uaccess();
+    t_uaccess_more();
     t_lib();
     printk("KTEST SUMMARY pass=%d fail=%d\n", pass_count, fail_count);
     qemu_exit(fail_count ? QEMU_EXIT_FAIL : QEMU_EXIT_PASS);

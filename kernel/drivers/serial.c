@@ -20,8 +20,13 @@ void serial_init(void)
     outb(COM1_PORT + REG_MCR, 0x0B);        /* DTR, RTS, OUT2 */
 }
 
+static int line_start = 1;
+
+int serial_at_line_start(void) { return line_start; }
+
 void serial_putc(char c)
 {
+    line_start = c == '\n';
     if (c == '\n')
         serial_putc('\r');
     while ((inb(COM1_PORT + REG_LSR) & 0x20) == 0)

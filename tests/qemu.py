@@ -2,20 +2,30 @@
 
 Exit codes (kernel/include/qemu.h): 33 = PASS, 35 = FAIL, 37 = PANIC, 124 = harness timeout.
 Every run fails on an unexpected `PANIC` line (INV-12) unless the caller asks for one.
+
+Two styles: `run_qemu()` boots with no console input and waits for exit; `Session` drives the console over
+stdin with expect/send, for confirmations, `run <prog>` and `tele` injections.
 """
 
 from __future__ import annotations
 
 import os
+import re
 import shlex
 import subprocess
+import threading
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 KERNEL = REPO / "build" / "kernel.elf"
+KERNEL_TEST = REPO / "build" / "kernel-test.elf"
+KERNEL_TEST_PERMISSIVE = REPO / "build" / "kernel-test-permissive.elf"
 KERNEL_KTEST = REPO / "build" / "kernel-ktest.elf"
-EVIDENCE = REPO / "docs" / "evidence" / "T-01"
+HOST_POLICY_TEST = REPO / "build" / "host" / "policy_test"
+HOST_POLICY_TEST_PERMISSIVE = REPO / "build" / "host" / "policy_test_permissive"
+EVIDENCE = REPO / "docs" / "evidence" / "T-02"
 
 EXIT_PASS = 33
 EXIT_FAIL = 35
@@ -23,6 +33,9 @@ EXIT_PANIC = 37
 EXIT_TIMEOUT = 124
 
 QEMU = os.environ.get("RING3_QEMU", "qemu-system-i386")
+
+# Short quotas for the suite (ticks at 100 Hz): action 1 s, request 4 s, confirmation 1.5 s.
+FAST_QUOTAS = "taction=100 trequest=400 tconfirm=150"
 
 
 @dataclass
@@ -72,8 +85,6 @@ def run_qemu(
     timeout: float = 20.0,
     expect_panic: bool = False,
 ) -> Run:
-    import time
-
     cmd = qemu_command(kernel, append)
     t0 = time.monotonic()
     try:
@@ -97,11 +108,118 @@ def run_qemu(
     return run
 
 
+class Session:
+    """An interactive QEMU run: `expect(regex)` waits for output, `send(line)` types on COM1.
+
+    Use as a context manager; `close()` sends `exit` (unless already finished), waits, and fails on PANIC.
+    """
+
+    def __init__(self, kernel: Path = KERNEL_TEST, append: str = FAST_QUOTAS, timeout: float = 30.0):
+        self.cmd = qemu_command(kernel, append)
+        self.timeout = timeout
+        self.t0 = time.monotonic()
+        self.proc = subprocess.Popen(
+            self.cmd, cwd=REPO, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+        )
+        self._buf = bytearray()
+        self._lock = threading.Lock()
+        self._eof = threading.Event()
+        self._reader = threading.Thread(target=self._read, daemon=True)
+        self._reader.start()
+        self.pos = 0  # consumed up to here
+        self.exit_code: int | None = None
+
+    def _read(self) -> None:
+        assert self.proc.stdout is not None
+        while True:
+            chunk = self.proc.stdout.read1(4096)
+            if not chunk:
+                break
+            with self._lock:
+                self._buf += chunk
+        self._eof.set()
+
+    @property
+    def output(self) -> str:
+        with self._lock:
+            return bytes(self._buf).decode("utf-8", "replace").replace("\r\n", "\n")
+
+    def expect(self, pattern: str, timeout: float | None = None) -> re.Match[str]:
+        """Waits until `pattern` (regex, multiline) matches output not yet consumed; consumes through it."""
+        deadline = time.monotonic() + (timeout if timeout is not None else self.timeout)
+        rx = re.compile(pattern, re.M)
+        while True:
+            text = self.output
+            m = rx.search(text, self.pos)
+            if m:
+                self.pos = m.end()
+                return m
+            if "PANIC:" in text[self.pos :]:
+                raise AssertionError(f"unexpected PANIC (INV-12):\n{text}")
+            if self._eof.is_set() or time.monotonic() > deadline:
+                raise AssertionError(f"timeout waiting for {pattern!r}; output so far:\n{text}")
+            time.sleep(0.01)
+
+    def send(self, line: str) -> None:
+        assert self.proc.stdin is not None
+        self.proc.stdin.write((line + "\n").encode())
+        self.proc.stdin.flush()
+
+    def prompt(self, timeout: float | None = None) -> None:
+        self.expect(r"ring3> ", timeout)
+
+    def run_prog(self, name: str, timeout: float | None = None) -> str:
+        """`run <name>` at the prompt; returns the transcript from RUN to END (consumes it)."""
+        self.prompt()
+        self.send(f"run {name}")
+        start = self.pos
+        self.expect(r"^END pid=\d+ \S+ ticks=\d+ uptime=\d+$", timeout)
+        return self.output[start : self.pos]
+
+    def close(self, expect_panic: bool = False) -> Run:
+        if self.exit_code is None:
+            try:
+                if not self._eof.is_set():
+                    if not self.output.endswith("ring3> "):
+                        self.prompt(5)
+                    self.send("exit")
+            except AssertionError:
+                pass
+            try:
+                self.exit_code = self.proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                self.proc.kill()
+                self.proc.wait()
+                self.exit_code = EXIT_TIMEOUT
+            self._reader.join(timeout=5)
+        run = Run(self.cmd, self.output, self.exit_code, time.monotonic() - self.t0)
+        if run.has_panic() and not expect_panic:
+            raise AssertionError(f"unexpected PANIC (INV-12):\n{run.output}")
+        return run
+
+    def __enter__(self) -> Session:
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        if self.exit_code is None:
+            self.proc.kill()
+            self.proc.wait()
+
+
 def record_evidence(name: str, run: Run) -> None:
-    """Write a COM1 transcript (and the exact QEMU command) under docs/evidence/T-01/."""
+    """Write a COM1 transcript (and the exact QEMU command) under docs/evidence/T-02/."""
     EVIDENCE.mkdir(parents=True, exist_ok=True)
     cmd = " ".join(shlex.quote(c) for c in run.cmd)
     (EVIDENCE / name).write_text(
         f"$ {cmd}\n# exit code {run.exit_code}, {run.seconds:.1f} s\n\n{run.output}", encoding="utf-8"
     )
     (EVIDENCE / "qemu-command.txt").write_text(f"{cmd}\n", encoding="utf-8")
+
+
+def audit_lines(text: str) -> list[dict[str, str]]:
+    """Parses `AUDIT k=v ...` lines into dicts (decision fields as strings)."""
+    out = []
+    for line in text.splitlines():
+        if line.startswith("AUDIT "):
+            out.append(dict(kv.split("=", 1) for kv in line[6:].split(" ") if "=" in kv))
+    return out
