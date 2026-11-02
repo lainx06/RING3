@@ -1,0 +1,21 @@
+$ printf 'info qtree\ninfo chardev\nquit\n' | qemu-system-i386 -m 64 -display none -S -monitor stdio -serial null -serial null -serial /dev/ttyACM0 -kernel build/kernel-link.elf
+# QEMU 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18). Same third-serial-port layout as make test-link; machine stopped (-S).
+# isa-serial devices from 'info qtree' (index 2 = third -serial = guest COM3):
+
+          dev: isa-serial, id ""
+            index = 2 (0x2)
+            iobase = 1000 (0x3e8)
+            irq = 4 (0x4)
+          dev: isa-serial, id ""
+            index = 1 (0x1)
+            iobase = 760 (0x2f8)
+            irq = 3 (0x3)
+          dev: isa-serial, id ""
+            index = 0 (0x0)
+            iobase = 1016 (0x3f8)
+            irq = 4 (0x4)
+
+# 'info chardev' (serial2 = the tty backend on /dev/ttyACM0):
+serial1: filename=null
+serial2: filename=serial
+serial0: filename=null

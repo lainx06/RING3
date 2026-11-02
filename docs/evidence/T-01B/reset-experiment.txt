@@ -1,0 +1,130 @@
+# Which event resets the Uno: QEMU opening the port, or the guest programming COM3?
+# Probe image with linkdelay=N: the kernel waits N ticks (100 Hz) before touching COM3 at all.
+# One run each, 3 s apart. Board: ring3cell 222d26d. Only PING frames were sent.
+
+$ qemu-system-i386 -m 64 -display none -serial stdio -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -serial null -serial /dev/ttyACM0 -kernel build/kernel-link.elf -append "linktest linkdelay=0"
+LINK com3 init port=0x3e8 baud=115200 8N1 ier=0 mcr=0x3 tick=25
+FRAME_DROP cobs tick=26
+FRAME_DROP len tick=26
+STATE_STALE seq=809 t_ms=40466 fan=0 servo=90 flags=0x20 ack=8 tick=26
+FRAME_DROP cobs tick=26
+STATE_STALE seq=804 t_ms=40216 fan=0 servo=90 flags=0x20 ack=8 tick=26
+STATE_STALE seq=805 t_ms=40266 fan=0 servo=90 flags=0x20 ack=8 tick=26
+STATE_STALE seq=806 t_ms=40316 fan=0 servo=90 flags=0x20 ack=8 tick=26
+STATE_STALE seq=807 t_ms=40366 fan=0 servo=90 flags=0x20 ack=8 tick=26
+STATE_STALE seq=808 t_ms=40416 fan=0 servo=90 flags=0x20 ack=8 tick=26
+STATE_STALE seq=809 t_ms=40466 fan=0 servo=90 flags=0x20 ack=8 tick=26
+LINK first_state ticks_since_com3_init=27 ticks_since_kernel_timer_start=52 dev_seq=0 dev_t_ms=16 stale_before=7 rejected_before=3
+LINK collect consecutive=40 rejected_since_first=0 flags=0x20 (LINK_LOST expected: no kernel frame yet)
+LINK ping seq=1 acked after 5 ticks flags=0x0
+LINK ping seq=2 acked after 1 ticks flags=0x0
+LINK ping seq=3 acked after 3 ticks flags=0x0
+LINK ping seq=4 acked after 4 ticks flags=0x0
+LINK ping seq=5 acked after 6 ticks flags=0x0
+LINK ping seq=6 acked after 2 ticks flags=0x0
+LINK ping seq=7 acked after 3 ticks flags=0x0
+LINK ping seq=8 acked after 5 ticks flags=0x0
+LINK pings sent=8 acked=8 last_ack=8
+LINK SUMMARY stale=7 restarts=0 states=77 rejected=3 lsr_err=0 gaps=0 best_consecutive=77 final_run=77 run_ticks=401 rate_mhz=18952 dev_period_us=50000 fan_max=0 servo_min=90 servo_max=90
+LINK REJECTS cobs=2 oversize=0 short=0 len=1 crc=0 type=0 body_len=0 field=0
+LINK PASS
+
+$ qemu-system-i386 -m 64 -display none -serial stdio -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -serial null -serial /dev/ttyACM0 -kernel build/kernel-link.elf -append "linktest linkdelay=100"
+LINK com3 init port=0x3e8 baud=115200 8N1 ier=0 mcr=0x3 tick=126
+FRAME_DROP cobs tick=126
+STATE_STALE seq=134 t_ms=6716 fan=0 servo=90 flags=0x20 ack=8 tick=126
+FRAME_DROP cobs tick=126
+STATE_STALE seq=129 t_ms=6466 fan=0 servo=90 flags=0x20 ack=8 tick=126
+STATE_STALE seq=130 t_ms=6516 fan=0 servo=90 flags=0x20 ack=8 tick=126
+STATE_STALE seq=131 t_ms=6566 fan=0 servo=90 flags=0x20 ack=8 tick=126
+STATE_STALE seq=132 t_ms=6616 fan=0 servo=90 flags=0x20 ack=8 tick=126
+STATE_STALE seq=133 t_ms=6666 fan=0 servo=90 flags=0x20 ack=8 tick=126
+STATE_STALE seq=134 t_ms=6716 fan=0 servo=90 flags=0x20 ack=8 tick=126
+LINK first_state ticks_since_com3_init=12 ticks_since_kernel_timer_start=138 dev_seq=0 dev_t_ms=16 stale_before=7 rejected_before=2
+LINK collect consecutive=40 rejected_since_first=0 flags=0x20 (LINK_LOST expected: no kernel frame yet)
+LINK ping seq=1 acked after 5 ticks flags=0x0
+LINK ping seq=2 acked after 1 ticks flags=0x0
+LINK ping seq=3 acked after 2 ticks flags=0x0
+LINK ping seq=4 acked after 4 ticks flags=0x0
+LINK ping seq=5 acked after 5 ticks flags=0x0
+LINK ping seq=6 acked after 2 ticks flags=0x0
+LINK ping seq=7 acked after 3 ticks flags=0x0
+LINK ping seq=8 acked after 4 ticks flags=0x0
+LINK pings sent=8 acked=8 last_ack=8
+LINK SUMMARY stale=7 restarts=0 states=77 rejected=2 lsr_err=0 gaps=0 best_consecutive=77 final_run=77 run_ticks=401 rate_mhz=18952 dev_period_us=50000 fan_max=0 servo_min=90 servo_max=90
+LINK REJECTS cobs=2 oversize=0 short=0 len=0 crc=0 type=0 body_len=0 field=0
+LINK PASS
+
+$ qemu-system-i386 -m 64 -display none -serial stdio -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -serial null -serial /dev/ttyACM0 -kernel build/kernel-link.elf -append "linktest linkdelay=200"
+LINK com3 init port=0x3e8 baud=115200 8N1 ier=0 mcr=0x3 tick=225
+FRAME_DROP cobs tick=225
+STATE_STALE seq=79 t_ms=3966 fan=0 servo=90 flags=0x0 ack=8 tick=225
+STATE_STALE seq=80 t_ms=4016 fan=0 servo=90 flags=0x0 ack=8 tick=226
+STATE_STALE seq=81 t_ms=4066 fan=0 servo=90 flags=0x0 ack=8 tick=226
+STATE_STALE seq=82 t_ms=4116 fan=0 servo=90 flags=0x0 ack=8 tick=226
+STATE_STALE seq=83 t_ms=4166 fan=0 servo=90 flags=0x0 ack=8 tick=226
+STATE_STALE seq=84 t_ms=4216 fan=0 servo=90 flags=0x0 ack=8 tick=226
+STATE_STALE seq=85 t_ms=4267 fan=0 servo=90 flags=0x0 ack=8 tick=226
+STATE_STALE seq=86 t_ms=4316 fan=0 servo=90 flags=0x0 ack=8 tick=226
+STATE_STALE seq=87 t_ms=4366 fan=0 servo=90 flags=0x0 ack=8 tick=226
+STATE_STALE seq=88 t_ms=4416 fan=0 servo=90 flags=0x0 ack=8 tick=226
+STATE_STALE seq=89 t_ms=4466 fan=0 servo=90 flags=0x0 ack=8 tick=226
+STATE_STALE seq=90 t_ms=4516 fan=0 servo=90 flags=0x0 ack=8 tick=226
+STATE_STALE seq=91 t_ms=4566 fan=0 servo=90 flags=0x0 ack=8 tick=226
+STATE_STALE seq=92 t_ms=4616 fan=0 servo=90 flags=0x0 ack=8 tick=227
+STATE_STALE seq=93 t_ms=4666 fan=0 servo=90 flags=0x20 ack=8 tick=227
+STATE_STALE seq=94 t_ms=4716 fan=0 servo=90 flags=0x20 ack=8 tick=227
+STATE_STALE seq=95 t_ms=4766 fan=0 servo=90 flags=0x20 ack=8 tick=227
+STATE_STALE seq=96 t_ms=4816 fan=0 servo=90 flags=0x20 ack=8 tick=227
+STATE_STALE seq=97 t_ms=4866 fan=0 servo=90 flags=0x20 ack=8 tick=227
+STATE_STALE seq=98 t_ms=4916 fan=0 servo=90 flags=0x20 ack=8 tick=227
+STATE_STALE seq=99 t_ms=4966 fan=0 servo=90 flags=0x20 ack=8 tick=227
+STATE_STALE seq=100 t_ms=5016 fan=0 servo=90 flags=0x20 ack=8 tick=227
+STATE_STALE seq=101 t_ms=5066 fan=0 servo=90 flags=0x20 ack=8 tick=227
+STATE_STALE seq=102 t_ms=5116 fan=0 servo=90 flags=0x20 ack=8 tick=227
+STATE_STALE seq=103 t_ms=5166 fan=0 servo=90 flags=0x20 ack=8 tick=227
+STATE_STALE seq=104 t_ms=5216 fan=0 servo=90 flags=0x20 ack=8 tick=227
+STATE_STALE seq=105 t_ms=5266 fan=0 servo=90 flags=0x20 ack=8 tick=227
+STATE_STALE seq=106 t_ms=5316 fan=0 servo=90 flags=0x20 ack=8 tick=227
+STATE_STALE seq=107 t_ms=5366 fan=0 servo=90 flags=0x20 ack=8 tick=227
+STATE_STALE seq=108 t_ms=5416 fan=0 servo=90 flags=0x20 ack=8 tick=227
+STATE_STALE seq=109 t_ms=5466 fan=0 servo=90 flags=0x20 ack=8 tick=227
+STATE_STALE seq=110 t_ms=5516 fan=0 servo=90 flags=0x20 ack=8 tick=227
+STATE_STALE seq=111 t_ms=5566 fan=0 servo=90 flags=0x20 ack=8 tick=227
+STATE_STALE seq=112 t_ms=5616 fan=0 servo=90 flags=0x20 ack=8 tick=228
+STATE_STALE seq=113 t_ms=5666 fan=0 servo=90 flags=0x20 ack=8 tick=228
+STATE_STALE seq=114 t_ms=5716 fan=0 servo=90 flags=0x20 ack=8 tick=228
+STATE_STALE seq=115 t_ms=5766 fan=0 servo=90 flags=0x20 ack=8 tick=228
+STATE_STALE seq=116 t_ms=5816 fan=0 servo=90 flags=0x20 ack=8 tick=228
+STATE_STALE seq=117 t_ms=5866 fan=0 servo=90 flags=0x20 ack=8 tick=228
+STATE_STALE seq=118 t_ms=5916 fan=0 servo=90 flags=0x20 ack=8 tick=228
+STATE_STALE seq=119 t_ms=5966 fan=0 servo=90 flags=0x20 ack=8 tick=228
+STATE_STALE seq=120 t_ms=6016 fan=0 servo=90 flags=0x20 ack=8 tick=228
+STATE_STALE seq=121 t_ms=6066 fan=0 servo=90 flags=0x20 ack=8 tick=228
+STATE_STALE seq=122 t_ms=6116 fan=0 servo=90 flags=0x20 ack=8 tick=228
+STATE_STALE seq=123 t_ms=6166 fan=0 servo=90 flags=0x20 ack=8 tick=228
+STATE_STALE seq=124 t_ms=6216 fan=0 servo=90 flags=0x20 ack=8 tick=228
+STATE_STALE seq=125 t_ms=6266 fan=0 servo=90 flags=0x20 ack=8 tick=228
+STATE_STALE seq=126 t_ms=6316 fan=0 servo=90 flags=0x20 ack=8 tick=228
+STATE_STALE seq=127 t_ms=6366 fan=0 servo=90 flags=0x20 ack=8 tick=228
+STATE_STALE seq=128 t_ms=6416 fan=0 servo=90 flags=0x20 ack=8 tick=229
+STATE_STALE seq=129 t_ms=6466 fan=0 servo=90 flags=0x20 ack=8 tick=229
+STATE_STALE seq=130 t_ms=6516 fan=0 servo=90 flags=0x20 ack=8 tick=229
+STATE_STALE seq=131 t_ms=6566 fan=0 servo=90 flags=0x20 ack=8 tick=229
+STATE_STALE seq=132 t_ms=6616 fan=0 servo=90 flags=0x20 ack=8 tick=229
+STATE_STALE seq=133 t_ms=6666 fan=0 servo=90 flags=0x20 ack=8 tick=229
+STATE_STALE seq=134 t_ms=6716 fan=0 servo=90 flags=0x20 ack=8 tick=229
+LINK first_state ticks_since_com3_init=4 ticks_since_kernel_timer_start=229 dev_seq=0 dev_t_ms=16 stale_before=56 rejected_before=1
+LINK collect consecutive=40 rejected_since_first=0 flags=0x20 (LINK_LOST expected: no kernel frame yet)
+LINK ping seq=1 NOT acked (ack_seq=0)
+LINK ping seq=2 acked after 1 ticks flags=0x0
+LINK ping seq=3 acked after 2 ticks flags=0x0
+LINK ping seq=4 acked after 3 ticks flags=0x0
+LINK ping seq=5 acked after 5 ticks flags=0x0
+LINK ping seq=6 acked after 1 ticks flags=0x0
+LINK ping seq=7 acked after 3 ticks flags=0x0
+LINK ping seq=8 acked after 4 ticks flags=0x0
+LINK pings sent=8 acked=7 last_ack=8
+LINK SUMMARY stale=56 restarts=0 states=78 rejected=1 lsr_err=0 gaps=0 best_consecutive=78 final_run=78 run_ticks=337 rate_mhz=22848 dev_period_us=50000 fan_max=0 servo_min=90 servo_max=90
+LINK REJECTS cobs=1 oversize=0 short=0 len=0 crc=0 type=0 body_len=0 field=0
+LINK FAIL ack_seq did not follow every PING

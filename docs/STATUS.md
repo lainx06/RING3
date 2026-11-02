@@ -15,10 +15,16 @@ milestone.
   fails on the Nov 1 code. 20 pytest tests (~31 s), 17 ktests, 674 host checks (633 permissive); any
   `dropped > 0` or `PANIC` fails every QEMU run. `docs/evidence/T-02F/README.md`. T-03b / T-04 can build on
   `kernel/`.
+- **T-01B complete** (2026-11-01 22:55 ET): real `ring3cell` firmware reaches the kernel as COM3 (QEMU third
+  `-serial /dev/ttyACM0`, 0x3E8, **IRQ 4** shared with COM1). `make test-link` 3/3 back to back: 77 contiguous
+  `STATE`, 8/8 `PING` acked, fan 0. First new-boot `STATE` ≈ 0.6 s after QEMU start; 18.9 Hz on the kernel clock
+  (device clock 20.0 Hz). **T-04 notes:** stale pre-reset frames (sometimes the same block repeated) arrive after
+  the open, so sync on the new boot (`t_ms`/`seq` restart); the reset follows QEMU's open, not COM3 init.
+  `docs/evidence/T-01B/README.md`. usbipd/QEMU COM3 path: verified; D-20 fallback not needed.
 - Second terminal Nov 1: **T-06** (Opus 5.5 / high) once T-01 has made its first commit (D-42).
 - User, while T-01 runs: `SETUP.md` step 8 (usbipd + Uno + arduino-cli in Ubuntu), then wiring per
   `hardware/wiring.md` in the afternoon.
-- Open: track fit (D-18) → ask in Discord. usbipd/QEMU COM3 path unverified (T-01B). WSLg unverified (setup).
+- Open: track fit (D-18) → ask in Discord. WSLg unverified (setup).
 - Spend: $0 of the $30 project cap (estimate, not billing).
 
 ## T-01 progress (builder adds one line per milestone)
@@ -57,6 +63,7 @@ milestone.
 | T-01 | 2026-11-01 13:06 ET | Fable 5.1 / high | 2026-11-01 13:30 ET; K1–K4 pass 13:22 ET; A1–A8 pass | `docs/evidence/T-01/README.md` |
 | T-02 | 2026-11-01 19:36 ET | Fable 5.1 / high | 2026-11-01 20:11 ET; A1–A9 pass; M3 before the 11:59 PM time-box | `docs/evidence/T-02/README.md` |
 | T-02F | 2026-11-02 | Fable 5.1 / high | 2026-11-02; A1–A5 pass (A3: halt / fan(0) under pending and killing covered on the host build; the kernel cannot reach those states with a syscall, see the README); doc merge D-46..D-52 committed first | `docs/evidence/T-02F/README.md` |
+| T-01B | 2026-11-01 22:35 ET | Opus 5.5 / high | 2026-11-01 22:55 ET; A1–A4 pass + step 5 (fan never moved); 1 test-program fix logged (stale pre-reset frames) | `docs/evidence/T-01B/README.md` |
 | T-06 | 2026-11-01 16:58 ET | Opus 5.5 / high | **21:46 ET: A1 A2 A3 A6 A7 pass; A5 pass except the alarm outputs; A4 part 1 pass. Pending Nov 2 (parts arrive): LCD, buzzer, RGB wiring → `bringup` part 2 (A4) + link-loss alarm (A5.8).** Firmware `222d26d` flashed. Lead decisions D-46..D-50 applied; 10 test-program changes logged, none loosened an expectation | `docs/evidence/T-06/README.md` |
 
 ## Last evidence

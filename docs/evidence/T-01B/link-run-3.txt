@@ -1,0 +1,111 @@
+$ make test-link   # [ms] = host time since make started; QEMU command echoed by make
+# 2026-11-02T03:49:01Z run 3 of 3
+
+[    25 ms] make KTEST_LINK=1
+[    26 ms] make[1]: Entering directory '<repo>'
+[    56 ms] make[1]: Nothing to be done for 'all'.
+[    56 ms] make[1]: Leaving directory '<repo>'
+[    56 ms] qemu-system-i386 -m 64 -display none -serial stdio -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -serial null -serial /dev/ttyACM0 -kernel build/kernel-link.elf -append "linktest" ; rc=$?; \
+[    56 ms]   echo "qemu exit code $rc"; [ $rc -eq 33 ]
+[   139 ms] RING3 0.1.0 build 77c4218
+[   139 ms] policy: default sha256=f70fb85bccf007953fccdbd0aa9cb3df311d1fe7a372b1dfe93f1428affed7b3
+[   139 ms] memory: 65023 KiB usable
+[   140 ms] init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, 3741 frames free
+[   140 ms] TIMER t0=0
+[   390 ms] TIMER t1=25
+[   400 ms] LINK com3 init port=0x3e8 baud=115200 8N1 ier=0 mcr=0x3 tick=25
+[   401 ms] FRAME_DROP cobs tick=26
+[   401 ms] STATE_STALE seq=79 t_ms=3966 fan=0 servo=90 flags=0x0 ack=8 tick=26
+[   672 ms] STATE seq=0 t_ms=16 fan=0 servo=90 dist=65535 estop=0 flags=0x0 ack=0 tick=53
+[   672 ms] LINK first_state ticks_since_com3_init=28 ticks_since_kernel_timer_start=53 dev_seq=0 dev_t_ms=16 stale_before=1 rejected_before=1
+[   724 ms] STATE seq=1 t_ms=66 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=0 tick=58
+[   776 ms] STATE seq=2 t_ms=116 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=0 tick=63
+[   828 ms] STATE seq=3 t_ms=166 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=0 tick=68
+[   884 ms] STATE seq=4 t_ms=216 fan=0 servo=90 dist=89 estop=0 flags=0x0 ack=0 tick=74
+[   936 ms] STATE seq=5 t_ms=266 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=0 tick=79
+[   988 ms] STATE seq=6 t_ms=316 fan=0 servo=90 dist=92 estop=0 flags=0x0 ack=0 tick=84
+[  1040 ms] STATE seq=7 t_ms=366 fan=0 servo=90 dist=92 estop=0 flags=0x0 ack=0 tick=89
+[  1097 ms] STATE seq=8 t_ms=416 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=0 tick=95
+[  1148 ms] STATE seq=9 t_ms=466 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=0 tick=100
+[  1200 ms] STATE seq=10 t_ms=516 fan=0 servo=90 dist=92 estop=0 flags=0x0 ack=0 tick=106
+[  1252 ms] STATE seq=11 t_ms=566 fan=0 servo=90 dist=92 estop=0 flags=0x0 ack=0 tick=111
+[  1308 ms] STATE seq=12 t_ms=616 fan=0 servo=90 dist=91 estop=0 flags=0x0 ack=0 tick=116
+[  1360 ms] STATE seq=13 t_ms=666 fan=0 servo=90 dist=92 estop=0 flags=0x0 ack=0 tick=122
+[  1412 ms] STATE seq=14 t_ms=716 fan=0 servo=90 dist=92 estop=0 flags=0x0 ack=0 tick=127
+[  1469 ms] STATE seq=15 t_ms=766 fan=0 servo=90 dist=92 estop=0 flags=0x0 ack=0 tick=132
+[  1520 ms] STATE seq=16 t_ms=816 fan=0 servo=90 dist=92 estop=0 flags=0x0 ack=0 tick=137
+[  1574 ms] STATE seq=17 t_ms=866 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=0 tick=143
+[  1624 ms] STATE seq=18 t_ms=916 fan=0 servo=90 dist=92 estop=0 flags=0x0 ack=0 tick=148
+[  1676 ms] STATE seq=19 t_ms=966 fan=0 servo=90 dist=92 estop=0 flags=0x0 ack=0 tick=153
+[  1732 ms] STATE seq=20 t_ms=1016 fan=0 servo=90 dist=92 estop=0 flags=0x0 ack=0 tick=159
+[  1785 ms] STATE seq=21 t_ms=1067 fan=0 servo=90 dist=94 estop=0 flags=0x20 ack=0 tick=164
+[  1836 ms] STATE seq=22 t_ms=1116 fan=0 servo=90 dist=93 estop=0 flags=0x20 ack=0 tick=169
+[  1888 ms] STATE seq=23 t_ms=1166 fan=0 servo=90 dist=92 estop=0 flags=0x20 ack=0 tick=174
+[  1944 ms] STATE seq=24 t_ms=1216 fan=0 servo=90 dist=93 estop=0 flags=0x20 ack=0 tick=180
+[  1997 ms] STATE seq=25 t_ms=1266 fan=0 servo=90 dist=93 estop=0 flags=0x20 ack=0 tick=185
+[  2048 ms] STATE seq=26 t_ms=1316 fan=0 servo=90 dist=93 estop=0 flags=0x20 ack=0 tick=190
+[  2100 ms] STATE seq=27 t_ms=1366 fan=0 servo=90 dist=93 estop=0 flags=0x20 ack=0 tick=196
+[  2156 ms] STATE seq=28 t_ms=1416 fan=0 servo=90 dist=93 estop=0 flags=0x20 ack=0 tick=201
+[  2208 ms] STATE seq=29 t_ms=1466 fan=0 servo=90 dist=93 estop=0 flags=0x20 ack=0 tick=206
+[  2260 ms] STATE seq=30 t_ms=1516 fan=0 servo=90 dist=93 estop=0 flags=0x20 ack=0 tick=212
+[  2318 ms] STATE seq=31 t_ms=1566 fan=0 servo=90 dist=93 estop=0 flags=0x20 ack=0 tick=217
+[  2368 ms] STATE seq=32 t_ms=1616 fan=0 servo=90 dist=93 estop=0 flags=0x20 ack=0 tick=222
+[  2420 ms] STATE seq=33 t_ms=1666 fan=0 servo=90 dist=93 estop=0 flags=0x20 ack=0 tick=228
+[  2472 ms] STATE seq=34 t_ms=1716 fan=0 servo=90 dist=93 estop=0 flags=0x20 ack=0 tick=233
+[  2524 ms] STATE seq=35 t_ms=1766 fan=0 servo=90 dist=93 estop=0 flags=0x20 ack=0 tick=238
+[  2580 ms] STATE seq=36 t_ms=1816 fan=0 servo=90 dist=93 estop=0 flags=0x20 ack=0 tick=244
+[  2633 ms] STATE seq=37 t_ms=1866 fan=0 servo=90 dist=93 estop=0 flags=0x20 ack=0 tick=249
+[  2684 ms] STATE seq=38 t_ms=1916 fan=0 servo=90 dist=93 estop=0 flags=0x20 ack=0 tick=254
+[  2736 ms] STATE seq=39 t_ms=1966 fan=0 servo=90 dist=93 estop=0 flags=0x20 ack=0 tick=259
+[  2736 ms] LINK collect consecutive=40 rejected_since_first=0 flags=0x20 (LINK_LOST expected: no kernel frame yet)
+[  2792 ms] STATE seq=40 t_ms=2016 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=1 tick=265
+[  2792 ms] LINK ping seq=1 acked after 6 ticks flags=0x0
+[  2844 ms] STATE seq=41 t_ms=2066 fan=0 servo=90 dist=91 estop=0 flags=0x0 ack=1 tick=270
+[  2896 ms] STATE seq=42 t_ms=2116 fan=0 servo=90 dist=92 estop=0 flags=0x0 ack=1 tick=275
+[  2952 ms] STATE seq=43 t_ms=2166 fan=0 servo=90 dist=91 estop=0 flags=0x0 ack=1 tick=281
+[  3005 ms] STATE seq=44 t_ms=2216 fan=0 servo=90 dist=92 estop=0 flags=0x0 ack=2 tick=286
+[  3005 ms] LINK ping seq=2 acked after 2 ticks flags=0x0
+[  3056 ms] STATE seq=45 t_ms=2266 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=2 tick=291
+[  3108 ms] STATE seq=46 t_ms=2316 fan=0 servo=90 dist=91 estop=0 flags=0x0 ack=2 tick=296
+[  3160 ms] STATE seq=47 t_ms=2366 fan=0 servo=90 dist=91 estop=0 flags=0x0 ack=2 tick=302
+[  3216 ms] STATE seq=48 t_ms=2416 fan=0 servo=90 dist=92 estop=0 flags=0x0 ack=2 tick=307
+[  3268 ms] STATE seq=49 t_ms=2466 fan=0 servo=90 dist=92 estop=0 flags=0x0 ack=3 tick=312
+[  3268 ms] LINK ping seq=3 acked after 3 ticks flags=0x0
+[  3320 ms] STATE seq=50 t_ms=2516 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=3 tick=318
+[  3372 ms] STATE seq=51 t_ms=2566 fan=0 servo=90 dist=92 estop=0 flags=0x0 ack=3 tick=323
+[  3429 ms] STATE seq=52 t_ms=2616 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=3 tick=328
+[  3481 ms] STATE seq=53 t_ms=2666 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=3 tick=334
+[  3533 ms] STATE seq=54 t_ms=2716 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=4 tick=339
+[  3533 ms] LINK ping seq=4 acked after 5 ticks flags=0x0
+[  3589 ms] STATE seq=55 t_ms=2766 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=4 tick=344
+[  3641 ms] STATE seq=56 t_ms=2816 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=4 tick=350
+[  3693 ms] STATE seq=57 t_ms=2866 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=4 tick=355
+[  3745 ms] STATE seq=58 t_ms=2916 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=5 tick=360
+[  3745 ms] LINK ping seq=5 acked after 1 ticks flags=0x0
+[  3801 ms] STATE seq=59 t_ms=2966 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=5 tick=366
+[  3855 ms] STATE seq=60 t_ms=3016 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=5 tick=371
+[  3906 ms] STATE seq=61 t_ms=3066 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=5 tick=376
+[  3957 ms] STATE seq=62 t_ms=3116 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=5 tick=381
+[  4009 ms] STATE seq=63 t_ms=3166 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=6 tick=386
+[  4009 ms] LINK ping seq=6 acked after 2 ticks flags=0x0
+[  4065 ms] STATE seq=64 t_ms=3216 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=6 tick=392
+[  4118 ms] STATE seq=65 t_ms=3266 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=6 tick=397
+[  4172 ms] STATE seq=66 t_ms=3316 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=6 tick=403
+[  4225 ms] STATE seq=67 t_ms=3366 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=6 tick=408
+[  4278 ms] STATE seq=68 t_ms=3416 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=7 tick=413
+[  4278 ms] LINK ping seq=7 acked after 4 ticks flags=0x0
+[  4330 ms] STATE seq=69 t_ms=3466 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=7 tick=419
+[  4382 ms] STATE seq=70 t_ms=3516 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=7 tick=424
+[  4438 ms] STATE seq=71 t_ms=3566 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=7 tick=429
+[  4492 ms] STATE seq=72 t_ms=3616 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=8 tick=435
+[  4492 ms] LINK ping seq=8 acked after 1 ticks flags=0x0
+[  4542 ms] STATE seq=73 t_ms=3666 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=8 tick=440
+[  4594 ms] STATE seq=74 t_ms=3716 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=8 tick=445
+[  4650 ms] STATE seq=75 t_ms=3766 fan=0 servo=90 dist=89 estop=0 flags=0x0 ack=8 tick=451
+[  4703 ms] STATE seq=76 t_ms=3816 fan=0 servo=90 dist=93 estop=0 flags=0x0 ack=8 tick=456
+[  4729 ms] LINK pings sent=8 acked=8 last_ack=8
+[  4730 ms] LINK SUMMARY stale=1 restarts=0 states=77 rejected=1 lsr_err=0 gaps=0 best_consecutive=77 final_run=77 run_ticks=403 rate_mhz=18858 dev_period_us=50000 fan_max=0 servo_min=90 servo_max=90
+[  4730 ms] LINK REJECTS cobs=1 oversize=0 short=0 len=0 crc=0 type=0 body_len=0 field=0
+[  4730 ms] LINK PASS
+[  4738 ms] qemu exit code 33
+# make exit status 0
