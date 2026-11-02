@@ -10,6 +10,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 MODELS_TOML = REPO / "config" / "models.toml"
 BUDGET_TOML = REPO / "config" / "budget.toml"
+MIN_OUTPUT_TOKENS = 16  # Responses API: max_output_tokens >= 16; it bounds reasoning + visible output (D-55)
 
 
 class ConfigError(ValueError):
@@ -22,6 +23,7 @@ class Price:
     output_uusd_per_mtok: int
     source: str
     checked: str
+    cached_input_uusd_per_mtok: int | None = None  # None: cached input tokens are priced as input tokens
 
 
 @dataclass(frozen=True)
@@ -30,7 +32,7 @@ class ModelConfig:
     endpoint: str
     max_output_tokens: int
     timeout_s: int
-    price: Price | None  # None = unset / [UNVERIFIED]: the ledger refuses to reserve
+    price: Price | None  # None = unset: the ledger refuses to reserve (fails closed)
 
 
 def _int(d: dict, key: str, lo: int, hi: int) -> int:
@@ -54,7 +56,12 @@ def _price(d: dict) -> Price | None:
         raise ConfigError("price_checked must be YYYY-MM-DD")
     pin = _int(d, "price_input_uusd_per_mtok", 1, 10**9)
     pout = _int(d, "price_output_uusd_per_mtok", 1, 10**9)
-    return Price(pin, pout, src, checked)
+    pcached = None
+    if "price_cached_input_uusd_per_mtok" in d:
+        pcached = _int(d, "price_cached_input_uusd_per_mtok", 1, 10**9)
+        if pcached > pin:
+            raise ConfigError("price_cached_input_uusd_per_mtok must not exceed the input price")
+    return Price(pin, pout, src, checked, pcached)
 
 
 def load_model_config(path: Path = MODELS_TOML) -> ModelConfig:
@@ -71,7 +78,7 @@ def load_model_config(path: Path = MODELS_TOML) -> ModelConfig:
     return ModelConfig(
         id=mid,
         endpoint=endpoint,
-        max_output_tokens=_int(m, "max_output_tokens", 1, 65536),
+        max_output_tokens=_int(m, "max_output_tokens", MIN_OUTPUT_TOKENS, 65536),
         timeout_s=_int(m, "timeout_s", 1, 600),
         price=_price(m),
     )

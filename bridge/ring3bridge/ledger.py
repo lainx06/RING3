@@ -65,6 +65,7 @@ class Reservation:
     max_output_tokens: int
     price_in: int
     price_out: int
+    price_cached: int = 0  # 0 = no cached-input price: cached tokens settle at the input price
 
 
 def _canon(rec: dict) -> str:
@@ -88,6 +89,7 @@ class Ledger:
                 rec = json.loads(line)
                 if rec["kind"] == "reserve":
                     vals = [rec[k] for k in ("id", "uusd", "in_tok", "out_tok", "p_in", "p_out")]
+                    vals.append(rec.get("p_cached", 0))
                     if not all(type(v) is int and v >= 0 for v in vals) or vals[0] in self._res:
                         raise ValueError(f"line {n}")
                     r = Reservation(vals[0], str(rec["run"]), *vals[1:])
@@ -135,7 +137,7 @@ class Ledger:
         if self._error:
             raise BudgetRefused("ledger_unreadable", self._error)
         if price is None:
-            raise BudgetRefused("no_price", "model price unset in config/models.toml [UNVERIFIED]")
+            raise BudgetRefused("no_price", "model price unset in config/models.toml")
         if not run_budget_uusd or run_budget_uusd <= 0:
             raise BudgetRefused("no_run_budget", "--budget-usd is required")
         tin = request_tokens(request)
@@ -150,23 +152,37 @@ class Ledger:
             raise BudgetRefused("project_cap", f"{fmt_usd(amount)} would pass the project cap")
         rid = max(self._res, default=0) + 1
         r = Reservation(rid, run_id, amount, tin, max_output_tokens, price.input_uusd_per_mtok,
-                        price.output_uusd_per_mtok)  # fmt: skip
+                        price.output_uusd_per_mtok, price.cached_input_uusd_per_mtok or 0)  # fmt: skip
         self._append({"kind": "reserve", "id": rid, "run": run_id, "uusd": amount, "in_tok": tin,
                       "out_tok": max_output_tokens, "p_in": r.price_in, "p_out": r.price_out,
-                      "t_ns": time.time_ns()})  # fmt: skip
+                      "p_cached": r.price_cached, "t_ns": time.time_ns()})  # fmt: skip
         self._res[rid] = r
         return r
 
     def settle(
-        self, r: Reservation, input_tokens: int | None = None, output_tokens: int | None = None
+        self,
+        r: Reservation,
+        input_tokens: int | None = None,
+        output_tokens: int | None = None,
+        cached_tokens: int | None = None,
     ) -> int:
-        """Settles with reported usage; unknown usage settles at the full reservation (conservative)."""
+        """Settles with reported usage; unknown usage settles at the full reservation (conservative).
+
+        ``cached_tokens`` (a subset of ``input_tokens``, Responses API ``usage.input_tokens_details``) are
+        priced at the cached-input price when the reservation has one; unknown or out of range -> none."""
         if r.id in self._settled:
             raise ValueError("already settled")
         if input_tokens is None or output_tokens is None or input_tokens < 0 or output_tokens < 0:
             actual = r.uusd
         else:
-            actual = cost_uusd(input_tokens, r.price_in) + cost_uusd(output_tokens, r.price_out)
+            cached = cached_tokens if cached_tokens is not None and 0 <= cached_tokens <= input_tokens else 0
+            if not r.price_cached:
+                cached = 0
+            actual = (
+                cost_uusd(input_tokens - cached, r.price_in)
+                + cost_uusd(cached, r.price_cached)
+                + cost_uusd(output_tokens, r.price_out)
+            )
         self._append({"kind": "settle", "id": r.id, "uusd": actual, "t_ns": time.time_ns()})
         self._settled[r.id] = actual
         return actual

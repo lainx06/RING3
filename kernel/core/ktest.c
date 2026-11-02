@@ -135,6 +135,46 @@ static void t_cobs(void)
         CHECK(cobs_decode(enc, e, dec, 10) == (size_t)-1);         /* output too small */
     }
     end();
+
+    begin("cobs_rejects_noncanonical");
+    {
+        /* D-55 / LINK_ABI §1: 254 non-zero bytes encode as FF + 254 bytes (255 B). The same bytes with a
+         * trailing empty group (FF + 254 bytes + 01) decode to the same input on a lenient decoder; the
+         * kernel rejects that spelling like the bridge does. */
+        for (size_t i = 0; i < 254; i++)
+            src[i] = (uint8_t)(1 + (i % 255));
+        size_t e = cobs_encode(src, 254, enc, sizeof enc);
+        CHECK(e == 255 && enc[0] == 0xFF);
+        CHECK(cobs_decode(enc, e, dec, sizeof dec) == 254 && memcmp(dec, src, 254) == 0);
+        enc[255] = 0x01;
+        CHECK(cobs_decode(enc, 256, dec, sizeof dec) == (size_t)-1);
+        /* ... but FF + 254 bytes + 01 + 01 is the canonical encoding of 254 bytes then a zero */
+        enc[256] = 0x01;
+        CHECK(cobs_decode(enc, 257, dec, sizeof dec) == 255 && dec[254] == 0);
+        /* and a short frame ending in an empty group after a non-full group ("x" then a zero) stays valid */
+        const uint8_t x0[] = { 0x02, 0x78, 0x01 };
+        CHECK(cobs_decode(x0, 3, dec, sizeof dec) == 2 && dec[0] == 0x78 && dec[1] == 0);
+        /* a 0xFF group followed by more data is fine (255 non-zero bytes) */
+        for (size_t i = 0; i < 255; i++)
+            src[i] = (uint8_t)(1 + (i % 255));
+        CHECK(roundtrip(src, 255));
+        /* every decodable short input re-encodes to itself (exhaustive over 1..3 bytes, values 0..3) */
+        int canon_ok = 1;
+        for (unsigned v = 0; v < 64 && canon_ok; v++) {
+            uint8_t t[3] = { (uint8_t)(v & 3), (uint8_t)((v >> 2) & 3), (uint8_t)((v >> 4) & 3) };
+            for (size_t n = 1; n <= 3 && canon_ok; n++) {
+                size_t d = cobs_decode(t, n, dec, sizeof dec);
+                if (d == (size_t)-1)
+                    continue;
+                uint8_t re[8];
+                size_t r = cobs_encode(dec, d, re, sizeof re);
+                if (r != n || memcmp(re, t, n) != 0)
+                    canon_ok = 0;
+            }
+        }
+        CHECK(canon_ok);
+    }
+    end();
 }
 
 /* ---- frame allocator ---- */

@@ -1,4 +1,4 @@
-"""Muse Spark adapter over a ``Transport`` (D-06, ARCHITECTURE §6, INV-09).
+"""Muse Spark adapter over a ``Transport`` (D-06, D-55, ARCHITECTURE §6, INV-09).
 
 Order for every request, enforced here:
   1. build the request body (no key in it);
@@ -9,11 +9,14 @@ Order for every request, enforced here:
 The first 401/403, any other non-200 status or any transport error stops the client: every later ``ask()``
 raises ``ModelStop`` without sending.
 
-[UNVERIFIED] Request and response field names below (``model``, ``instructions``, ``input``,
-``max_output_tokens``; ``output[].content[].text`` with ``type == "output_text"``; ``usage.input_tokens`` /
-``usage.output_tokens``) follow the common Responses-API shape. They were not checked against Meta's public
-API docs in T-03a (no network access to Meta). The endpoint and model ID come from config/models.toml
-(ARCHITECTURE §6, seen in the authenticated catalog 2026-10-31).
+Request and response shape: Meta's Responses API (https://dev.meta.ai/docs/protocols/responses, checked by
+the lead on 2026-11-01, D-55): ``POST <endpoint>`` with ``model``, ``instructions`` (re-sent every turn),
+``input``, ``max_output_tokens`` (>= 16; it bounds reasoning and visible output together, so the reservation
+takes it in full) and ``store: false``. The reply text is ``output[].content[].text`` where
+``type == "output_text"``; usage is ``usage.input_tokens``, ``usage.output_tokens`` and
+``usage.input_tokens_details.cached_tokens``; ``status`` must be ``"completed"``, anything else (incomplete,
+failed, ...) is an invalid reply. ``reasoning.effort`` is not sent (``"none"`` is rejected with HTTP 400).
+Structured output (``text.format``) is not used: the bridge's strict validation is authoritative either way.
 """
 
 from __future__ import annotations
@@ -26,6 +29,8 @@ from ring3bridge.config import ModelConfig
 from ring3bridge.eventlog import EventLog
 from ring3bridge.ledger import BudgetRefused, Ledger
 from ring3bridge.models.transport import Transport, TransportError
+
+STATUS_COMPLETED = "completed"
 
 
 class ModelStop(Exception):
@@ -42,27 +47,42 @@ class ModelReply:
     text: str  # the model's text, still untrusted: goes to strictjson.validate and nowhere else
     input_tokens: int | None
     output_tokens: int | None
+    cached_tokens: int | None = None
+    status: str = ""  # the reply's ``status`` field ("" when absent or not a string)
 
 
 def build_request(model_id: str, instructions: str, user_input: str, max_output_tokens: int) -> bytes:
-    """[UNVERIFIED] field names. Canonical JSON bytes, so the reservation is sized on exactly what is sent."""
+    """Responses API body (D-55). Canonical JSON bytes: the reservation is sized on exactly what is sent."""
     body = {
         "model": model_id,
         "instructions": instructions,
         "input": user_input,
         "max_output_tokens": max_output_tokens,
+        "store": False,
     }
     return json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
 
 
+def _nonneg_int(v: object) -> int | None:
+    return v if type(v) is int and v >= 0 else None
+
+
 def parse_response(body: bytes) -> ModelReply:
-    """[UNVERIFIED] field names. Never raises: anything unexpected yields text "" (strictjson rejects it)."""
+    """Responses API reply (D-55). Never raises: anything unexpected yields text "" (strictjson rejects it).
+
+    Text is taken only from a reply whose ``status`` is ``"completed"`` and that holds exactly one
+    ``output_text`` item. Usage is parsed whenever present so an incomplete reply still settles on real
+    numbers."""
     try:
         d = json.loads(body)
     except (ValueError, RecursionError):
         return ModelReply("", None, None)
+    if type(d) is not dict:
+        return ModelReply("", None, None)
+    status = d.get("status")
+    status = status if type(status) is str else ""
     texts: list[str] = []
-    out = d.get("output") if type(d) is dict else None
+    out = d.get("output")
     if type(out) is list:
         for item in out:
             content = item.get("content") if type(item) is dict else None
@@ -70,12 +90,14 @@ def parse_response(body: bytes) -> ModelReply:
                 for c in content:
                     if type(c) is dict and c.get("type") == "output_text" and type(c.get("text")) is str:
                         texts.append(c["text"])
-    usage = d.get("usage") if type(d) is dict else None
-    tin = usage.get("input_tokens") if type(usage) is dict else None
-    tout = usage.get("output_tokens") if type(usage) is dict else None
-    tin = tin if type(tin) is int and tin >= 0 else None
-    tout = tout if type(tout) is int and tout >= 0 else None
-    return ModelReply(texts[0] if len(texts) == 1 else "", tin, tout)
+    usage = d.get("usage")
+    usage = usage if type(usage) is dict else {}
+    tin = _nonneg_int(usage.get("input_tokens"))
+    tout = _nonneg_int(usage.get("output_tokens"))
+    details = usage.get("input_tokens_details")
+    cached = _nonneg_int(details.get("cached_tokens")) if type(details) is dict else None
+    text = texts[0] if len(texts) == 1 and status == STATUS_COMPLETED else ""
+    return ModelReply(text, tin, tout, cached, status)
 
 
 class MuseSparkClient:
@@ -122,7 +144,7 @@ class MuseSparkClient:
             failure = ModelStop(code, f"transport {e.kind}")
         if failure is not None:
             self.log.append("model_reply", status=0, bytes=0, error=failure.detail, reservation=res.id)
-            self._settle(res, None, None)
+            self._settle(res, None, None, None)
             self.stopped = failure
             raise failure
         blob = self.log.blob(resp.body)
@@ -130,17 +152,17 @@ class MuseSparkClient:
             "model_reply", status=resp.status, bytes=len(resp.body), blob=blob, reservation=res.id
         )
         if resp.status in (401, 403):
-            self._settle(res, None, None)
+            self._settle(res, None, None, None)
             self.stopped = ModelStop(abi.LINK_STOP_MODEL_AUTH, f"HTTP {resp.status}")
             raise self.stopped
         if resp.status != 200:
-            self._settle(res, None, None)
+            self._settle(res, None, None, None)
             self.stopped = ModelStop(abi.LINK_STOP_TRANSPORT, f"HTTP {resp.status}")
             raise self.stopped
         reply = parse_response(resp.body)
-        self._settle(res, reply.input_tokens, reply.output_tokens)
+        self._settle(res, reply.input_tokens, reply.output_tokens, reply.cached_tokens)
         return reply
 
-    def _settle(self, res, tin: int | None, tout: int | None) -> None:
-        actual = self.ledger.settle(res, tin, tout)
+    def _settle(self, res, tin: int | None, tout: int | None, cached: int | None) -> None:
+        actual = self.ledger.settle(res, tin, tout, cached)
         self.log.append("spend_settled", reservation=res.id, uusd=actual, usage_known=int(tin is not None))

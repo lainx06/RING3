@@ -29,10 +29,15 @@ FAKE_PRICE = Price(2_000_000, 8_000_000, "https://example.invalid/synthetic-test
 CFG = ModelConfig("muse-spark-1.3", "https://api.meta.ai/v1/responses", 512, 60, FAKE_PRICE)
 
 
-def ok_body(text='{"action":"call","op":"halt","args":{}}', tin=100, tout=12) -> bytes:
+def ok_body(text='{"action":"call","op":"halt","args":{}}', tin=100, tout=12, cached=0,
+            status="completed") -> bytes:  # fmt: skip
+    """A Responses API reply in the shape of Meta's docs (D-55)."""
     return json.dumps(
-        {"output": [{"type": "message", "content": [{"type": "output_text", "text": text}]}],
-         "usage": {"input_tokens": tin, "output_tokens": tout}}
+        {"id": "resp_test", "object": "response", "status": status, "model": CFG.id,
+         "output": [{"type": "message", "role": "assistant",
+                     "content": [{"type": "output_text", "text": text}]}],
+         "usage": {"input_tokens": tin, "output_tokens": tout,
+                   "input_tokens_details": {"cached_tokens": cached}}}
     ).encode()  # fmt: skip
 
 
@@ -140,21 +145,73 @@ def test_inv_09_stop_on_401(tmp_path, first, code):
 
 
 def test_parse_response_never_raises():
-    assert parse_response(ok_body("hi", 5, 6)).text == "hi"
-    assert parse_response(ok_body("hi", 5, 6)).input_tokens == 5
+    r = parse_response(ok_body("hi", 5, 6, cached=2))
+    assert (r.text, r.input_tokens, r.output_tokens, r.cached_tokens) == ("hi", 5, 6, 2)
+    assert r.status == "completed"
     for junk in (b"", b"[]", b"{", b'{"output":"x"}', b'{"output":[{"content":[{"type":"output_text"}]}]}',
                  b'{"usage":{"input_tokens":-1,"output_tokens":true}}', b"[" * 100000):  # fmt: skip
         r = parse_response(junk)
-        assert r.text == "" and r.input_tokens is None and r.output_tokens is None
+        assert r.text == "" and r.input_tokens is None and r.output_tokens is None and r.cached_tokens is None
     two = {
-        "output": [{"content": [{"type": "output_text", "text": "a"}, {"type": "output_text", "text": "b"}]}]
+        "status": "completed",
+        "output": [{"content": [{"type": "output_text", "text": "a"}, {"type": "output_text", "text": "b"}]}],
     }
     assert parse_response(json.dumps(two).encode()).text == ""  # more than one text: not one reply
 
 
-def test_request_body_has_no_secret_fields():
+def test_parse_response_status_must_be_completed():
+    """D-55: any status but "completed" (incomplete, failed, in_progress, missing) is an invalid reply; the
+    usage is still read so the reservation settles on real numbers."""
+    for status in ("incomplete", "failed", "in_progress", "queued", "cancelled", "", None, 1, "Completed"):
+        body = json.loads(ok_body("hi", 50, 60))
+        if status is None:
+            del body["status"]
+        else:
+            body["status"] = status
+        r = parse_response(json.dumps(body).encode())
+        assert r.text == "", status
+        assert (r.input_tokens, r.output_tokens) == (50, 60), status
+    assert parse_response(ok_body("hi", 50, 60)).text == "hi"
+    # usage details that are not a dict or hold junk: cached unknown, the rest still parsed
+    body = json.loads(ok_body("hi", 50, 60))
+    body["usage"]["input_tokens_details"] = "x"
+    r = parse_response(json.dumps(body).encode())
+    assert (r.text, r.input_tokens, r.cached_tokens) == ("hi", 50, None)
+    body["usage"]["input_tokens_details"] = {"cached_tokens": -4}
+    assert parse_response(json.dumps(body).encode()).cached_tokens is None
+
+
+def test_incomplete_reply_settles_on_usage_and_counts_as_invalid(tmp_path):
+    body = ok_body("hi", 300, 100, status="incomplete")
+    client, t, ledger, log = make(tmp_path, [TransportResponse(200, body)])
+    r = client.ask("ctx", "req")
+    assert r.text == "" and r.status == "incomplete"
+    assert client.stopped is None  # an invalid reply is the run loop's business (two in a row -> STOP)
+    assert ledger.settled_uusd() == 300 * 2 + 100 * 8  # settled on the reported usage, not the reservation
+    assert types(log)[-2:] == ["model_reply", "spend_settled"]
+
+
+def test_cached_tokens_reach_the_ledger(tmp_path):
+    cfg_cached = ModelConfig(
+        CFG.id,
+        CFG.endpoint,
+        512,
+        60,
+        Price(2_000_000, 8_000_000, FAKE_PRICE.source, FAKE_PRICE.checked, 500_000),
+    )
+    client, t, ledger, log = make(tmp_path, [TransportResponse(200, ok_body("x", 1000, 10, cached=400))])
+    client.config = cfg_cached
+    client.ask("ctx", "req")
+    assert ledger.settled_uusd() == 600 * 2 + 400 * 0.5 + 10 * 8  # 1480
+
+
+def test_request_body_matches_the_responses_api():
+    """D-55: exactly the documented fields, store false, no key, no reasoning.effort."""
     b = json.loads(build_request("muse-spark-1.3", "ctx", "req", 512))
-    assert set(b) == {"model", "instructions", "input", "max_output_tokens"}
+    assert set(b) == {"model", "instructions", "input", "max_output_tokens", "store"}
+    assert b["store"] is False and b["max_output_tokens"] == 512 and b["model"] == "muse-spark-1.3"
+    assert b["instructions"] == "ctx" and b["input"] == "req"
+    assert "reasoning" not in b and "Authorization" not in build_request("m", "c", "r", 16).decode()
 
 
 # ---- secrets --------------------------------------------------------------------------------------------

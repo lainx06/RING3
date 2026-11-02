@@ -22,17 +22,44 @@ def ledger(tmp_path):
     return Ledger(project_cap_uusd=30_000_000, path=tmp_path / "ledger.jsonl")
 
 
-def test_shipped_config_has_no_price_and_fails_closed(tmp_path):
+def test_shipped_config_has_the_official_price(tmp_path):
+    """D-55: the shipped price is Meta's official Standard price with its source URL and check date."""
     cfg = load_model_config()
     assert cfg.id == "muse-spark-1.3"
     assert cfg.endpoint == "https://api.meta.ai/v1/responses"
-    assert cfg.price is None  # [UNVERIFIED]: not from Meta's official pricing page
+    assert cfg.price == Price(
+        1_250_000, 4_250_000, "https://dev.meta.ai/docs/pricing-rate-limits", "2026-11-01", 150_000
+    )
+    assert cfg.max_output_tokens >= 16  # Responses API minimum; bounds reasoning + visible output
     assert load_project_cap() == 30_000_000  # $30, D-12
     led = Ledger(load_project_cap(), tmp_path / "l.jsonl")
+    r = led.reserve("run1", "hello", cfg.max_output_tokens, cfg.price, usd_to_uusd("1"))
+    assert r.uusd == cost_uusd(5, 1_250_000) + cost_uusd(cfg.max_output_tokens, 4_250_000)
+    assert r.price_cached == 150_000
+
+
+def test_no_price_fails_closed(tmp_path):
+    """A config without a price (the T-03a state) reserves nothing and writes nothing."""
+    led = Ledger(30_000_000, tmp_path / "l.jsonl")
     with pytest.raises(BudgetRefused) as e:
-        led.reserve("run1", "hello", cfg.max_output_tokens, cfg.price, usd_to_uusd("1"))
+        led.reserve("run1", "hello", 512, None, usd_to_uusd("1"))
     assert e.value.reason == "no_price"
     assert not (tmp_path / "l.jsonl").exists()  # nothing reserved, nothing logged as spent
+
+
+def test_cached_tokens_settle_at_the_cached_price(ledger):
+    cached_price = Price(2_000_000, 8_000_000, "https://example.invalid/synthetic", "2026-11-02", 500_000)
+    r = ledger.reserve("run1", "abc", 100, cached_price, 1_000_000)
+    # 1000 input of which 400 cached: 600 * 2 + 400 * 0.5 + 10 * 8 = 1200 + 200 + 80
+    assert ledger.settle(r, 1000, 10, 400) == 1480
+    r = ledger.reserve("run1", "abc", 100, cached_price, 1_000_000)
+    assert ledger.settle(r, 1000, 10, None) == 2080  # unknown cached count: none cached
+    r = ledger.reserve("run1", "abc", 100, cached_price, 1_000_000)
+    assert ledger.settle(r, 1000, 10, 5000) == 2080  # cached > input: not trusted, none cached
+    r = ledger.reserve("run1", "abc", 100, FAKE, 1_000_000)  # no cached price: input price applies
+    assert ledger.settle(r, 1000, 10, 400) == 2080
+    again = Ledger(30_000_000, ledger.path)
+    assert again.settled_uusd() == ledger.settled_uusd()
 
 
 def test_reservation_size_is_bytes_plus_max_output(ledger):
@@ -141,3 +168,13 @@ def test_config_price_needs_source_and_date(tmp_path):
     p.write_text(base.replace("muse-spark-1.3", "muse-spark-1.3-contributor"))
     with pytest.raises(ConfigError):
         load_model_config(p)  # D-06
+    priced = base + "price_input_uusd_per_mtok = 10\nprice_output_uusd_per_mtok = 20\nprice_source = "
+    priced += '"https://x.example/p"\nprice_checked = "2026-11-02"\n'
+    p.write_text(priced + "price_cached_input_uusd_per_mtok = 11\n")
+    with pytest.raises(ConfigError):
+        load_model_config(p)  # a cached price above the input price is a typo, not a discount
+    p.write_text(priced + "price_cached_input_uusd_per_mtok = 3\n")
+    assert load_model_config(p).price.cached_input_uusd_per_mtok == 3
+    p.write_text(priced.replace("max_output_tokens = 512", "max_output_tokens = 15"))
+    with pytest.raises(ConfigError):
+        load_model_config(p)  # below the API minimum of 16

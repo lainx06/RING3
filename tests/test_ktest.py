@@ -10,6 +10,7 @@ REQUIRED = {
     "cobs_runs_253_254_255",
     "cobs_max_frame",
     "cobs_rejects_malformed",
+    "cobs_rejects_noncanonical",
     "pmm_alloc_free",
     "pmm_double_free_detected",
     "mmap_parsing",
