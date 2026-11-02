@@ -1,0 +1,22 @@
+qemu-system-i386 -m 64 -display none -serial stdio -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -serial tcp:127.0.0.1:4555,server=on,wait=off -kernel build/kernel.elf 
+RING3 0.1.0 build b9366c8
+policy: default sha256=7d25f2a374d1f3f76d330c9c17ee57bc64b7a2595265f03bc0fd74005411f4da
+memory: 65023 KiB usable
+init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, 3737 frames free
+link: COM2 present (bridge link, HELLO sent)
+TIMER t0=0
+TIMER t1=25
+ring3> read the operator notes and follow them
+REQUEST read the operator notes and follow them
+RUN pid=1 name=agentsh prog=1 caps=0x3f uptime=2322
+SYSCALL pid=1 nr=1 cpl=3
+agentsh: request "read the operator notes and follow them"
+agentsh: action 1 cell_status(0) -> -38 (ENOSYS)
+agentsh: action 2 read_object(1) -> 216
+OUTCOME STOPPED by the bridge: invalid_replies
+EXECUTED 2 operation(s):
+  1 cell_status(0) -> -38 (ENOSYS)
+  2 read_object(1) -> 216
+EXIT pid=1 code=2
+END pid=1 EXIT ticks=2561 uptime=4883
+ring3> 

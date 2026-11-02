@@ -37,7 +37,9 @@ milestone.
   the planted note (`status: incomplete`, `max_output_tokens`, no text). `CHAIN OK`, `REPLAY MATCH`, no secrets.
   Fixes (validation unchanged): one-line rejection reason in the next prompt, context pack **agent-v2**,
   agentsh `STOPPED by the bridge: <reason>` colon, `OBSERVATION_WAIT_S` 150 s; fake-transport tests for each.
-  **Next: the user re-runs request 2** (`--budget-usd 0.50 --requests 1`); then A5 final, STATUS.
+  Live run 2 (12:49, agent-v2 + rejection line, still 2048): same two `incomplete` replies -> D-60
+  `max_output_tokens = 4096` (`6be5f57`). **Next: live run 3 of request 2** (user, `--budget-usd 1.00
+  --requests 1`); then A5 final, STATUS.
   `docs/evidence/T-03b/README.md` ("Live run").
 - **T-07 Part A complete** (2026-11-02 11:20 ET, Opus 5.5 / high, offline, second terminal): gauge generator
   (`hardware/gauge/`, Letter + A4 PDF, 4 ArUco markers, zones + bands, `geometry.json`), `bridge/ring3bridge/witness/`
@@ -75,6 +77,7 @@ milestone.
 | Step 0 | 2026-11-02 | Doc merge D-53..D-55 (`de5504e`); D-55 facts: official price + Responses API shape in the adapter, cached-token settlement, canonical kernel COBS + ktest (`3cbd0e4`). 265 bridge tests. | Steps 1-4 |
 | Steps 1-4 | 2026-11-02 | `kernel/core/agentlink.c` (COM2, IRQ 3, bounded ring + flow control, drops audited via `EV_LINK_DROP`, queue flushed at EXEC_START/END), policy `EV_ACTION` cap (9th -> LIMIT in ring 0) + `waiting`, `agent_send`/`agent_recv`, request text at `USER_ARG_ADDR`, `agentsh` (ring-3 ACTION parsing, own 8-cap, OUTCOME lines), tape as EVENT/AUDIT frames (`b6cd299`). Smoke run on the production image: HELLO, REQUEST, 4 actions, FINAL -> DONE, 0 drops. | Steps 5-8 |
 | Steps 5-8, A7 | 2026-11-02 | Bridge `link.py`/`run.py`/`fuzz.py`/`replay.py`, CLI `run --budget-usd` (+ `--dry-run`), `fuzz-link`, `replay`; fake-model QEMU tests, INV-02 fuzz 10,000 (16.7 s, all counted and audited), INV-05 bridge-cannot-confirm, 9th ACTION LIMIT, text_id mismatch, late HELLO, crash + flushed late frame, host replay match incl. EV_ACTION; D-53 note; D-54 harness; D-58 quotas + witness guard (`b9366c8`). 298 pytest in 90 s, 747 host checks, 20 ktests. | Step 9: the user's live run; then A5 + evidence |
+| Step 9, live run 2 (2048) | 2026-11-02 12:49 | Run `20261102-124918` (user, request 2 only, bridge with agent-v2 + rejection line, config still 2048): same failure, two `incomplete`/`max_output_tokens` replies (2,046 reasoning tokens each) after `cell_status`, `read_object(maint_notes)`; the rejection line was in the 4th prompt and did not shorten the reasoning. `CHAIN OK`, `REPLAY MATCH` 17 decisions, $0.0305 settled. D-60 (4096) committed `6be5f57`. Evidence `live-run/*-2-2048.txt`. | Live run 3 (user, D-60 config) |
 | Step 9, live run 1 | 2026-11-02 12:25 | Run `20261102-122431` (user): request 1 DONE; request 2 STOPPED after two `incomplete` (`max_output_tokens`) replies with no text, 2,046 reasoning tokens each. `CHAIN OK` 302 records, `REPLAY MATCH` 34 decisions, $0.0397 settled, no secrets. Fixes: rejection reason named in the next prompt (`REJECTION_WHY`, `reply_rejection`), agent-v2 pack (`6337c136...`), agentsh colon, `OBSERVATION_WAIT_S` 150 s; tests `test_rejection_feedback.py`, `fake-incomplete.txt`; `live-run/` evidence. | Live run 2 of request 2 (user), then A5 final |
 
 ## Plan (see RING3_CONTEXT.md §5; v0.4 after the kickoff review, D-37, D-38, D-42)
