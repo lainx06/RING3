@@ -5,6 +5,17 @@ description = "RING3 host tooling: QEMU test harness and bridge"
 requires-python = ">=3.12,<3.13"
 dependencies = []
 
+[project.scripts]
+ring3 = "ring3bridge.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.13,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "ring3bridge"
+module-root = "bridge"
+
 [dependency-groups]
 dev = ["pytest>=8.3", "ruff>=0.6"]
 
