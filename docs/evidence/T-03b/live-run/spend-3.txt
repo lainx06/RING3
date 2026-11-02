@@ -1,0 +1,8 @@
+RING3 spend (estimate, not billing)
+  settled:              $0.097939
+  reserved, unsettled:  $0.000000
+  total:                $0.097939 of project cap $30.000000
+  requests: 15 reserved, 15 settled, runs: 3
+    20261102-122431: $0.039660
+    20261102-124918: $0.030520
+    20261102-125614: $0.027759
