@@ -19,3 +19,41 @@ $ uv run python tools/cellctl.py watch /dev/ttyACM0 --seconds 3   (20:34 ET, bac
 60 STATE frames; dist tally: 148-153 mm x50, 162-163 mm x8, NO_ECHO x1 (the boot STATE before the first reading).
 Not the 264-290 mm keyboard backstop seen in bring-up: an object about 15 cm out. Moving checks held until the
 beam is clear (user had moved the fan motor out of the beam at this point; the reading did not change).
+
+$ uv run python tools/cellctl.py watch /dev/ttyACM0 --seconds 2   (20:40 ET, backstop confirm; user's 60 s watch: 261-291 mm clear, hand 39-76 mm)
+dist tally: dist=252 x1, dist=253 x6, dist=261 x12, dist=262 x19, 
+
+$ uv run python tools/cellctl.py a5 /dev/ttyACM0 --only clamp,link_loss
+20:41:01 opened /dev/ttyACM0 raw 115200 8N1; the Uno resets on open, waiting for the first STATE of the new boot
+20:41:03 first STATE of the new boot after 1641 ms (0 pre-reset frames discarded): STATE seq=0 t=16 ms fan=0% servo=90 dist=NO_ECHO estop=0 flags=- ack=0
+20:41:03   boot flags: WDT_RESET=False LINK_LOST=False
+20:41:03   undecodable bytes runs before sync (frames cut by the reset): 0
+20:41:04 [clamp] FAN 100 -> 80 + CLAMP; SERVO 170 -> 165 + CLAMP
+20:41:04   FAN 100: STATE seq=34 t=1716 ms fan=0% servo=90 dist=265 mm estop=0 flags=CLAMP,ESTOP_L ack=8
+20:41:05   SERVO 170: STATE seq=40 t=2016 ms fan=0% servo=90 dist=264 mm estop=0 flags=CLAMP,ESTOP_L ack=11
+20:41:06   -> FAIL: fan reported 0 clamp=True; servo reported 90 clamp=True
+20:41:06 [link_loss] fan 60 + servo 120, then silence -> fan 0, servo 90, LINK_LOST after 1 s
+20:41:08   LINK_LOST: STATE seq=111 t=5566 ms fan=0% servo=90 dist=264 mm estop=0 flags=ESTOP_L,LINK_LOST ack=26  (886 ms after the last frame, host clock)
+20:41:09   -> FAIL: parked after 886 ms, fan=0 servo=90, PING clears LINK_LOST=True, fan not auto-restarted=True
+20:41:09 A5 SUMMARY
+20:41:09   clamp        FAIL fan reported 0 clamp=True; servo reported 90 clamp=True
+20:41:09   link_loss    FAIL parked after 886 ms, fan=0 servo=90, PING clears LINK_LOST=True, fan not auto-restarted=True
+
+Both checks above failed because ESTOP_LATCHED was set with the button released (estop=0) as soon as the fan ran;
+clamp's FAN/SERVO were refused under the latch, and link_loss's FAN 60 never started. Diagnosis:
+
+$ uv run python tools/cellctl.py noise /dev/ttyACM0
+20:43:16 opened /dev/ttyACM0 raw 115200 8N1; the Uno resets on open, waiting for the first STATE of the new boot
+20:43:18 first STATE of the new boot after 1631 ms (13 pre-reset frames discarded): STATE seq=0 t=16 ms fan=0% servo=90 dist=NO_ECHO estop=0 flags=- ack=0
+20:43:18   boot flags: WDT_RESET=False LINK_LOST=False
+20:43:18   undecodable bytes runs before sync (frames cut by the reset): 3
+20:43:18   [boot idle] STATE seq=1 t=66 ms fan=0% servo=90 dist=288 mm estop=0 flags=- ack=1
+20:43:21   [servo 120] STATE seq=69 t=3466 ms fan=0% servo=120 dist=279 mm estop=0 flags=- ack=16
+20:43:22   [servo 90] STATE seq=89 t=4466 ms fan=0% servo=90 dist=258 mm estop=0 flags=- ack=21
+20:43:24   [FAN 60 trial 1] STATE seq=121 t=6066 ms fan=60% servo=90 dist=258 mm estop=0 flags=- ack=30
+20:43:24   [FAN 60 trial 1] STATE seq=130 t=6516 ms fan=0% servo=90 dist=259 mm estop=0 flags=ESTOP_L ack=31
+20:43:26   [reset before fan trial 2] STATE seq=180 t=9016 ms fan=0% servo=90 dist=279 mm estop=0 flags=- ack=43
+20:43:26   [FAN 60 trial 2] STATE seq=192 t=9616 ms fan=60% servo=90 dist=258 mm estop=0 flags=- ack=47
+20:43:28   [FAN 60 trial 2] STATE seq=219 t=10966 ms fan=0% servo=90 dist=279 mm estop=0 flags=ESTOP_L ack=52
+20:43:29   [final reset] STATE seq=251 t=12566 ms fan=0% servo=90 dist=250 mm estop=0 flags=- ack=61
+20:43:30 NOISE SUMMARY: latch set without a press in: FAN 60 trial 1, FAN 60 trial 2

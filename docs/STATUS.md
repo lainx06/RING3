@@ -52,7 +52,7 @@ milestone.
 |---|---|---|---|---|
 | T-01 | 2026-11-01 13:06 ET | Fable 5.1 / high | 2026-11-01 13:30 ET; K1–K4 pass 13:22 ET; A1–A8 pass | `docs/evidence/T-01/README.md` |
 | T-02 | 2026-11-01 19:36 ET | Fable 5.1 / high | 2026-11-01 20:11 ET; A1–A9 pass; M3 before the 11:59 PM time-box | `docs/evidence/T-02/README.md` |
-| T-06 | 2026-11-01 16:58 ET | Opus 5.5 / high | in progress. 17:07 M1 pin table (15/18) + wiring guide + `bringup` (32 % flash, 15 % RAM). 17:13 M2 protocol + frame code, `make -C firmware test` 115/115. 17:16 M3 `ring3cell` (26 % flash, 22 % RAM, A6 grep clean). 17:18 M4 `cellctl.py` (selftest 25/25 vectors). D-46: boot LCD `HALTED` / `no kernel link`, no "safe" in display/serial text. Waiting on user: wiring + A4/A5 on hardware | `docs/evidence/T-06/` (pending) |
+| T-06 | 2026-11-01 16:58 ET | Opus 5.5 / high | in progress. 17:07 M1 pin table (15/18) + wiring guide + `bringup` (32 % flash, 15 % RAM). 17:13 M2 protocol + frame code, `make -C firmware test` 115/115. 17:16 M3 `ring3cell` (26 % flash, 22 % RAM, A6 grep clean). 17:18 M4 `cellctl.py` (selftest 25/25 vectors). D-46: boot LCD `HALTED` / `no kernel link`, no "safe" in display/serial text. A4 part 1 done (4 safety parts; LCD/buzzer/RGB pending, parts Nov 2). A5: rate + bad_crc OK; **blocked 20:43: running fan sets the E-stop latch with the button released (5/5)**, stopped and reported; clamp/link_loss/manual checks wait for the fix | `docs/evidence/T-06/` (pending) |
 
 ## Last evidence
 `docs/evidence/T-01/` (isolation transcript, ktest, panic dump, build, pytest, toolchain, skills byte-check).

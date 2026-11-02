@@ -8,6 +8,7 @@ Standard library only. Frame format: hardware/protocol.md (constants mirror firm
   uv run python tools/cellctl.py watch /dev/ttyACM0       # print decoded STATE frames (keeps PINGs going)
   uv run python tools/cellctl.py a5 /dev/ttyACM0          # the T-06 A5 checks, with prompts for manual steps
   uv run python tools/cellctl.py a5 /dev/ttyACM0 --only rate,clamp
+  uv run python tools/cellctl.py noise /dev/ttyACM0       # does the fan set the E-stop latch? (moves fan)
 """
 
 from __future__ import annotations
@@ -165,6 +166,7 @@ class Cell:
         self.seq = 0
         self.last_ping = 0.0
         self.pinging = True
+        self.last_tx = 0.0  # time.monotonic() of the last frame actually written
         self.states: list[State] = []
         self.bad_rx = 0
 
@@ -177,6 +179,7 @@ class Cell:
         if corrupt_crc:
             dec[-1] ^= 0x5A
         os.write(self.fd, cobs_encode(bytes(dec)) + b"\x00")
+        self.last_tx = time.monotonic()
         return self.seq
 
     def poll(self) -> list[State]:
@@ -438,8 +441,10 @@ class Checks:
         self.c.run(0.4)
         self.c.send(T_FAN, bytes([LINK_LOSS_FAN]))
         run = self.c.wait_for(lambda s: s.fan == LINK_LOSS_FAN, 1.0)
-        last_sent = time.monotonic()
         self.c.pinging = False
+        last_sent = (
+            self.c.last_tx
+        )  # the last frame really sent (a PING may have gone out during the wait above)
         st = self.c.wait_for(lambda s: s.has(F_LINK_LOST), 3.0)
         silence_ms = int((st.rx_time - last_sent) * 1000) if st else -1
         self.log(f"  LINK_LOST: {st}  ({silence_ms} ms after the last frame, host clock)")
@@ -535,6 +540,53 @@ def cmd_selftest(_args, log) -> int:
     return 1 if fails else 0
 
 
+def cmd_noise(args, log) -> int:
+    """Diagnostic: does anything other than a press set the E-stop latch? Idle, servo moves, then FAN 60 for
+    2 s, twice; prints every change of flags/fan/servo/button. Moves the fan and servo."""
+    cell, _ = open_cell(args.port, log)
+    last = [None]
+    trips = []
+
+    def watch(label: str, secs: float) -> None:
+        end = time.monotonic() + secs
+        while time.monotonic() < end:
+            for st in cell.poll():
+                key = (st.flags & ~F_BAD_FRAME, st.fan, st.servo, st.estop)
+                if key != last[0]:
+                    log(f"  [{label}] {st}")
+                    if (
+                        st.has(F_ESTOP_LATCHED)
+                        and not st.estop
+                        and (last[0] is None or not last[0][0] & F_ESTOP_LATCHED)
+                    ):
+                        trips.append(label)
+                    last[0] = key
+
+    try:
+        watch("boot idle", 1.5)
+        cell.send(T_ESTOP_RESET)
+        watch("after ESTOP_RESET, idle", 2.0)
+        cell.send(T_SERVO, bytes([120]))
+        watch("servo 120", 1.0)
+        cell.send(T_SERVO, bytes([90]))
+        watch("servo 90", 1.0)
+        for trial in (1, 2):
+            cell.send(T_ESTOP_RESET)
+            watch(f"reset before fan trial {trial}", 0.6)
+            cell.send(T_FAN, bytes([LINK_LOSS_FAN]))
+            watch(f"FAN {LINK_LOSS_FAN} trial {trial}", 2.0)
+            cell.send(T_FAN, bytes([0]))
+            watch(f"FAN 0 trial {trial}", 1.0)
+        cell.send(T_ESTOP_RESET)
+        watch("final reset", 0.5)
+    finally:
+        cell.send(T_FAN, bytes([0]))
+        cell.run(0.3)
+        cell.close()
+    log(f"NOISE SUMMARY: latch set without a press in: {', '.join(trips) if trips else 'none'}")
+    return 1 if trips else 0
+
+
 def cmd_watch(args, log) -> int:
     cell, _ = open_cell(args.port, log)
     try:
@@ -576,6 +628,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("selftest")
+    nz = sub.add_parser("noise")
+    nz.add_argument("port")
     w = sub.add_parser("watch")
     w.add_argument("port")
     w.add_argument("--seconds", type=float, default=10.0)
@@ -587,7 +641,9 @@ def main() -> int:
     def log(msg: str) -> None:
         print(f"{time.strftime('%H:%M:%S')} {msg}", flush=True)
 
-    return {"selftest": cmd_selftest, "watch": cmd_watch, "a5": cmd_a5}[args.cmd](args, log)
+    return {"selftest": cmd_selftest, "watch": cmd_watch, "a5": cmd_a5, "noise": cmd_noise}[args.cmd](
+        args, log
+    )
 
 
 if __name__ == "__main__":
