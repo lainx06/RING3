@@ -1,6 +1,32 @@
 # T-06 evidence
 
-In progress. The A1–A7 table is filled in when the card closes.
+Status 2026-11-01 21:46 ET: **A1, A2, A3, A6, A7 pass; A5 passes except the alarm outputs; A4 part 1 passes,
+part 2 pending.** Pending items wait for the LCD, buzzer and RGB LED (parts arrive 2026-11-02).
+
+| # | Acceptance (card) | Result | Evidence |
+|---|---|---|---|
+| A1 | Pin table, no conflicts (D2 INT0 E-stop, D3 INT1 echo, servo D9, fan PWM D5/D6, L293D IN1/IN2 + LCD RW hard-wired, D0/D1 free), D-43 two-rail power, sensor backstop, every part with wiring + check, D-41f order | **PASS** (document). 15/18 pins, fan on D5 (Timer0); layout corrected to the real build (D-47, D-48, D-49). LCD/buzzer/RGB sections are written but not yet checked against hardware | `hardware/wiring.md` |
+| A2 | `make -C firmware test` passes (CRC, COBS, rejection, clamps) | **PASS**: 121 frame checks + 19 rule checks (E-stop latching, FAN drop), vectors match, `frame.cpp` clean under avr-g++ `-Werror` | `host-tests.txt` |
+| A3 | Both sketches compile for `arduino:avr:uno`, no warnings from our code, RAM < 75 % | **PASS**: `ring3cell` 26 % flash / 22 % RAM, `bringup` 32 % / 15 %; 0 warnings in our files (1 core warning in `new.cpp`) | `compile.txt` |
+| A4 | Bring-up transcript: every wired part responds (after the 4 safety parts, then after the rest); unwired parts listed; min spinning duty recorded | **PARTIAL.** Part 1 PASS (E-stop, sensor 264–290 mm, servo, fan; min duty **50 %**; LCD/buzzer/RGB listed as not wired) — as reported by the user, not a verbatim transcript. **Part 2 PENDING** (LCD, buzzer, RGB) | `bringup.txt` |
+| A5 | `ring3cell` + `cellctl.py` hardware checks | **PASS for every item below except the alarm outputs (PENDING)** | `cellctl.txt` |
+| A5.1 | `STATE` at 18–22 Hz | PASS: 19.1 Hz host / 20.0 Hz device, 0 seq gaps (21:45, final firmware) | |
+| A5.2 | `FAN 100` → 80 + clamp flag; `SERVO 170` → 165 | PASS (21:23, 21:30, 21:39) | |
+| A5.3 | Bad-CRC frame rejected and flagged | PASS: BAD_FRAME, fan 0, `ack_seq` unchanged with PINGs paused (21:30) | |
+| A5.4 | E-stop press → fan 0 in the next `STATE`; latch holds until `ESTOP_RESET` with the button released | PASS (21:24; re-run on the fix #10 tool 21:43) | |
+| A5.5 | Hand < 100 mm while the fan runs → fan 0, presence fault latched | PASS: cut in the first `STATE` reading < 100 mm (96 mm) (21:28) | |
+| A5.6 | ECHO unplugged while the fan runs → fan 0 within ~150 ms, fault latched | PASS: fan 0 100 ms (device clock) after the first no-echo `STATE`, i.e. ~100–150 ms after the wire left D3 (21:41) | |
+| A5.7 | E-stop during a tight `FAN` loop → fan stays 0 | PASS: 275 `FAN 60` frames, 0 `STATE` with fan > 0 after the press (21:43) | |
+| A5.8 | No frames for 1 s → safe state + alarm | **Safe state PASS**: `LINK_LOST`, fan 0, servo 90 after 1093 ms; PING clears it; no auto-restart (21:23). **Alarm PENDING**: the 3 beeps + red blink + LCD `LINK LOST - STOP` need the buzzer, RGB and LCD | |
+| A5+ | D-49 noise / D-50 F2 (lead additions) | PASS: `noise` → `none` (21:23); `discard_link` (21:39), `discard_estop` (21:43), `discard_presence` (21:40), all on the proven-acceptance check | |
+| A6 | No `delay(`, `pulseIn(`, `tone(`, `lcd.clear(`/`lcd.home(` outside `setup()` in `firmware/ring3cell/`; `wdt_enable` + `.init3` hook present | **PASS**: only `lcd.clear()` at line 592, inside `setup()`; both present | `compile.txt` |
+| A7 | Every commit has the `Builder:` trailer and touches only this card's paths | **PASS**: 28 commits, all with `Builder: Opus 5.5/high`; STATUS edits only the T-06 row. One commit outside the card's paths by explicit instruction: `f342248 docs: lead update D-43` (ARCHITECTURE, DECISIONS, INVARIANTS, T-06 card) | `git log` |
+
+**Pending for 2026-11-02 (LCD, buzzer, RGB):** wire §6–§8 of `hardware/wiring.md` (power order: Uno 5V jumper out
+first); flash `bringup`, run `a` with every part `y` → `bringup.txt` part 2 (re-checks the four safety parts on the
+final D-48/D-49 wiring too); re-flash `ring3cell`, re-run `link_loss` and watch for 3 beeps, red blinking and
+`LINK LOST - STOP` → closes A5.8; check the boot LCD shows `HALTED` / `no kernel link` (D-46). Also confirm on the
+parts: RGB common cathode, active buzzer, LCD header soldered (`[UNVERIFIED]` in the guide).
 
 | File | What |
 |---|---|

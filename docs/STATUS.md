@@ -52,7 +52,7 @@ milestone.
 |---|---|---|---|---|
 | T-01 | 2026-11-01 13:06 ET | Fable 5.1 / high | 2026-11-01 13:30 ET; K1–K4 pass 13:22 ET; A1–A8 pass | `docs/evidence/T-01/README.md` |
 | T-02 | 2026-11-01 19:36 ET | Fable 5.1 / high | 2026-11-01 20:11 ET; A1–A9 pass; M3 before the 11:59 PM time-box | `docs/evidence/T-02/README.md` |
-| T-06 | 2026-11-01 16:58 ET | Opus 5.5 / high | in progress. 17:07 M1 pin table (15/18) + wiring guide + `bringup` (32 % flash, 15 % RAM). 17:13 M2 protocol + frame code, `make -C firmware test` 115/115. 17:16 M3 `ring3cell` (26 % flash, 22 % RAM, A6 grep clean). 17:18 M4 `cellctl.py` (selftest 25/25 vectors). D-46: boot LCD `HALTED` / `no kernel link`, no "safe" in display/serial text. A4 part 1 done (4 safety parts; LCD/buzzer/RGB pending, parts Nov 2). A5: rate + bad_crc OK. 20:43 fan noise latched the E-stop (5/5) → D-49 hardware fix (user: `noise` none) + firmware: ISR latches only if D2 still LOW, loop latch ≥ 20 ms. 21:20 D-50 F2 (FAN dropped during any latch), F10 boundary tests, F6 (`WDT_RESET` not claimed); host tests 139/139; `compile.txt`, `host-tests.txt`. Next: user flashes, then clamp/link_loss/discard_* and hands-on A5 | `docs/evidence/T-06/README.md` |
+| T-06 | 2026-11-01 16:58 ET | Opus 5.5 / high | **21:46 ET: A1 A2 A3 A6 A7 pass; A5 pass except the alarm outputs; A4 part 1 pass. Pending Nov 2 (parts arrive): LCD, buzzer, RGB wiring → `bringup` part 2 (A4) + link-loss alarm (A5.8).** Firmware `222d26d` flashed. Lead decisions D-46..D-50 applied; 10 test-program changes logged, none loosened an expectation | `docs/evidence/T-06/README.md` |
 
 ## Last evidence
 `docs/evidence/T-01/` (isolation transcript, ktest, panic dump, build, pytest, toolchain, skills byte-check).
