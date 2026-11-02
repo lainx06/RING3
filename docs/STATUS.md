@@ -35,6 +35,14 @@ milestone.
   = ring-3 ticks, request quota 120 s, `witness` never an ACTION). Default suite 90 s. **Waiting for the user's
   live run** (`make run` + `uv run ring3 run --budget-usd 0.50 --requests 2`); then A5, evidence `live-run/`.
   `docs/evidence/T-03b/README.md`.
+- **T-07 Part A complete** (2026-11-02 11:20 ET, Opus 5.5 / high, offline, second terminal): gauge generator
+  (`hardware/gauge/`, Letter + A4 PDF, 4 ArUco markers, zones + bands, `geometry.json`), `bridge/ring3bridge/witness/`
+  (dial frame, SAM 3.1 parser + adapter on an injected transport/ledger, box-centre angle, verdict, calibration,
+  fresh-frame capture), `tools/witness_capture_win.py`, `[sam]` price in `config/models.toml`. A1 pass: 253 witness
+  tests + INV-01, 15/15 mutations caught. **New deps: numpy, opencv-python-headless.** Findings for Part B: the
+  D-58 box-centre angle sticks at 90 deg within ~5 deg (SG90 hub), so calibration passes only with the paper
+  aligned to <= ~2 deg (else the witness disables itself, limit kept at 3 deg); camera axis must be over the
+  pivot (parallax). `docs/evidence/T-07/README.md`.
 - Second terminal Nov 1: **T-06** (Opus 5.5 / high) once T-01 has made its first commit (D-42).
 - User, while T-01 runs: `SETUP.md` step 8 (usbipd + Uno + arduino-cli in Ubuntu), then wiring per
   `hardware/wiring.md` in the afternoon.
@@ -88,6 +96,7 @@ milestone.
 | T-03a | 2026-11-01 22:38 ET | Opus 5.5 / high | 2026-11-01 23:10 ET; A1–A6 pass; M1 (link ABI) `e6300b4` first; price and API field names `[UNVERIFIED]`; no network, no paid call | `docs/evidence/T-03a/README.md` |
 | T-03b | 2026-11-02 10:00 ET | Fable 5.1 / high | in progress: A1-A4, A6, A7 pass; A5 pending the user's live run (D-57) | `docs/evidence/T-03b/README.md` |
 | T-06 | 2026-11-01 16:58 ET | Opus 5.5 / high | **21:46 ET: A1 A2 A3 A6 A7 pass; A5 pass except the alarm outputs; A4 part 1 pass. Pending Nov 2 (parts arrive): LCD, buzzer, RGB wiring → `bringup` part 2 (A4) + link-loss alarm (A5.8).** Firmware `222d26d` flashed. Lead decisions D-46..D-50 applied; 10 test-program changes logged, none loosened an expectation | `docs/evidence/T-06/README.md` |
+| T-07 Part A | 2026-11-02 | Opus 5.5 / high | 2026-11-02 11:20 ET; A1 pass (Part B: A2-A4 open); offline, no paid call; 1 test-program change logged (fixture offset 4 -> 2 deg + new disable cases), no limit loosened | `docs/evidence/T-07/README.md` |
 
 ## Last evidence
 `docs/evidence/T-01/` (isolation transcript, ktest, panic dump, build, pytest, toolchain, skills byte-check).

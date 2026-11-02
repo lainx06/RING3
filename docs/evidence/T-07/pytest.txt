@@ -1,0 +1,405 @@
+$ uv run pytest tests/witness tests/bridge/test_inv_01_no_code_path.py -v
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0 -- .venv/bin/python
+rootdir: 
+configfile: pyproject.toml
+collecting ... collected 284 items
+
+tests/witness/test_angle_verdict.py::test_angle_through_box_centre[b0-90.0] PASSED [  0%]
+tests/witness/test_angle_verdict.py::test_angle_through_box_centre[b1-45.0] PASSED [  0%]
+tests/witness/test_angle_verdict.py::test_angle_through_box_centre[b2-135.0] PASSED [  1%]
+tests/witness/test_angle_verdict.py::test_centre_not_farthest_corner_near_90 PASSED [  1%]
+tests/witness/test_angle_verdict.py::test_no_records_is_not_found PASSED [  1%]
+tests/witness/test_angle_verdict.py::test_wrong_shape[b0-away from the pivot] PASSED [  2%]
+tests/witness/test_angle_verdict.py::test_wrong_shape[b1-far too long] PASSED [  2%]
+tests/witness/test_angle_verdict.py::test_wrong_shape[b2-too short] PASSED [  2%]
+tests/witness/test_angle_verdict.py::test_wrong_shape[b3-centred on the pivot] PASSED [  3%]
+tests/witness/test_angle_verdict.py::test_wrong_shape[b4-the whole dial] PASSED [  3%]
+tests/witness/test_angle_verdict.py::test_two_plausible_is_ambiguous_overlapping_or_not PASSED [  3%]
+tests/witness/test_angle_verdict.py::test_low_confidence_candidate_still_counts_for_ambiguity PASSED [  4%]
+tests/witness/test_angle_verdict.py::test_one_plausible_plus_junk_is_measured PASSED [  4%]
+tests/witness/test_angle_verdict.py::test_low_or_missing_confidence[None] PASSED [  4%]
+tests/witness/test_angle_verdict.py::test_low_or_missing_confidence[0] PASSED [  5%]
+tests/witness/test_angle_verdict.py::test_low_or_missing_confidence[499999] PASSED [  5%]
+tests/witness/test_angle_verdict.py::test_mask_confidence_used_when_box_has_none PASSED [  5%]
+tests/witness/test_angle_verdict.py::test_judge[50-50000-PASS-LOW] PASSED [  6%]
+tests/witness/test_angle_verdict.py::test_judge[90-90000-PASS-MID] PASSED [  6%]
+tests/witness/test_angle_verdict.py::test_judge[130-130000-PASS-HIGH] PASSED [  7%]
+tests/witness/test_angle_verdict.py::test_judge[50-90000-FAIL-WRONG_ZONE] PASSED [  7%]
+tests/witness/test_angle_verdict.py::test_judge[130-90000-FAIL-WRONG_ZONE] PASSED [  7%]
+tests/witness/test_angle_verdict.py::test_judge[90-35001-FAIL-WRONG_ZONE] PASSED [  8%]
+tests/witness/test_angle_verdict.py::test_judge[50-24999-FAIL-OUT_OF_SCALE] PASSED [  8%]
+tests/witness/test_angle_verdict.py::test_judge[50-155001-FAIL-OUT_OF_SCALE] PASSED [  8%]
+tests/witness/test_angle_verdict.py::test_judge[130-170000-FAIL-OUT_OF_SCALE] PASSED [  9%]
+tests/witness/test_angle_verdict.py::test_judge[50--10000-FAIL-OUT_OF_SCALE] PASSED [  9%]
+tests/witness/test_angle_verdict.py::test_judge[50-25000-None-BOUNDARY] PASSED [  9%]
+tests/witness/test_angle_verdict.py::test_judge[50-35000-None-BOUNDARY] PASSED [ 10%]
+tests/witness/test_angle_verdict.py::test_judge[50-65000-None-BOUNDARY] PASSED [ 10%]
+tests/witness/test_angle_verdict.py::test_judge[90-75000-None-BOUNDARY] PASSED [ 10%]
+tests/witness/test_angle_verdict.py::test_judge[90-105000-None-BOUNDARY] PASSED [ 11%]
+tests/witness/test_angle_verdict.py::test_judge[130-115000-None-BOUNDARY] PASSED [ 11%]
+tests/witness/test_angle_verdict.py::test_judge[130-145000-None-BOUNDARY] PASSED [ 11%]
+tests/witness/test_angle_verdict.py::test_judge[130-155000-None-BOUNDARY] PASSED [ 12%]
+tests/witness/test_angle_verdict.py::test_judge[70-90000-None-COMMAND_BOUNDARY] PASSED [ 12%]
+tests/witness/test_angle_verdict.py::test_judge[35-50000-None-COMMAND_BOUNDARY] PASSED [ 13%]
+tests/witness/test_angle_verdict.py::test_judge[145-130000-None-COMMAND_BOUNDARY] PASSED [ 13%]
+tests/witness/test_angle_verdict.py::test_judge[110-130000-None-COMMAND_BOUNDARY] PASSED [ 13%]
+tests/witness/test_angle_verdict.py::test_judge[20-50000-None-COMMAND_RANGE] PASSED [ 14%]
+tests/witness/test_angle_verdict.py::test_judge[160-130000-None-COMMAND_RANGE] PASSED [ 14%]
+tests/witness/test_angle_verdict.py::test_judge_sweep_pass_only_when_clear_and_same_zone PASSED [ 14%]
+tests/witness/test_calibrate.py::test_good_fit PASSED                    [ 15%]
+tests/witness/test_calibrate.py::test_round_trip_exact_for_ideal_data PASSED [ 15%]
+tests/witness/test_calibrate.py::test_bad_calibration_disables_the_witness[data0-residual] PASSED [ 15%]
+tests/witness/test_calibrate.py::test_bad_calibration_disables_the_witness[data1-residual] PASSED [ 16%]
+tests/witness/test_calibrate.py::test_bad_calibration_disables_the_witness[data2-negative] PASSED [ 16%]
+tests/witness/test_calibrate.py::test_bad_calibration_disables_the_witness[data3-slope] PASSED [ 16%]
+tests/witness/test_calibrate.py::test_bad_calibration_disables_the_witness[data4-offset] PASSED [ 17%]
+tests/witness/test_calibrate.py::test_bad_calibration_disables_the_witness[data5-no measurement] PASSED [ 17%]
+tests/witness/test_calibrate.py::test_bad_calibration_disables_the_witness[data6-need 5] PASSED [ 17%]
+tests/witness/test_calibrate.py::test_bad_calibration_disables_the_witness[data7-span] PASSED [ 18%]
+tests/witness/test_calibrate.py::test_bad_calibration_disables_the_witness[data8-repeated] PASSED [ 18%]
+tests/witness/test_calibrate.py::test_uncalibrated_is_cant_verify PASSED [ 19%]
+tests/witness/test_calibrate.py::test_pairs_must_be_integers PASSED      [ 19%]
+tests/witness/test_capture.py::test_nonce_comment_round_trip_and_helper_copy_agrees PASSED [ 19%]
+tests/witness/test_capture.py::test_fresh_frame_round_trip PASSED        [ 20%]
+tests/witness/test_capture.py::test_no_helper_is_stale PASSED            [ 20%]
+tests/witness/test_capture.py::test_missing_folder_is_stale PASSED       [ 20%]
+tests/witness/test_capture.py::test_bad_frames_are_stale[other nonce] PASSED [ 21%]
+tests/witness/test_capture.py::test_bad_frames_are_stale[no nonce] PASSED [ 21%]
+tests/witness/test_capture.py::test_bad_frames_are_stale[old file] PASSED [ 21%]
+tests/witness/test_capture.py::test_bad_frames_are_stale[undecodable] PASSED [ 22%]
+tests/witness/test_capture.py::test_helper_ignores_old_or_malformed_requests PASSED [ 22%]
+tests/witness/test_capture.py::test_helper_camera_failure_writes_nothing PASSED [ 22%]
+tests/witness/test_capture.py::test_helper_writes_atomically PASSED      [ 23%]
+tests/witness/test_fixtures.py::test_raw_angle_within_tolerance[even-0.8-flat] PASSED [ 23%]
+tests/witness/test_fixtures.py::test_raw_angle_within_tolerance[even-0.8-mild] PASSED [ 23%]
+tests/witness/test_fixtures.py::test_raw_angle_within_tolerance[even-0.8-rotated] PASSED [ 24%]
+tests/witness/test_fixtures.py::test_raw_angle_within_tolerance[even-0.8-steep] PASSED [ 24%]
+tests/witness/test_fixtures.py::test_raw_angle_within_tolerance[gradient-1.5-flat] PASSED [ 25%]
+tests/witness/test_fixtures.py::test_raw_angle_within_tolerance[gradient-1.5-mild] PASSED [ 25%]
+tests/witness/test_fixtures.py::test_raw_angle_within_tolerance[gradient-1.5-rotated] PASSED [ 25%]
+tests/witness/test_fixtures.py::test_raw_angle_within_tolerance[gradient-1.5-steep] PASSED [ 26%]
+tests/witness/test_fixtures.py::test_raw_angle_within_tolerance[dim-1.2-flat] PASSED [ 26%]
+tests/witness/test_fixtures.py::test_raw_angle_within_tolerance[dim-1.2-mild] PASSED [ 26%]
+tests/witness/test_fixtures.py::test_raw_angle_within_tolerance[dim-1.2-rotated] PASSED [ 27%]
+tests/witness/test_fixtures.py::test_raw_angle_within_tolerance[dim-1.2-steep] PASSED [ 27%]
+tests/witness/test_fixtures.py::test_calibration_from_synthetic_session PASSED [ 27%]
+tests/witness/test_fixtures.py::test_dead_zone_offsets_disable_the_witness[-7.0] PASSED [ 28%]
+tests/witness/test_fixtures.py::test_dead_zone_offsets_disable_the_witness[-5.0] PASSED [ 28%]
+tests/witness/test_fixtures.py::test_dead_zone_offsets_disable_the_witness[4.0] PASSED [ 28%]
+tests/witness/test_fixtures.py::test_dead_zone_offsets_disable_the_witness[5.0] PASSED [ 29%]
+tests/witness/test_fixtures.py::test_dead_zone_offsets_disable_the_witness[7.0] PASSED [ 29%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[mild-even-LOW reached] PASSED [ 29%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[mild-even-MID reached] PASSED [ 30%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[mild-even-HIGH reached] PASSED [ 30%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[mild-even-held in MID, HIGH commanded] PASSED [ 30%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[mild-even-held in LOW, HIGH commanded] PASSED [ 31%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[mild-even-held in HIGH, LOW commanded] PASSED [ 31%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[mild-even-drooped below scale] PASSED [ 32%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[mild-even-pushed past scale] PASSED [ 32%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[mild-even-on the LOW/MID edge] PASSED [ 32%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[mild-even-on the MID/HIGH edge] PASSED [ 33%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[steep-gradient-LOW reached] PASSED [ 33%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[steep-gradient-MID reached] PASSED [ 33%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[steep-gradient-HIGH reached] PASSED [ 34%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[steep-gradient-held in MID, HIGH commanded] PASSED [ 34%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[steep-gradient-held in LOW, HIGH commanded] PASSED [ 34%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[steep-gradient-held in HIGH, LOW commanded] PASSED [ 35%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[steep-gradient-drooped below scale] PASSED [ 35%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[steep-gradient-pushed past scale] PASSED [ 35%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[steep-gradient-on the LOW/MID edge] PASSED [ 36%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[steep-gradient-on the MID/HIGH edge] PASSED [ 36%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[rotated-dim-LOW reached] PASSED [ 36%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[rotated-dim-MID reached] PASSED [ 37%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[rotated-dim-HIGH reached] PASSED [ 37%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[rotated-dim-held in MID, HIGH commanded] PASSED [ 38%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[rotated-dim-held in LOW, HIGH commanded] PASSED [ 38%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[rotated-dim-held in HIGH, LOW commanded] PASSED [ 38%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[rotated-dim-drooped below scale] PASSED [ 39%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[rotated-dim-pushed past scale] PASSED [ 39%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[rotated-dim-on the LOW/MID edge] PASSED [ 39%]
+tests/witness/test_fixtures.py::test_verdicts_after_calibration[rotated-dim-on the MID/HIGH edge] PASSED [ 40%]
+tests/witness/test_fixtures.py::test_off_axis_camera_never_passes_a_wrong_zone[axis0] PASSED [ 40%]
+tests/witness/test_fixtures.py::test_off_axis_camera_never_passes_a_wrong_zone[axis1] PASSED [ 40%]
+tests/witness/test_fixtures.py::test_off_axis_camera_never_passes_a_wrong_zone[axis2] PASSED [ 41%]
+tests/witness/test_fixtures.py::test_off_axis_camera_never_passes_a_wrong_zone[axis3] PASSED [ 41%]
+tests/witness/test_gauge.py::test_geometry_json_is_generated_and_in_sync PASSED [ 41%]
+tests/witness/test_gauge.py::test_verdict_constants_match_the_printed_gauge PASSED [ 42%]
+tests/witness/test_gauge.py::test_markers_do_not_overlap_the_dial_or_each_other PASSED [ 42%]
+tests/witness/test_gauge.py::test_png_markers_found_at_their_geometry_positions PASSED [ 42%]
+tests/witness/test_gauge.py::test_pdf_is_true_scale_and_holds_the_gauge[ring3_gauge.pdf-letter] PASSED [ 43%]
+tests/witness/test_gauge.py::test_pdf_is_true_scale_and_holds_the_gauge[ring3_gauge_a4.pdf-a4] PASSED [ 43%]
+tests/witness/test_gauge.py::test_generator_is_deterministic PASSED      [ 44%]
+tests/witness/test_inv_14_witness.py::test_inv_14_cant_verify_cases[markers missing] PASSED [ 44%]
+tests/witness/test_inv_14_witness.py::test_inv_14_cant_verify_cases[markers missing (id 0)] PASSED [ 44%]
+tests/witness/test_inv_14_witness.py::test_inv_14_cant_verify_cases[arm not found (no mask)] PASSED [ 45%]
+tests/witness/test_inv_14_witness.py::test_inv_14_cant_verify_cases[two candidates (two masks)] PASSED [ 45%]
+tests/witness/test_inv_14_witness.py::test_inv_14_cant_verify_cases[two overlapping candidates] PASSED [ 45%]
+tests/witness/test_inv_14_witness.py::test_inv_14_cant_verify_cases[boundary band] PASSED [ 46%]
+tests/witness/test_inv_14_witness.py::test_inv_14_cant_verify_cases[bad calibration] PASSED [ 46%]
+tests/witness/test_inv_14_witness.py::test_inv_14_cant_verify_cases[not calibrated] PASSED [ 46%]
+tests/witness/test_inv_14_witness.py::test_inv_14_cant_verify_cases[unparseable SAM line] PASSED [ 47%]
+tests/witness/test_inv_14_witness.py::test_inv_14_cant_verify_cases[low confidence] PASSED [ 47%]
+tests/witness/test_inv_14_witness.py::test_inv_14_cant_verify_cases[no confidence] PASSED [ 47%]
+tests/witness/test_inv_14_witness.py::test_inv_14_cant_verify_cases[box not arm-shaped] PASSED [ 48%]
+tests/witness/test_inv_14_witness.py::test_inv_14_cant_verify_cases[command on a boundary] PASSED [ 48%]
+tests/witness/test_inv_14_witness.py::test_inv_14_cant_verify_stale_frame PASSED [ 48%]
+tests/witness/test_inv_14_witness.py::test_inv_14_never_upgraded[markers missing] PASSED [ 49%]
+tests/witness/test_inv_14_witness.py::test_inv_14_never_upgraded[markers missing (id 0)] PASSED [ 49%]
+tests/witness/test_inv_14_witness.py::test_inv_14_never_upgraded[arm not found (no mask)] PASSED [ 50%]
+tests/witness/test_inv_14_witness.py::test_inv_14_never_upgraded[two candidates (two masks)] PASSED [ 50%]
+tests/witness/test_inv_14_witness.py::test_inv_14_never_upgraded[two overlapping candidates] PASSED [ 50%]
+tests/witness/test_inv_14_witness.py::test_inv_14_never_upgraded[boundary band] SKIPPED [ 51%]
+tests/witness/test_inv_14_witness.py::test_inv_14_never_upgraded[bad calibration] PASSED [ 51%]
+tests/witness/test_inv_14_witness.py::test_inv_14_never_upgraded[not calibrated] PASSED [ 51%]
+tests/witness/test_inv_14_witness.py::test_inv_14_never_upgraded[unparseable SAM line] PASSED [ 52%]
+tests/witness/test_inv_14_witness.py::test_inv_14_never_upgraded[low confidence] PASSED [ 52%]
+tests/witness/test_inv_14_witness.py::test_inv_14_never_upgraded[no confidence] PASSED [ 52%]
+tests/witness/test_inv_14_witness.py::test_inv_14_never_upgraded[box not arm-shaped] PASSED [ 53%]
+tests/witness/test_inv_14_witness.py::test_inv_14_never_upgraded[command on a boundary] SKIPPED [ 53%]
+tests/witness/test_inv_14_witness.py::test_inv_14_auth_failure_stops_instead_of_cant_verify[401] PASSED [ 53%]
+tests/witness/test_inv_14_witness.py::test_inv_14_auth_failure_stops_instead_of_cant_verify[403] PASSED [ 54%]
+tests/witness/test_inv_14_witness.py::test_inv_14_not_in_decision_path PASSED [ 54%]
+tests/witness/test_inv_14_witness.py::test_inv_14_static_scan_catches_a_link_import PASSED [ 54%]
+tests/witness/test_inv_14_witness.py::test_capture_helper_has_no_network_and_runs_nothing PASSED [ 55%]
+tests/witness/test_sam_client.py::test_shipped_sam_config_has_the_official_price PASSED [ 55%]
+tests/witness/test_sam_client.py::test_one_image_reserved_before_every_call_then_settled PASSED [ 55%]
+tests/witness/test_sam_client.py::test_no_price_refuses_and_sends_nothing PASSED [ 56%]
+tests/witness/test_sam_client.py::test_budget_refusal_sends_nothing[None-no_run_budget] PASSED [ 56%]
+tests/witness/test_sam_client.py::test_budget_refusal_sends_nothing[2499-run_cap] PASSED [ 57%]
+tests/witness/test_sam_client.py::test_project_cap_refuses PASSED        [ 57%]
+tests/witness/test_sam_client.py::test_auth_and_transport_failures_stop_the_run[401] PASSED [ 57%]
+tests/witness/test_sam_client.py::test_auth_and_transport_failures_stop_the_run[403] PASSED [ 58%]
+tests/witness/test_sam_client.py::test_auth_and_transport_failures_stop_the_run[429] PASSED [ 58%]
+tests/witness/test_sam_client.py::test_auth_and_transport_failures_stop_the_run[500] PASSED [ 58%]
+tests/witness/test_sam_client.py::test_auth_and_transport_failures_stop_the_run[302] PASSED [ 59%]
+tests/witness/test_sam_client.py::test_auth_and_transport_failures_stop_the_run[timeout] PASSED [ 59%]
+tests/witness/test_sam_client.py::test_auth_and_transport_failures_stop_the_run[network] PASSED [ 59%]
+tests/witness/test_sam_client.py::test_auth_and_transport_failures_stop_the_run[too_large] PASSED [ 60%]
+tests/witness/test_sam_client.py::test_unreadable_reply_is_sam_format_after_settling PASSED [ 60%]
+tests/witness/test_sam_client.py::test_sam_config_fails_closed PASSED    [ 60%]
+tests/witness/test_sam_parser.py::test_parser_accepts[one record] PASSED [ 61%]
+tests/witness/test_sam_parser.py::test_parser_accepts[trailing newline] PASSED [ 61%]
+tests/witness/test_sam_parser.py::test_parser_accepts[trailing crlf] PASSED [ 61%]
+tests/witness/test_sam_parser.py::test_parser_accepts[two records, comma] PASSED [ 62%]
+tests/witness/test_sam_parser.py::test_parser_accepts[two records, comma space] PASSED [ 62%]
+tests/witness/test_sam_parser.py::test_parser_accepts[no confidence] PASSED [ 63%]
+tests/witness/test_sam_parser.py::test_parser_accepts[c = 1] PASSED      [ 63%]
+tests/witness/test_sam_parser.py::test_parser_accepts[c = 1.000000] PASSED [ 63%]
+tests/witness/test_sam_parser.py::test_parser_accepts[c = 0] PASSED      [ 64%]
+tests/witness/test_sam_parser.py::test_parser_accepts[w off by one (inclusive convention)] PASSED [ 64%]
+tests/witness/test_sam_parser.py::test_parser_accepts[box touches image edge] PASSED [ 64%]
+tests/witness/test_sam_parser.py::test_parser_accepts[payload holds commas] PASSED [ 65%]
+tests/witness/test_sam_parser.py::test_parser_accepts[payload holds '|>' and ',2<|'] PASSED [ 65%]
+tests/witness/test_sam_parser.py::test_parser_accepts[payload ending in '|' then the record end] PASSED [ 65%]
+tests/witness/test_sam_parser.py::test_parser_accepts[payload with '<|box' inside] PASSED [ 66%]
+tests/witness/test_sam_parser.py::test_parser_accepts[16 records] PASSED [ 66%]
+tests/witness/test_sam_parser.py::test_parser_rejects[garbage] PASSED    [ 66%]
+tests/witness/test_sam_parser.py::test_parser_rejects[json instead of records] PASSED [ 67%]
+tests/witness/test_sam_parser.py::test_parser_rejects[missing id] PASSED [ 67%]
+tests/witness/test_sam_parser.py::test_parser_rejects[negative id] PASSED [ 67%]
+tests/witness/test_sam_parser.py::test_parser_rejects[id with leading zero] PASSED [ 68%]
+tests/witness/test_sam_parser.py::test_parser_rejects[two spaces after id] PASSED [ 68%]
+tests/witness/test_sam_parser.py::test_parser_rejects[missing mask] PASSED [ 69%]
+tests/witness/test_sam_parser.py::test_parser_rejects[missing box] PASSED [ 69%]
+tests/witness/test_sam_parser.py::test_parser_rejects[mask before box] PASSED [ 69%]
+tests/witness/test_sam_parser.py::test_parser_rejects[float coordinate] PASSED [ 70%]
+tests/witness/test_sam_parser.py::test_parser_rejects[negative coordinate] PASSED [ 70%]
+tests/witness/test_sam_parser.py::test_parser_rejects[leading zero coordinate] PASSED [ 70%]
+tests/witness/test_sam_parser.py::test_parser_rejects[exponent coordinate] PASSED [ 71%]
+tests/witness/test_sam_parser.py::test_parser_rejects[seven-digit coordinate] PASSED [ 71%]
+tests/witness/test_sam_parser.py::test_parser_rejects[box keys reordered] PASSED [ 71%]
+tests/witness/test_sam_parser.py::test_parser_rejects[box key missing] PASSED [ 72%]
+tests/witness/test_sam_parser.py::test_parser_rejects[box extra key] PASSED [ 72%]
+tests/witness/test_sam_parser.py::test_parser_rejects[c above 1] PASSED  [ 72%]
+tests/witness/test_sam_parser.py::test_parser_rejects[c = 1.5] PASSED    [ 73%]
+tests/witness/test_sam_parser.py::test_parser_rejects[c negative] PASSED [ 73%]
+tests/witness/test_sam_parser.py::test_parser_rejects[c without leading digit] PASSED [ 73%]
+tests/witness/test_sam_parser.py::test_parser_rejects[c exponent] PASSED [ 74%]
+tests/witness/test_sam_parser.py::test_parser_rejects[c seven decimals] PASSED [ 74%]
+tests/witness/test_sam_parser.py::test_parser_rejects[c NaN] PASSED      [ 75%]
+tests/witness/test_sam_parser.py::test_parser_rejects[x1 >= x2] PASSED   [ 75%]
+tests/witness/test_sam_parser.py::test_parser_rejects[y1 > y2] PASSED    [ 75%]
+tests/witness/test_sam_parser.py::test_parser_rejects[box beyond image width] PASSED [ 76%]
+tests/witness/test_sam_parser.py::test_parser_rejects[box beyond image height] PASSED [ 76%]
+tests/witness/test_sam_parser.py::test_parser_rejects[w disagrees] PASSED [ 76%]
+tests/witness/test_sam_parser.py::test_parser_rejects[h disagrees] PASSED [ 77%]
+tests/witness/test_sam_parser.py::test_parser_rejects[mask without data] PASSED [ 77%]
+tests/witness/test_sam_parser.py::test_parser_rejects[mask data without W] PASSED [ 77%]
+tests/witness/test_sam_parser.py::test_parser_rejects[mask data empty payload] PASSED [ 78%]
+tests/witness/test_sam_parser.py::test_parser_rejects[mask zero height] PASSED [ 78%]
+tests/witness/test_sam_parser.py::test_parser_rejects[mask huge width] PASSED [ 78%]
+tests/witness/test_sam_parser.py::test_parser_rejects[mask payload with space] PASSED [ 79%]
+tests/witness/test_sam_parser.py::test_parser_rejects[mask unterminated] PASSED [ 79%]
+tests/witness/test_sam_parser.py::test_parser_rejects[duplicate object id] PASSED [ 79%]
+tests/witness/test_sam_parser.py::test_parser_rejects[semicolon separator] PASSED [ 80%]
+tests/witness/test_sam_parser.py::test_parser_rejects[trailing comma] PASSED [ 80%]
+tests/witness/test_sam_parser.py::test_parser_rejects[trailing text] PASSED [ 80%]
+tests/witness/test_sam_parser.py::test_parser_rejects[two lines] PASSED  [ 81%]
+tests/witness/test_sam_parser.py::test_parser_rejects[tab] PASSED        [ 81%]
+tests/witness/test_sam_parser.py::test_parser_rejects[non-ASCII] PASSED  [ 82%]
+tests/witness/test_sam_parser.py::test_parser_rejects[NUL byte] PASSED   [ 82%]
+tests/witness/test_sam_parser.py::test_parser_rejects[too many records] PASSED [ 82%]
+tests/witness/test_sam_parser.py::test_parser_rejects[only whitespace] PASSED [ 83%]
+tests/witness/test_sam_parser.py::test_parser_rejects[only a newline pair] PASSED [ 83%]
+tests/witness/test_sam_parser.py::test_parser_reads_fields_as_integers PASSED [ 83%]
+tests/witness/test_sam_parser.py::test_empty_line_is_no_records PASSED   [ 84%]
+tests/witness/test_sam_parser.py::test_parser_is_bounded PASSED          [ 84%]
+tests/witness/test_sam_parser.py::test_envelope_rejects[not json] PASSED [ 84%]
+tests/witness/test_sam_parser.py::test_envelope_rejects[json list] PASSED [ 85%]
+tests/witness/test_sam_parser.py::test_envelope_rejects[status incomplete] PASSED [ 85%]
+tests/witness/test_sam_parser.py::test_envelope_rejects[status missing] PASSED [ 85%]
+tests/witness/test_sam_parser.py::test_envelope_rejects[output missing] PASSED [ 86%]
+tests/witness/test_sam_parser.py::test_envelope_rejects[no output_text] PASSED [ 86%]
+tests/witness/test_sam_parser.py::test_envelope_rejects[two output_text] PASSED [ 86%]
+tests/witness/test_sam_parser.py::test_envelope_rejects[text not a string] PASSED [ 87%]
+tests/witness/test_sam_parser.py::test_envelope_reads_the_line PASSED    [ 87%]
+tests/witness/test_sam_parser.py::test_request_shape PASSED              [ 88%]
+tests/witness/test_sam_parser.py::test_request_rejects_bad_prompts[] PASSED [ 88%]
+tests/witness/test_sam_parser.py::test_request_rejects_bad_prompts[xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx] PASSED [ 88%]
+tests/witness/test_sam_parser.py::test_request_rejects_bad_prompts[arm\n] PASSED [ 89%]
+tests/witness/test_sam_parser.py::test_request_rejects_bad_prompts[bras \xe9] PASSED [ 89%]
+tests/witness/test_sam_parser.py::test_request_rejects_non_jpeg PASSED   [ 89%]
+tests/bridge/test_inv_01_no_code_path.py::test_inv_01_no_code_path PASSED [ 90%]
+tests/bridge/test_inv_01_no_code_path.py::test_allowlist_entries_are_still_needed PASSED [ 90%]
+tests/bridge/test_inv_01_no_code_path.py::test_scanner_catches[eval(reply)] PASSED [ 90%]
+tests/bridge/test_inv_01_no_code_path.py::test_scanner_catches[exec(reply)] PASSED [ 91%]
+tests/bridge/test_inv_01_no_code_path.py::test_scanner_catches[compile(reply, 'x', 'exec')] PASSED [ 91%]
+tests/bridge/test_inv_01_no_code_path.py::test_scanner_catches[__import__(name)] PASSED [ 91%]
+tests/bridge/test_inv_01_no_code_path.py::test_scanner_catches[import subprocess] PASSED [ 92%]
+tests/bridge/test_inv_01_no_code_path.py::test_scanner_catches[import subprocess as sp] PASSED [ 92%]
+tests/bridge/test_inv_01_no_code_path.py::test_scanner_catches[from subprocess import run] PASSED [ 92%]
+tests/bridge/test_inv_01_no_code_path.py::test_scanner_catches[import pickle] PASSED [ 93%]
+tests/bridge/test_inv_01_no_code_path.py::test_scanner_catches[from importlib import import_module] PASSED [ 93%]
+tests/bridge/test_inv_01_no_code_path.py::test_scanner_catches[import importlib.util] PASSED [ 94%]
+tests/bridge/test_inv_01_no_code_path.py::test_scanner_catches[import marshal] PASSED [ 94%]
+tests/bridge/test_inv_01_no_code_path.py::test_scanner_catches[import ctypes] PASSED [ 94%]
+tests/bridge/test_inv_01_no_code_path.py::test_scanner_catches[os.system(cmd)] PASSED [ 95%]
+tests/bridge/test_inv_01_no_code_path.py::test_scanner_catches[os.popen(cmd)] PASSED [ 95%]
+tests/bridge/test_inv_01_no_code_path.py::test_scanner_catches[from os import system] PASSED [ 95%]
+tests/bridge/test_inv_01_no_code_path.py::test_scanner_catches[getattr(handlers, op)] PASSED [ 96%]
+tests/bridge/test_inv_01_no_code_path.py::test_scanner_catches[setattr(obj, key, 1)] PASSED [ 96%]
+tests/bridge/test_inv_01_no_code_path.py::test_scanner_catches[globals()[name]] PASSED [ 96%]
+tests/bridge/test_inv_01_no_code_path.py::test_scanner_catches[vars(obj)[k]] PASSED [ 97%]
+tests/bridge/test_inv_01_no_code_path.py::test_scanner_catches[__builtins__['eval']] PASSED [ 97%]
+tests/bridge/test_inv_01_no_code_path.py::test_scanner_catches[builtins.eval(x)] PASSED [ 97%]
+tests/bridge/test_inv_01_no_code_path.py::test_scanner_catches[input()] PASSED [ 98%]
+tests/bridge/test_inv_01_no_code_path.py::test_scanner_allows_plain_data_code[import re\nre.compile('x')] PASSED [ 98%]
+tests/bridge/test_inv_01_no_code_path.py::test_scanner_allows_plain_data_code[json.loads(s)] PASSED [ 98%]
+tests/bridge/test_inv_01_no_code_path.py::test_scanner_allows_plain_data_code[getattr(obj, 'name')] PASSED [ 99%]
+tests/bridge/test_inv_01_no_code_path.py::test_scanner_allows_plain_data_code[import hashlib] PASSED [ 99%]
+tests/bridge/test_inv_01_no_code_path.py::test_scanner_allows_plain_data_code[struct.pack('<B', 1)] PASSED [100%]
+
+=========================== short test summary info ============================
+SKIPPED [2] tests/witness/test_inv_14_witness.py:80: raised by the verdict stage itself
+======================== 282 passed, 2 skipped in 9.59s ========================
+
+$ uv run pytest tests/bridge -q   (regression check: config/models.toml gained a [sam] table)
+266 passed in 4.36s
+
+$ uv run ruff check <T-07 paths> && uv run ruff format --check <T-07 paths>
+E501 Line too long (114 > 110)
+  --> tests/witness/make_fixtures_md.py:59:111
+   |
+57 |         "",
+58 |         "Generated by `uv run python -m tests.witness.make_fixtures_md` from the same code the tests run",
+59 |         "(`tests/witness/synth.py`). Gauge rendered at 6 px/mm, SG90-like horn (hub r 3.5 mm, tip r 2 mm, 18 mm)",
+   |                                                                                                               ^^^^
+60 |         "drawn 7 % enlarged about the camera axis (horn ~27 mm above the paper, camera ~400 mm up), projected into",
+61 |         "a 1280x960 frame (`flat`, `mild`, `steep`, `rotated` perspectives), blur, light (`even`, `gradient`,",
+   |
+
+E501 Line too long (116 > 110)
+  --> tests/witness/make_fixtures_md.py:60:111
+   |
+58 |         "Generated by `uv run python -m tests.witness.make_fixtures_md` from the same code the tests run",
+59 |         "(`tests/witness/synth.py`). Gauge rendered at 6 px/mm, SG90-like horn (hub r 3.5 mm, tip r 2 mm, 18 mm)",
+60 |         "drawn 7 % enlarged about the camera axis (horn ~27 mm above the paper, camera ~400 mm up), projected into",
+   |                                                                                                               ^^^^^^
+61 |         "a 1280x960 frame (`flat`, `mild`, `steep`, `rotated` perspectives), blur, light (`even`, `gradient`,",
+62 |         "`dim`), noise, JPEG q88. The fake SAM box is the arm label's bounding box after the *detected* dial warp;",
+   |
+
+E501 Line too long (111 > 110)
+  --> tests/witness/make_fixtures_md.py:61:111
+   |
+59 |         "(`tests/witness/synth.py`). Gauge rendered at 6 px/mm, SG90-like horn (hub r 3.5 mm, tip r 2 mm, 18 mm)",
+60 |         "drawn 7 % enlarged about the camera axis (horn ~27 mm above the paper, camera ~400 mm up), projected into",
+61 |         "a 1280x960 frame (`flat`, `mild`, `steep`, `rotated` perspectives), blur, light (`even`, `gradient`,",
+   |                                                                                                               ^
+62 |         "`dim`), noise, JPEG q88. The fake SAM box is the arm label's bounding box after the *detected* dial warp;",
+63 |         "the mask payload is a stand-in (Ascii85 of the box raster; the real encoding is undocumented).",
+   |
+
+E501 Line too long (116 > 110)
+  --> tests/witness/make_fixtures_md.py:62:111
+   |
+60 |         "drawn 7 % enlarged about the camera axis (horn ~27 mm above the paper, camera ~400 mm up), projected into",
+61 |         "a 1280x960 frame (`flat`, `mild`, `steep`, `rotated` perspectives), blur, light (`even`, `gradient`,",
+62 |         "`dim`), noise, JPEG q88. The fake SAM box is the arm label's bounding box after the *detected* dial warp;",
+   |                                                                                                               ^^^^^^
+63 |         "the mask payload is a stand-in (Ascii85 of the box raster; the real encoding is undocumented).",
+64 |         f"Simulated mounting offset: dial angle = command + {OFFSET_DEG:g} deg.",
+   |
+
+E501 Line too long (112 > 110)
+   --> tests/witness/make_fixtures_md.py:99:111
+    |
+ 97 |     lines += ["", "## Recorded-style SAM lines (as returned by the fake transport)", ""]
+ 98 |     for name, line in samples:
+ 99 |         lines.append(f"- **{name}**: " + (f"`{short(line)}`" if line else "(none: no SAM call, or empty line)"))
+    |                                                                                                               ^^
+100 |     lines += ["", "## Samples", "", "`fixture_frame.jpg`: camera frame, steep perspective, gradient light, arm at",
+101 |               f"{90 + OFFSET_DEG:g} deg. `fixture_crop.jpg`: the dial crop sent to SAM for that frame.", ""]  # fmt: skip
+    |
+
+E501 Line too long (115 > 110)
+   --> tests/witness/make_fixtures_md.py:100:111
+    |
+ 98 |     for name, line in samples:
+ 99 |         lines.append(f"- **{name}**: " + (f"`{short(line)}`" if line else "(none: no SAM call, or empty line)"))
+100 |     lines += ["", "## Samples", "", "`fixture_frame.jpg`: camera frame, steep perspective, gradient light, arm at",
+    |                                                                                                               ^^^^^
+101 |               f"{90 + OFFSET_DEG:g} deg. `fixture_crop.jpg`: the dial crop sent to SAM for that frame.", ""]  # fmt: skip
+102 |     (OUT / "fixtures.md").write_text("\n".join(lines))
+    |
+
+E501 Line too long (121 > 110)
+   --> tests/witness/make_fixtures_md.py:101:111
+    |
+ 99 |         lines.append(f"- **{name}**: " + (f"`{short(line)}`" if line else "(none: no SAM call, or empty line)"))
+100 |     lines += ["", "## Samples", "", "`fixture_frame.jpg`: camera frame, steep perspective, gradient light, arm at",
+101 |               f"{90 + OFFSET_DEG:g} deg. `fixture_crop.jpg`: the dial crop sent to SAM for that frame.", ""]  # fmt: skip
+    |                                                                                                               ^^^^^^^^^^^
+102 |     (OUT / "fixtures.md").write_text("\n".join(lines))
+103 |     frame, _, _ = synth.render(Scene([90 + OFFSET_DEG], quad="steep", light="gradient"))
+    |
+
+E501 Line too long (111 > 110)
+   --> tests/witness/make_fixtures_md.py:105:111
+    |
+103 |     frame, _, _ = synth.render(Scene([90 + OFFSET_DEG], quad="steep", light="gradient"))
+104 |     cv2.imwrite(str(OUT / "fixture_frame.jpg"), frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+105 |     cv2.imwrite(str(OUT / "fixture_crop.jpg"), find_dial(frame, geom).crop_img, [cv2.IMWRITE_JPEG_QUALITY, 85])
+    |                                                                                                               ^
+
+Found 8 errors.
+unformatted: File would be reformatted
+   --> tests/witness/make_fixtures_md.py:99:22
+    |
+98  |     for name, line in samples:
+    -         lines.append(f"- **{name}**: " + (f"`{short(line)}`" if line else "(none: no SAM call, or empty line)"))
+99  +         lines.append(
+100 +             f"- **{name}**: " + (f"`{short(line)}`" if line else "(none: no SAM call, or empty line)")
+101 +         )
+102 |     lines += ["", "## Samples", "", "`fixture_frame.jpg`: camera frame, steep perspective, gradient light, arm at",
+--------------------------------------------------------------------------------
+106 |     cv2.imwrite(str(OUT / "fixture_frame.jpg"), frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+    -     cv2.imwrite(str(OUT / "fixture_crop.jpg"), find_dial(frame, geom).crop_img, [cv2.IMWRITE_JPEG_QUALITY, 85])
+107 +     cv2.imwrite(
+108 +         str(OUT / "fixture_crop.jpg"), find_dial(frame, geom).crop_img, [cv2.IMWRITE_JPEG_QUALITY, 85]
+109 +     )
+110 |
+    |
+
+1 file would be reformatted, 22 files already formatted

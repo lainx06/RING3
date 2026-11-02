@@ -1,0 +1,16 @@
+CAUGHT  markers: accept 3 of 4: E       KeyError: 2
+CAUGHT  angle: farthest corner instead of box centre: tests/witness/test_angle_verdict.py:44: AssertionError
+CAUGHT  angle: first plausible record wins (no AMBIGUOUS): FAILED tests/witness/test_angle_verdict.py::test_two_plausible_is_ambiguous_overlapping_or_not
+CAUGHT  angle: confidence filters candidates: FAILED tests/witness/test_angle_verdict.py::test_low_confidence_candidate_still_counts_for_ambiguity
+CAUGHT  verdict: no out-of-scale FAIL: >       raise AssertionError("caller checks bands and scale first")
+CAUGHT  verdict: bands only at inner edges: >       raise AssertionError("caller checks bands and scale first")
+CAUGHT  verdict: commanded zone on a band allowed: >       raise AssertionError("caller checks bands and scale first")
+CAUGHT  calibration: residual unchecked: E       AssertionError: assert (not True)
+CAUGHT  sam: post before reserving: ==================================== ERRORS ====================================
+CAUGHT  sam: 401/403 become CAN'T VERIFY: FAILED tests/witness/test_inv_14_witness.py::test_inv_14_auth_failure_stops_instead_of_cant_verify[401]
+CAUGHT  sam: record separator rule changed (multi-record lines): FAILED tests/witness/test_sam_parser.py::test_parser_accepts[16 records] - ri...
+CAUGHT  pipeline: SAM before the calibration check: tests/witness/test_fixtures.py:51: AssertionError
+CAUGHT  capture: nonce not checked: FAILED tests/witness/test_capture.py::test_bad_frames_are_stale[other nonce]
+CAUGHT  capture: old file accepted: FAILED tests/witness/test_capture.py::test_bad_frames_are_stale[old file] - F...
+CAUGHT  witness imports the link writer: E       AssertionError: assert ['verdict.py ...idge.framing'] == []
+15/15 mutations caught
