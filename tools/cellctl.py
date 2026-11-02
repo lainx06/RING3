@@ -130,6 +130,12 @@ class State:
         )
 
 
+def acked(st: State, seq: int) -> bool:
+    """True when the device accepted kernel frame `seq` or a later one (16-bit wrap). PINGs keep flowing, so
+    a STATE can already acknowledge a PING sent after the frame we care about."""
+    return ((st.ack_seq - seq) & 0xFFFF) < 0x8000
+
+
 def parse_state(enc: bytes, rx_time: float) -> State | None:
     dec = cobs_decode(enc)
     if dec is None or len(dec) < 7:
@@ -268,13 +274,13 @@ class Checks:
             self.record("clamp", False, "no clear presence reading (check the backstop)")
             return
         seq = self.c.send(T_FAN, bytes([100]))
-        st = self.c.wait_for(lambda s: s.ack_seq == seq, 1.0)
+        st = self.c.wait_for(lambda s: acked(s, seq), 1.0)
         st = self.c.latest(0.2) or st
         fan_ok = st is not None and st.fan == 80 and st.has(F_CLAMP)
         self.log(f"  FAN 100: {st}")
         self.fan_off_reset()
         seq = self.c.send(T_SERVO, bytes([170]))
-        st2 = self.c.wait_for(lambda s: s.ack_seq == seq, 1.0)
+        st2 = self.c.wait_for(lambda s: acked(s, seq), 1.0)
         self.log(f"  SERVO 170: {st2}")
         servo_ok = st2 is not None and st2.servo == 165 and st2.has(F_CLAMP)
         self.c.run(0.5)
@@ -288,26 +294,41 @@ class Checks:
         )
 
     def bad_crc(self) -> None:
-        self.log("[bad_crc] FAN 60 with a corrupted CRC: rejected, BAD_FRAME, fan unchanged")
+        self.log(
+            "[bad_crc] FAN 60 with a corrupted CRC: rejected, BAD_FRAME, fan unchanged, not acknowledged"
+        )
         self.fan_off_reset()
         before = self.c.latest()
+        # PINGs paused around the bad frame (< 0.5 s, inside the 1 s link watchdog), so "not acknowledged"
+        # means ack_seq doesn't move at all, rather than only "isn't exactly this seq".
+        self.c.pinging = False
+        self.c.run(0.1)
+        base = self.c.latest(0.1)
         seq = self.c.send(T_FAN, bytes([FAN_DUTY]), corrupt_crc=True)
-        st = self.c.wait_for(lambda s: s.has(F_BAD_FRAME), 1.0)
-        after = self.c.latest(0.3)
+        st = self.c.wait_for(lambda s: s.has(F_BAD_FRAME), 0.3)
+        after = self.c.latest(0.2)
+        self.c.pinging = True
         self.log(f"  flagged: {st}")
+        no_ack = (
+            base is not None
+            and st is not None
+            and after is not None
+            and st.ack_seq == base.ack_seq
+            and after.ack_seq == base.ack_seq
+        )
         ok = (
-            st is not None
+            before is not None
+            and st is not None
             and st.fan == 0
-            and st.ack_seq != seq
             and after is not None
             and after.fan == 0
-            and before is not None
+            and no_ack
         )
         self.record(
             "bad_crc",
             ok,
             f"BAD_FRAME seen={st is not None}, fan stayed {after.fan if after else '?'}, "
-            f"ack_seq not advanced to {seq}={st is not None and st.ack_seq != seq}",
+            f"ack_seq stayed {base.ack_seq if base else '?'} (bad frame was seq {seq})={no_ack}",
         )
 
     def estop(self) -> None:
@@ -492,7 +513,7 @@ class Checks:
         seq = self.c.send(T_FAN, bytes([FAN_DUTY]))  # restores the link; must not start the fan
         self.c.last_ping = time.monotonic()
         self.c.pinging = True
-        back = self.c.wait_for(lambda s: s.ack_seq == seq and not s.has(F_LINK_LOST), 1.0)
+        back = self.c.wait_for(lambda s: acked(s, seq) and not s.has(F_LINK_LOST), 1.0)
         self.log(f"  link back via FAN 60: {back}")
         stays = self._fan_stays_zero(1.0)
         starts = self._new_fan_starts()
@@ -549,7 +570,7 @@ class Checks:
         clear = self.clear_reading(30.0)
         self.c.run(0.3)
         seq = self.c.send(T_FAN, bytes([FAN_DUTY]))  # clears the fault; the setpoint is dropped
-        cleared = self.c.wait_for(lambda s: s.ack_seq == seq and not s.has(F_PRESENCE_FAULT), 1.0)
+        cleared = self.c.wait_for(lambda s: acked(s, seq) and not s.has(F_PRESENCE_FAULT), 1.0)
         self.log(f"  clearing FAN 60: {cleared}")
         after = self._fan_stays_zero(1.0)
         starts = self._new_fan_starts()
