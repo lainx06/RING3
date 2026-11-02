@@ -22,3 +22,7 @@ select = ["E", "F", "W", "I", "B", "UP"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["ring3bridge"]
+
+[tool.ruff.lint.per-file-ignores]
+# a case table: one reply per line reads better than wrapped string literals
+"tests/bridge/test_inv_08_parser_cases.py" = ["E501"]
