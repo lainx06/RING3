@@ -146,11 +146,12 @@ All times ET.
 | When | Card | Must work by the end |
 |---|---|---|
 | Oct 31 night | (user) | `SETUP.md` steps 1–7 (WSL toolchain, repo with docs, Claude Code). T-01 may start tonight. |
-| Nov 1 | T-01 (Fable 5.1) | Gemini pre-review done Oct 31 (D-41). Critical path first (D-37): boot, COM1, faults, timer, harness (**M1, 2 PM**), then the **isolation slice** (**kill check K1–K4, 9 PM**), then memory/lib/ktests. |
+| Nov 1 | T-01 (Fable 5.1) | **Done 13:30 ET; kill check passed 13:22 (D-44).** Gemini pre-review done Oct 31 (D-41). Critical path first (D-37): boot, COM1, faults, timer, harness (**M1, 2 PM**), then the **isolation slice** (**kill check K1–K4, 9 PM**), then memory/lib/ktests. |
 | Nov 1 morning (user, while T-01 runs) | — | `SETUP.md` step 8 (usbipd + Uno into WSL, arduino-cli in Ubuntu). |
 | Nov 1 (2nd terminal, after T-01's first commit) | T-06 | Wiring guide + Uno firmware (frames, clamps, local presence cutoff, E-stop ISR, watchdogs, LCD/buzzer/RGB, 50 ms telemetry); **user wires (E-stop, sensor, servo, fan first; power per D-31) and flashes in the afternoon** (D-42). |
-| Nov 1 evening | T-01B | Link smoke test: QEMU `-serial /dev/ttyACM0` + trivial echo sketch (D-31) |
-| Nov 2 | T-02 | Executor lifecycle + tick quotas, hardened `uaccess`, object store, pure-C policy engine (`decide()`), capabilities, taint, console confirmation, host build of the policy + its tests. **Checkpoint 9 PM** (D-38a). |
+| Nov 1 afternoon (2nd terminal) | T-02 (Fable 5.1) | **Pulled forward (D-44):** executor lifecycle + tick quotas, hardened `uaccess`, object store, pure-C `decide()` incl. the device safety rules, capabilities, taint, console confirmation, host build + kernel-vs-host decision match, permissive build. **Checkpoint 9 PM Nov 1.** |
+| Nov 1 evening | T-01B | Link smoke test: QEMU `-serial /dev/ttyACM0` + trivial echo sketch (D-31), after T-06's hardware checks |
+| Nov 2 | — | T-02 leftovers if any; then T-03a / T-03b move up (lead re-plans the evening of Nov 1). |
 | Nov 2 (2nd terminal) | T-03a | Bridge host-only Python (framing with the shared link vectors, strict JSON, ledger, event log + verify) (D-38b). Any T-06 leftovers first. |
 | Nov 3 morning | T-03b | COM2 kernel link, Muse Spark adapter, strict JSON → 16-byte ACTION end to end, event tape, `agentsh` |
 | Nov 3 midday | T-04 | COM3 device driver, cell syscalls, tick-driven lease + `AUTO_HALT`, E-stop latch, end-to-end: a prompt spins the fan and is refused at 100 %. **Checkpoint 2 PM** (D-38c). |

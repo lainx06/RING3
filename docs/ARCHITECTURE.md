@@ -128,7 +128,11 @@ path to COM1.
 no kernel dependencies: `decide(const state*, const event*, state* next, decision* out)`. Events: syscall
 requests, console lines, COM2 frames, COM3 telemetry, timer ticks. The kernel calls it; **the same source is
 compiled for the host** (`build/host/policy_replay`) so replay feeds the recorded event tape through the identical
-code. Tests exercise it directly (fast, no QEMU).
+code. Tests exercise it directly (fast, no QEMU). **Event model (D-45):** `EXEC_START`/`EXEC_END` mark request
+boundaries; syscall events carry `uaccess_ok` (`uaccess` runs first; a bad pointer → `DENY_FAULT` with no state
+change); confirmation is two-phase (`CONFIRM_PENDING`, then every rule re-checked at the answer's tick); quotas and
+leases are kept as ticks so routine ticks are silent and change nothing; the action quota pauses during a pending
+confirmation, the request quota never does.
 
 **Audit and event tape.** Every policy decision produces an audit record
 `{seq, tick, syscall, target, decision, reason, result, tainted}`. Decisions: `ALLOW`, `DENY_CAP`, `DENY_RULE`,
@@ -154,7 +158,9 @@ No `tone()` (Timer2), and D10 has no PWM (Servo uses Timer1). T-06 writes the pi
 The presence sensor faces a fixed backstop on the desk (20–40 cm), so "clear" is a real reading.
 The Uno is attached as the guest's COM3 (QEMU `-serial /dev/ttyACM0` after `usbipd attach --wsl`). Same frame
 format as §4, 115200 baud. Opening the port resets the Uno; firmware boots into the **safe state**: fan off, servo
-parked at 90°, LCD "SAFE - waiting for kernel".
+parked at 90°, LCD "HALTED" / "no kernel link" (INV-11 bans "safe" in screen text, D-46). Firmware second-layer
+extras (D-46): the servo also holds while the E-stop is latched or without a clear reading, and a `FAN` command
+without a clear reading is refused and latches the presence fault.
 
 **Frames.** Kernel → device: `FAN duty u8 (0-100 %)`, `SERVO deg u8`, `LCD line u8 + text ≤ 16 B`, `ALARM pattern u8`,
 `PING`, `ESTOP_RESET`. Device → kernel: `STATE` at 20 Hz *(prov.)*: `seq u16, t_ms u32, fan_duty u8, servo_cmd u8,
@@ -181,7 +187,9 @@ confirmation), like any destructive action (INV-05).
 
 **Kernel safety policy (D-21, D-25)**, every decision audited:
 - Servo: 30-150°, ≤ 30° per command, ≥ 200 ms apart (`DENY_LIMIT`).
-- Fan: 0-80 % duty, ramp ≤ 20 %/s (`DENY_LIMIT`); duty > 0 needs confirmation the first time per request.
+- Fan (D-47, measured minimum spin 50 %): duty **0 or 50–80 %** (1–49 % → `DENY_ARG`); an increase ≤ 20 points
+  per command and ≥ 1 s after the last change, except the first step from 0, which may go straight to 50–60 %
+  (`DENY_LIMIT`); decreases always allowed; duty > 0 needs confirmation the first time per request.
 - **Presence interlock:** no motion command (fan > 0 or servo move) while the latest distance is < 100 mm *(prov.)*,
   is "no echo" (`0xFFFF`, treated as not clear, D-43), or is older than 500 ms (`DENY_INTERLOCK`, `DENY_STALE`); if
   presence appears while the fan runs, the kernel commands fan 0 itself.
