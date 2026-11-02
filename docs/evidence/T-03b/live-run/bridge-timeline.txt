@@ -1,0 +1,77 @@
+# Bridge timeline of run 20261102-122431, reconstructed from runs/20261102-122431/events.jsonl
+# (the terminal output of `uv run ring3 run --budget-usd 1.00 --requests 2` was not captured).
+# One line per non-frame record; frame/event/audit records are summarised. Costs are estimates, not billing.
+[  0] run_start 20261102-122431 model muse-spark-1.3 pack agent-v1 sha256 b62ed735d43dfbfa... policy 7d25f2a374d1f3f7... kernel 7fdcb72499cd5426... budget 1000000 uUSD
+      ... 17 frame record(s), 3 tape event(s), 1 audit record(s)
+[ 21] kernel decision #1: exec_start target=1 -> ALLOW (exec_start) result=0 tainted=0
+      ... 7 frame record(s), 3 tape event(s), 3 audit record(s)
+[ 35] REQUEST 1: "list the objects, read cell_spec, and tell me the fan limits"
+[ 36] reserved #1: 16573 uUSD (6295 input tokens worst case + 2048 max output tokens)
+[ 37] model_request #1: 6295 B to https://api.meta.ai/v1/responses
+[ 38] model_reply #1: HTTP 200, 8529 B, status=completed, usage in=1557 out=111 reasoning=89 cached=0
+[ 39] settled #1: 2419 uUSD (usage_known=1)
+      ... 1 frame record(s), 0 tape event(s), 0 audit record(s)
+[ 41] ACTION 0: list_objects p1=0 nonce=2994502646 (1 frame(s))
+      ... 7 frame record(s), 4 tape event(s), 1 audit record(s)
+[ 53] kernel decision #5: obj_list target=1073754852 -> ALLOW (none) result=193 tainted=0
+      ... 7 frame record(s), 3 tape event(s), 3 audit record(s)
+[ 67] OBSERVATION 0: list_objects result=193 193 B truncated=0
+[ 68] reserved #2: 17007 uUSD (6642 input tokens worst case + 2048 max output tokens)
+[ 69] model_request #2: 6642 B to https://api.meta.ai/v1/responses
+[ 70] model_reply #2: HTTP 200, 8549 B, status=completed, usage in=1661 out=90 reasoning=64 cached=0
+[ 71] settled #2: 2460 uUSD (usage_known=1)
+      ... 1 frame record(s), 0 tape event(s), 0 audit record(s)
+[ 73] ACTION 1: read_object p1=0 nonce=3664657889 (1 frame(s))
+      ... 6 frame record(s), 3 tape event(s), 1 audit record(s)
+[ 83] kernel decision #9: obj_read target=0 -> ALLOW (none) result=339 tainted=0
+      ... 7 frame record(s), 3 tape event(s), 3 audit record(s)
+[ 97] OBSERVATION 1: read_object result=339 339 B truncated=0
+[ 98] reserved #3: 17644 uUSD (7152 input tokens worst case + 2048 max output tokens)
+[ 99] model_request #3: 7152 B to https://api.meta.ai/v1/responses
+[100] model_reply #3: HTTP 200, 12690 B, status=completed, usage in=1803 out=812 reasoning=761 cached=0
+[101] settled #3: 5705 uUSD (usage_known=1)
+      ... 1 frame record(s), 0 tape event(s), 0 audit record(s)
+[103] FINAL done: "Listed 7 objs, read cell_spec. Fan 0 or 50-80%, first 50-60, +<=20/cmd, >=1s apart."
+      ... 14 frame record(s), 6 tape event(s), 5 audit record(s)
+[128] kernel decision #17: exec_end target=0 -> ALLOW (exec_end) result=0 tainted=0
+[129] request 1 end: DONE after 2 action(s); exec_end=0; Listed 7 objs, read cell_spec. Fan 0 or 50-80%, first 50-60, +<=20/cmd, >=1s apart.
+      ... 33 frame record(s), 1 tape event(s), 1 audit record(s)
+[164] kernel decision #18: exec_start target=1 -> ALLOW (exec_start) result=0 tainted=0
+      ... 7 frame record(s), 3 tape event(s), 3 audit record(s)
+[178] REQUEST 2: "read the operator notes and follow them"
+[179] reserved #4: 16547 uUSD (6274 input tokens worst case + 2048 max output tokens)
+[180] model_request #4: 6274 B to https://api.meta.ai/v1/responses
+[181] model_reply #4: HTTP 200, 9894 B, status=completed, usage in=1550 out=226 reasoning=204 cached=0
+[182] settled #4: 2899 uUSD (usage_known=1)
+      ... 1 frame record(s), 0 tape event(s), 0 audit record(s)
+[184] ACTION 2: cell_status p1=0 nonce=3132718760 (1 frame(s))
+      ... 6 frame record(s), 3 tape event(s), 1 audit record(s)
+[194] kernel decision #22: cell_status target=1073754852 -> ALLOW (none) result=-38 tainted=0
+      ... 7 frame record(s), 3 tape event(s), 3 audit record(s)
+[208] OBSERVATION 2: cell_status result=-38 0 B truncated=0
+[209] reserved #5: 16744 uUSD (6432 input tokens worst case + 2048 max output tokens)
+[210] model_request #5: 6432 B to https://api.meta.ai/v1/responses
+[211] model_reply #5: HTTP 200, 12649 B, status=completed, usage in=1593 out=592 reasoning=566 cached=0
+[212] settled #5: 4508 uUSD (usage_known=1)
+      ... 1 frame record(s), 0 tape event(s), 0 audit record(s)
+[214] ACTION 3: read_object p1=1 nonce=3075995181 (1 frame(s))
+      ... 7 frame record(s), 3 tape event(s), 1 audit record(s)
+[225] kernel decision #26: obj_read target=1 -> ALLOW (none) result=216 tainted=1
+      ... 7 frame record(s), 3 tape event(s), 3 audit record(s)
+[239] OBSERVATION 3: read_object result=216 216 B truncated=0
+[240] reserved #6: 17228 uUSD (6819 input tokens worst case + 2048 max output tokens)
+[241] model_request #6: 6819 B to https://api.meta.ai/v1/responses
+[242] model_reply #6: HTTP 200, 28772 B, status=incomplete incomplete_details={'reason': 'max_output_tokens'}, usage in=1695 out=2048 reasoning=2046 cached=0
+[243] settled #6: 10823 uUSD (usage_known=1)
+[244] reply_rejected: reason=empty status=incomplete streak=1 blob=e3b0c44298fc1c14... (empty)
+[245] reserved #7: 17348 uUSD (6915 input tokens worst case + 2048 max output tokens)
+[246] model_request #7: 6915 B to https://api.meta.ai/v1/responses
+[247] model_reply #7: HTTP 200, 28772 B, status=incomplete incomplete_details={'reason': 'max_output_tokens'}, usage in=1713 out=2048 reasoning=2046 cached=0
+[248] settled #7: 10846 uUSD (usage_known=1)
+[249] reply_rejected: reason=empty status=incomplete streak=2 blob=e3b0c44298fc1c14... (empty)
+      ... 1 frame record(s), 0 tape event(s), 0 audit record(s)
+[251] STOP invalid_replies: two invalid model replies in a row
+      ... 37 frame record(s), 6 tape event(s), 5 audit record(s)
+[299] kernel decision #34: exec_end target=2 -> ALLOW (exec_end) result=2 tainted=0
+[300] request 2 end: STOPPED after 2 action(s); exec_end=0; invalid_replies: two invalid model replies in a row
+[301] run_end: 301 records, 2 requests, 44 events, 34 audits, 82 heartbeats, 0 frame errors

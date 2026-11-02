@@ -54,10 +54,25 @@ def responses_body(text: str, tin: int = 1000, tout: int = 20) -> bytes:
     ).encode()  # fmt: skip
 
 
-class ScriptedModel:
-    """A transport whose replies are the given model texts, in order; records every request body."""
+def incomplete_body(tin: int = 1700, tout: int = 2048) -> bytes:
+    """A reply cut off at ``max_output_tokens`` while reasoning, in the shape the live run 20261102-122431
+    recorded (D-55 docs): ``status: incomplete``, ``incomplete_details.reason``, a ``reasoning`` output item
+    with no summary and no ``message`` item at all."""
+    return json.dumps(
+        {"id": "resp_fake", "object": "response", "status": "incomplete", "model": CFG.id,
+         "incomplete_details": {"reason": "max_output_tokens"},
+         "output": [{"type": "reasoning", "id": "rs_fake", "status": "incomplete", "summary": [],
+                     "encrypted_content": "AAAA"}],
+         "usage": {"input_tokens": tin, "output_tokens": tout, "input_tokens_details": {"cached_tokens": 0},
+                   "output_tokens_details": {"reasoning_tokens": tout - 2}}}
+    ).encode()  # fmt: skip
 
-    def __init__(self, replies: list[str]):
+
+class ScriptedModel:
+    """A transport whose replies are the given model texts (or raw Responses API bodies as ``bytes``), in
+    order; records every request body."""
+
+    def __init__(self, replies: list[str | bytes]):
         self.replies = list(replies)
         self.bodies: list[bytes] = []
 
@@ -65,7 +80,8 @@ class ScriptedModel:
         self.bodies.append(body)
         if not self.replies:
             raise AssertionError("the scripted model has no reply left: the bridge asked once too often")
-        return TransportResponse(200, responses_body(self.replies.pop(0)))
+        reply = self.replies.pop(0)
+        return TransportResponse(200, reply if isinstance(reply, bytes) else responses_body(reply))
 
     @property
     def calls(self) -> int:

@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from ring3bridge.config import REPO
 
 PACK_DIR = REPO / "docs" / "context-packs"
-CURRENT = "agent-v1"
+CURRENT = "agent-v2"
 
 
 @dataclass(frozen=True)

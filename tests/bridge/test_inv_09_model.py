@@ -181,6 +181,33 @@ def test_parse_response_status_must_be_completed():
     assert parse_response(json.dumps(body).encode()).cached_tokens is None
 
 
+def test_parse_response_reports_the_incomplete_reason_and_the_text_count():
+    """Live run 20261102-122431: a reply cut off at max_output_tokens has status incomplete,
+    incomplete_details.reason and only a reasoning item. The reason is bounded (it is quoted to the model)."""
+    body = json.loads(ok_body("hi", 50, 2048, status="incomplete"))
+    body["incomplete_details"] = {"reason": "max_output_tokens"}
+    body["output"] = [{"type": "reasoning", "summary": [], "encrypted_content": "AAAA"}]
+    r = parse_response(json.dumps(body).encode())
+    assert (r.text, r.status, r.incomplete_reason, r.texts) == ("", "incomplete", "max_output_tokens", 0)
+    assert (r.input_tokens, r.output_tokens) == (50, 2048)
+    for junk in ("", "x" * 33, "has space", "semi;colon", 5, None, ["max_output_tokens"], {"a": 1}):
+        body["incomplete_details"] = {"reason": junk}
+        assert parse_response(json.dumps(body).encode()).incomplete_reason == "", junk
+    body["incomplete_details"] = "max_output_tokens"
+    assert parse_response(json.dumps(body).encode()).incomplete_reason == ""
+    body["incomplete_details"] = {"reason": "Content_Filter9"}
+    assert parse_response(json.dumps(body).encode()).incomplete_reason == "content_filter9"  # lower-cased
+    # the text count: completed with 0 or 2 texts is still text "" (not one reply), and says how many
+    assert parse_response(ok_body("hi")).texts == 1
+    two = json.loads(ok_body("hi"))
+    two["output"][0]["content"].append({"type": "output_text", "text": "b"})
+    r = parse_response(json.dumps(two).encode())
+    assert (r.text, r.texts) == ("", 2)
+    two["output"] = []
+    r = parse_response(json.dumps(two).encode())
+    assert (r.text, r.texts, r.status) == ("", 0, "completed")
+
+
 def test_incomplete_reply_settles_on_usage_and_counts_as_invalid(tmp_path):
     body = ok_body("hi", 300, 100, status="incomplete")
     client, t, ledger, log = make(tmp_path, [TransportResponse(200, body)])

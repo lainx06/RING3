@@ -404,7 +404,7 @@ int main(void)
             return 3;
         }
         if (type == LINK_T_STOP) {
-            report("STOPPED", "by the bridge:", (const uint8_t *)stop_name(body[LINK_STOP_OFF_REASON]),
+            report("STOPPED", "by the bridge", (const uint8_t *)stop_name(body[LINK_STOP_OFF_REASON]),
                    u_strlen(stop_name(body[LINK_STOP_OFF_REASON])));
             return 2;
         }

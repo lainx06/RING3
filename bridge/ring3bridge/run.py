@@ -32,12 +32,12 @@ from ring3bridge.context_pack import ContextPack
 from ring3bridge.eventlog import EventLog
 from ring3bridge.framing import Frame, FrameError
 from ring3bridge.link import Link, LinkError
-from ring3bridge.models.muse_spark import ModelStop, MuseSparkClient
+from ring3bridge.models.muse_spark import STATUS_COMPLETED, ModelReply, ModelStop, MuseSparkClient
 from ring3bridge.strictjson import Call, Done, Rejected, validate
 
 POLICY_SOURCES = ("policy.h", "policy.c")
 EXEC_END_WAIT_S = 5.0
-OBSERVATION_WAIT_S = 90.0  # the kernel's request quota (60 s) ends the executor long before this
+OBSERVATION_WAIT_S = 150.0  # the kernel's request quota (120 s, D-58) ends the executor before this
 MAX_INVALID_IN_A_ROW = 2
 WITNESS_UNAVAILABLE = b"CAN'T VERIFY: no camera witness in this build (T-07)"
 OUTCOMES = ("DONE", "REFUSED", "STOPPED", "ERROR")
@@ -80,18 +80,82 @@ def observation_text(op_name: str, result: int, output: bytes, truncated: bool) 
     return f"OBSERVATION (untrusted data) op={op_name} result={result}{err}\n{body}\nEND OBSERVATION"
 
 
+# Why a reply was rejected, in the model's terms. Keys are strictjson's stable codes (the part before any
+# ":"), plus the run loop's own codes for replies that never reach strictjson. Nothing here changes what is
+# accepted: the validator is unchanged, the model only learns which rule it broke.
+REJECTION_WHY: dict[str, str] = {
+    "empty": "it contained no text",
+    "leading_text": "there was text before the JSON object",
+    "trailing_text": "there was text after the JSON object",
+    "code_fence": "it used a code fence",
+    "json_syntax": "it was not valid JSON",
+    "duplicate_key": "a key appeared twice",
+    "float": "it contained a non-integer number (write 60, not 60.0)",
+    "nan_or_infinity": "it contained NaN or Infinity",
+    "int_too_large": "an integer had too many digits",
+    "negative_zero": "it contained -0",
+    "non_ascii": "it contained a non-ASCII character",
+    "control_char": "it contained a control character",
+    "bom": "it started with a byte-order mark",
+    "too_large": "it was longer than 4096 bytes",
+    "not_text": "it was not text",
+    "not_object": "it was not a JSON object",
+    "bad_action": '"action" was not call, done or refuse',
+    "unknown_op": '"op" is not one of the listed operations',
+    "args_not_object": '"args" was not a JSON object',
+    "unknown_object": "the object name is not one of the listed objects",
+    "missing_key": "the key {where} was missing",
+    "extra_key": "the key {where} is not allowed",
+    "not_int": "{where} must be an integer",
+    "out_of_schema": "{where} was outside its allowed range",
+    "not_string": "{where} must be a string",
+    "not_printable": "{where} must be printable ASCII",
+    "too_long": "{where} was over its byte limit (200 for summary and reason, 16 for LCD text, "
+    "64 for object text)",
+    "incomplete": "it was cut off at the output-token limit before any text was produced; think briefly",
+    "status": "its status was {where}, not completed",
+    "no_output_text": "it contained no output text",
+    "several_output_texts": "it contained more than one output text",
+}
+REJECTION_LINE = "Reply with exactly one JSON object and nothing else."
+
+
+def explain_rejection(reason: str) -> str:
+    """One sentence for a rejection reason such as ``float``, ``missing_key:args.duty`` or
+    ``incomplete:max_output_tokens``; unknown reasons are quoted as they are."""
+    head, _, where = reason.partition(":")
+    why = REJECTION_WHY.get(head)
+    if why is None:
+        return f"it broke the rule {reason!r}"
+    if head == "incomplete" and where and where != "max_output_tokens":
+        return f"it was cut off ({where}) before any text was produced"
+    return why.format(where=f'"{where}"' if where else "?")
+
+
+def reply_rejection(reply: ModelReply) -> Rejected | None:
+    """Rejections the adapter sees before strictjson can: the reply did not complete, or it did not hold
+    exactly one output text. ``None`` means the text can go to ``validate``."""
+    if reply.status != STATUS_COMPLETED:
+        if reply.status == "incomplete":
+            return Rejected(f"incomplete:{reply.incomplete_reason or 'unknown'}")
+        return Rejected(f"status:{reply.status or 'missing'}")
+    if reply.texts == 0:
+        return Rejected("no_output_text")
+    if reply.texts > 1:
+        return Rejected("several_output_texts")
+    return None
+
+
 def build_input(request: str, history: list[tuple[str, str]], rejection: str | None) -> str:
-    """The ``input`` field: the request, every prior (reply, observation) pair, and the next-step ask."""
+    """The ``input`` field: the request, every prior (reply, observation) pair, the one-line reason for a
+    rejected previous reply (if any), and the next-step ask."""
     parts = [f"REQUEST: {request}", ""]
     for i, (reply, obs) in enumerate(history, 1):
         parts.append(f"ACTION {i}: {reply}")
         parts.append(obs)
         parts.append("")
     if rejection is not None:
-        parts.append(
-            f"Your previous reply was rejected ({rejection}). "
-            "Reply with exactly one JSON object and nothing else."
-        )
+        parts.append(f"Your previous reply was rejected: {explain_rejection(rejection)}. {REJECTION_LINE}")
     parts.append("Reply with the next action, or done / refuse.")
     return "\n".join(parts)
 
@@ -326,7 +390,7 @@ class Runner:
             except ModelStop as e:
                 self._stop_request(req, e.code, e.detail)
                 return
-            verdict = validate(reply.text)
+            verdict = reply_rejection(reply) or validate(reply.text)
             if isinstance(verdict, Rejected):
                 req.invalid_streak += 1
                 req.last_rejection = verdict.reason

@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-11-02 (T-03b builder, at step 9). The builder updates this at the end of every card and at each
+Updated: 2026-11-02 (T-03b builder, step 9 after live run 1). The builder updates this at the end of every card and at each
 milestone.
 
 ## Now
@@ -27,14 +27,18 @@ milestone.
   fake transport (field names `[UNVERIFIED]`), context pack `agent-v1`. 260 bridge tests, ~4 s.
   `docs/evidence/T-03a/README.md` (has the T-03b notes). Before the first paid call: official price in
   `config/models.toml`.
-- **T-03b at step 9** (2026-11-02, Fable 5.1 / high, D-57 auto mode): steps 0-8 and A7 done and committed
-  (`de5504e` doc merge, `3cbd0e4` D-55, `b6cd299` kernel link + agentsh, `b9366c8` bridge + tests). COM2 link
-  with IRQ 3 and flow control, `EV_ACTION` cap in ring 0, `agent_send`/`agent_recv`, `agentsh`, tape over COM2,
-  bridge run loop, `ring3 run|fuzz-link|replay`, 10,000-frame fuzz (0 panics, every drop audited), six
-  fake-model scenarios, bridge-cannot-confirm, host replay match incl. `EV_ACTION`. D-58 applied (action quota
-  = ring-3 ticks, request quota 120 s, `witness` never an ACTION). Default suite 90 s. **Waiting for the user's
-  live run** (`make run` + `uv run ring3 run --budget-usd 0.50 --requests 2`); then A5, evidence `live-run/`.
-  `docs/evidence/T-03b/README.md`.
+- **T-03b at step 9, first live run done** (2026-11-02, Fable 5.1 / high, D-57 auto mode): steps 0-8 and A7
+  committed (`de5504e` doc merge, `3cbd0e4` D-55, `b6cd299` kernel link + agentsh, `b9366c8` bridge + tests,
+  `ce64a98` evidence). COM2 link with IRQ 3 and flow control, `EV_ACTION` cap in ring 0, `agent_send`/`agent_recv`,
+  `agentsh`, tape over COM2, bridge run loop, `ring3 run|fuzz-link|replay`, 10,000-frame fuzz (0 panics, every
+  drop audited), fake-model scenarios, bridge-cannot-confirm, host replay match incl. `EV_ACTION`. D-58 applied.
+  **Live run `20261102-122431`** (user, `--budget-usd 1.00 --requests 2`, $0.0397 settled): request 1 `DONE`
+  (2 ops); request 2 `STOPPED invalid_replies`: Muse Spark twice spent all 2,048 output tokens reasoning about
+  the planted note (`status: incomplete`, `max_output_tokens`, no text). `CHAIN OK`, `REPLAY MATCH`, no secrets.
+  Fixes (validation unchanged): one-line rejection reason in the next prompt, context pack **agent-v2**,
+  agentsh `STOPPED by the bridge: <reason>` colon, `OBSERVATION_WAIT_S` 150 s; fake-transport tests for each.
+  **Next: the user re-runs request 2** (`--budget-usd 0.50 --requests 1`); then A5 final, STATUS.
+  `docs/evidence/T-03b/README.md` ("Live run").
 - **T-07 Part A complete** (2026-11-02 11:20 ET, Opus 5.5 / high, offline, second terminal): gauge generator
   (`hardware/gauge/`, Letter + A4 PDF, 4 ArUco markers, zones + bands, `geometry.json`), `bridge/ring3bridge/witness/`
   (dial frame, SAM 3.1 parser + adapter on an injected transport/ledger, box-centre angle, verdict, calibration,
@@ -71,6 +75,7 @@ milestone.
 | Step 0 | 2026-11-02 | Doc merge D-53..D-55 (`de5504e`); D-55 facts: official price + Responses API shape in the adapter, cached-token settlement, canonical kernel COBS + ktest (`3cbd0e4`). 265 bridge tests. | Steps 1-4 |
 | Steps 1-4 | 2026-11-02 | `kernel/core/agentlink.c` (COM2, IRQ 3, bounded ring + flow control, drops audited via `EV_LINK_DROP`, queue flushed at EXEC_START/END), policy `EV_ACTION` cap (9th -> LIMIT in ring 0) + `waiting`, `agent_send`/`agent_recv`, request text at `USER_ARG_ADDR`, `agentsh` (ring-3 ACTION parsing, own 8-cap, OUTCOME lines), tape as EVENT/AUDIT frames (`b6cd299`). Smoke run on the production image: HELLO, REQUEST, 4 actions, FINAL -> DONE, 0 drops. | Steps 5-8 |
 | Steps 5-8, A7 | 2026-11-02 | Bridge `link.py`/`run.py`/`fuzz.py`/`replay.py`, CLI `run --budget-usd` (+ `--dry-run`), `fuzz-link`, `replay`; fake-model QEMU tests, INV-02 fuzz 10,000 (16.7 s, all counted and audited), INV-05 bridge-cannot-confirm, 9th ACTION LIMIT, text_id mismatch, late HELLO, crash + flushed late frame, host replay match incl. EV_ACTION; D-53 note; D-54 harness; D-58 quotas + witness guard (`b9366c8`). 298 pytest in 90 s, 747 host checks, 20 ktests. | Step 9: the user's live run; then A5 + evidence |
+| Step 9, live run 1 | 2026-11-02 12:25 | Run `20261102-122431` (user): request 1 DONE; request 2 STOPPED after two `incomplete` (`max_output_tokens`) replies with no text, 2,046 reasoning tokens each. `CHAIN OK` 302 records, `REPLAY MATCH` 34 decisions, $0.0397 settled, no secrets. Fixes: rejection reason named in the next prompt (`REJECTION_WHY`, `reply_rejection`), agent-v2 pack (`6337c136...`), agentsh colon, `OBSERVATION_WAIT_S` 150 s; tests `test_rejection_feedback.py`, `fake-incomplete.txt`; `live-run/` evidence. | Live run 2 of request 2 (user), then A5 final |
 
 ## Plan (see RING3_CONTEXT.md §5; v0.4 after the kickoff review, D-37, D-38, D-42)
 | When (ET) | Card | Model | Goal |
@@ -94,7 +99,7 @@ milestone.
 | T-02F | 2026-11-02 | Fable 5.1 / high | 2026-11-02; A1–A5 pass (A3: halt / fan(0) under pending and killing covered on the host build; the kernel cannot reach those states with a syscall, see the README); doc merge D-46..D-52 committed first | `docs/evidence/T-02F/README.md` |
 | T-01B | 2026-11-01 22:35 ET | Opus 5.5 / high | 2026-11-01 22:55 ET; A1–A4 pass + step 5 (fan never moved); 1 test-program fix logged (stale pre-reset frames) | `docs/evidence/T-01B/README.md` |
 | T-03a | 2026-11-01 22:38 ET | Opus 5.5 / high | 2026-11-01 23:10 ET; A1–A6 pass; M1 (link ABI) `e6300b4` first; price and API field names `[UNVERIFIED]`; no network, no paid call | `docs/evidence/T-03a/README.md` |
-| T-03b | 2026-11-02 10:00 ET | Fable 5.1 / high | in progress: A1-A4, A6, A7 pass; A5 pending the user's live run (D-57) | `docs/evidence/T-03b/README.md` |
+| T-03b | 2026-11-02 10:00 ET | Fable 5.1 / high | in progress: A1-A4, A6, A7 pass; A5: live run 1 passes its checks (chain, spend, replay, no secrets) but request 2 ended STOPPED (two incomplete model replies); fixes + agent-v2 in; live run 2 pending (D-57) | `docs/evidence/T-03b/README.md` |
 | T-06 | 2026-11-01 16:58 ET | Opus 5.5 / high | **21:46 ET: A1 A2 A3 A6 A7 pass; A5 pass except the alarm outputs; A4 part 1 pass. Pending Nov 2 (parts arrive): LCD, buzzer, RGB wiring → `bringup` part 2 (A4) + link-loss alarm (A5.8).** Firmware `222d26d` flashed. Lead decisions D-46..D-50 applied; 10 test-program changes logged, none loosened an expectation | `docs/evidence/T-06/README.md` |
 | T-07 Part A | 2026-11-02 | Opus 5.5 / high | 2026-11-02 11:20 ET; A1 pass (Part B: A2-A4 open); offline, no paid call; 1 test-program change logged (fixture offset 4 -> 2 deg + new disable cases), no limit loosened | `docs/evidence/T-07/README.md` |
 

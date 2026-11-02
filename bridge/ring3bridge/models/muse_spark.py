@@ -49,6 +49,18 @@ class ModelReply:
     output_tokens: int | None
     cached_tokens: int | None = None
     status: str = ""  # the reply's ``status`` field ("" when absent or not a string)
+    incomplete_reason: str = ""  # ``incomplete_details.reason`` (e.g. "max_output_tokens"), bounded, else ""
+    texts: int = 0  # how many ``output_text`` items the reply held (exactly one is valid)
+
+
+MAX_REASON_LEN = 32
+
+
+def _reason_token(v: object) -> str:
+    """A short lower-case identifier from the API, or "" (it is quoted to the model, so it is bounded)."""
+    if type(v) is str and 0 < len(v) <= MAX_REASON_LEN and all(c.isalnum() or c == "_" for c in v):
+        return v.lower()
+    return ""
 
 
 def build_request(model_id: str, instructions: str, user_input: str, max_output_tokens: int) -> bytes:
@@ -72,7 +84,8 @@ def parse_response(body: bytes) -> ModelReply:
 
     Text is taken only from a reply whose ``status`` is ``"completed"`` and that holds exactly one
     ``output_text`` item. Usage is parsed whenever present so an incomplete reply still settles on real
-    numbers."""
+    numbers. ``incomplete_reason`` carries ``incomplete_details.reason`` (Meta docs: "max_output_tokens" when
+    reasoning plus output hit the cap) so the run loop can tell the model why nothing arrived."""
     try:
         d = json.loads(body)
     except (ValueError, RecursionError):
@@ -81,6 +94,8 @@ def parse_response(body: bytes) -> ModelReply:
         return ModelReply("", None, None)
     status = d.get("status")
     status = status if type(status) is str else ""
+    inc = d.get("incomplete_details")
+    incomplete_reason = _reason_token(inc.get("reason")) if type(inc) is dict else ""
     texts: list[str] = []
     out = d.get("output")
     if type(out) is list:
@@ -97,7 +112,7 @@ def parse_response(body: bytes) -> ModelReply:
     details = usage.get("input_tokens_details")
     cached = _nonneg_int(details.get("cached_tokens")) if type(details) is dict else None
     text = texts[0] if len(texts) == 1 and status == STATUS_COMPLETED else ""
-    return ModelReply(text, tin, tout, cached, status)
+    return ModelReply(text, tin, tout, cached, status, incomplete_reason, len(texts))
 
 
 class MuseSparkClient:
