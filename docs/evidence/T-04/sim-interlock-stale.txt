@@ -1,0 +1,277 @@
+$ qemu-system-i386 -kernel build/kernel-test.elf -m 64 -display none -serial stdio -serial null -serial tcp:127.0.0.1:57161,server=on,wait=off -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -append 'taction=100 trequest=400 tconfirm=150'
+# exit code 33, 4.8 s
+
+RING3 0.1.0 build 940db6e
+policy: default sha256=4101a8cc305078722afb56a4eb09e2b4c3705e2d2c697b418c7ef02885cdef0b
+memory: 65023 KiB usable
+init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, 3713 frames free
+link: COM2 present (bridge link, HELLO sent)
+cell: COM3 present (work cell, IRQ 4 + tick poll)
+TIMER t0=0
+TIMER t1=25
+test image: quotas action=100 request=400 confirm=150 ticks
+TAPE k=7 s=0 f=3 t=5 nr=0 a0=300 a1=5898240 a2=1 a3=66
+AUDIT seq=1 tick=5 sys=telemetry target=0 decision=BOARD_BOOT reason=board_boot result=0 tainted=0
+TAPE k=7 s=0 f=3 t=10 nr=0 a0=300 a1=5898240 a2=2 a3=116
+TAPE k=7 s=0 f=3 t=15 nr=0 a0=300 a1=5898240 a2=3 a3=166
+TAPE k=7 s=0 f=3 t=20 nr=0 a0=300 a1=5898240 a2=4 a3=216
+ring3> 
+TAPE k=7 s=0 f=3 t=25 nr=0 a0=300 a1=5898240 a2=5 a3=266
+status
+status: fan=0 servo=90 estop_latched=0 tele_valid=1 distance=300 in_request=0 tainted=0 pending=0 seq=1 dropped=0 uptime=27
+link: com2=1 connected=0 rx_frames=0 frames_dropped=0 queued=0 tx_frames=7 tx_dropped=0 stalled=0
+cell: com3=1 synced=1 frames=5 prev_boot=0 old=0 frame_drops=0 resync_bytes=20 lsr_err=0 tx=3 tx_failed=0 pings=0 halts=1
+cell: last seq=5 t_ms=266 fan=0 servo=90 dist=300 estop=0 flags=0x0 ack=3 age_ticks=2
+ring3> 
+TAPE k=7 s=0 f=3 t=30 nr=0 a0=50 a1=5898240 a2=6 a3=316
+TAPE k=7 s=0 f=3 t=35 nr=0 a0=50 a1=5898240 a2=7 a3=366
+TAPE k=7 s=0 f=3 t=40 nr=0 a0=50 a1=5898240 a2=8 a3=416
+TAPE k=7 s=0 f=3 t=45 nr=0 a0=50 a1=5898240 a2=9 a3=466
+run cellcmd fan 60; servo 120
+TAPE k=1 s=4 f=0 t=49 nr=63 a0=100 a1=400 a2=150 a3=0
+AUDIT seq=2 tick=49 sys=exec_start target=4 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=1 name=cellcmd prog=4 caps=0x3f uptime=49
+SYSCALL pid=1 nr=6 cpl=3
+TAPE k=3 s=0 f=1 t=49 nr=6 a0=60 a1=0 a2=0 a3=0
+AUDIT seq=3 tick=49 sys=cell_fan target=60 decision=DENY_INTERLOCK reason=presence result=-200 tainted=0
+cellcmd: fan 60 -> -200
+TAPE k=3 s=0 f=1 t=49 nr=1 a0=1073746452 a1=13 a2=0 a3=0
+AUDIT seq=4 tick=49 sys=cons_write target=1073746452 decision=ALLOW reason=none result=13 tainted=0
+TAPE k=3 s=0 f=1 t=49 nr=1 a0=2147478444 a1=2 a2=0 a3=0
+AUDIT seq=5 tick=49 sys=cons_write target=2147478444 decision=ALLOW reason=none result=2 tainted=0
+TAPE k=3 s=0 f=1 t=49 nr=1 a0=1073746425 a1=4 a2=0 a3=0
+AUDIT seq=6 tick=49 sys=cons_write target=1073746425 decision=ALLOW reason=none result=4 tainted=0
+TAPE k=3 s=0 f=1 t=49 nr=1 a0=2147478444 a1=4 a2=0 a3=0
+AUDIT seq=7 tick=49 sys=cons_write target=2147478444 decision=ALLOW reason=none result=4 tainted=0
+TAPE k=3 s=0 f=1 t=49 nr=1 a0=1073746438 a1=1 a2=0 a3=0
+AUDIT seq=8 tick=49 sys=cons_write target=1073746438 decision=ALLOW reason=none result=1 tainted=0
+TAPE k=3 s=0 f=1 t=49 nr=7 a0=120 a1=0 a2=0 a3=0
+AUDIT seq=9 tick=49 sys=cell_servo target=120 decision=DENY_INTERLOCK reason=presence result=-200 tainted=0
+cellcmd: servo 120 -> -200
+TAPE k=3 s=0 f=1 t=49 nr=1 a0=1073746275 a1=15 a2=0 a3=0
+AUDIT seq=10 tick=49 sys=cons_write target=1073746275 decision=ALLOW reason=none result=15 tainted=0
+TAPE k=3 s=0 f=1 t=49 nr=1 a0=2147478444 a1=3 a2=0 a3=0
+AUDIT seq=11 tick=49 sys=cons_write target=2147478444 decision=ALLOW reason=none result=3 tainted=0
+TAPE k=3 s=0 f=1 t=49 nr=1 a0=1073746425 a1=4 a2=0 a3=0
+AUDIT seq=12 tick=49 sys=cons_write target=1073746425 decision=ALLOW reason=none result=4 tainted=0
+TAPE k=3 s=0 f=1 t=49 nr=1 a0=2147478444 a1=4 a2=0 a3=0
+AUDIT seq=13 tick=49 sys=cons_write target=2147478444 decision=ALLOW reason=none result=4 tainted=0
+cellcmd: done
+TAPE k=3 s=0 f=1 t=49 nr=1 a0=1073746438 a1=1 a2=0 a3=0
+AUDIT seq=14 tick=49 sys=cons_write target=1073746438 decision=ALLOW reason=none result=1 tainted=0
+TAPE k=3 s=0 f=1 t=49 nr=1 a0=1073746366 a1=14 a2=0 a3=0
+AUDIT seq=15 tick=49 sys=cons_write target=1073746366 decision=ALLOW reason=none result=14 tainted=0
+EXIT pid=1 code=0
+TAPE k=2 s=0 f=0 t=49 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=16 tick=49 sys=exec_end target=0 decision=ALLOW reason=exec_end result=0 tainted=0
+END pid=1 EXIT ticks=0 uptime=49
+ring3> 
+TAPE k=7 s=0 f=3 t=50 nr=0 a0=50 a1=5898240 a2=10 a3=516
+TAPE k=7 s=0 f=3 t=55 nr=0 a0=50 a1=5898240 a2=11 a3=566
+TAPE k=7 s=0 f=3 t=60 nr=0 a0=50 a1=5898240 a2=12 a3=616
+TAPE k=7 s=0 f=3 t=65 nr=0 a0=65535 a1=5898240 a2=13 a3=666
+TAPE k=7 s=0 f=3 t=70 nr=0 a0=65535 a1=5898240 a2=14 a3=716
+TAPE k=7 s=0 f=3 t=75 nr=0 a0=65535 a1=5898240 a2=15 a3=766
+TAPE k=7 s=0 f=3 t=80 nr=0 a0=65535 a1=5898240 a2=16 a3=816
+run cellcmd fan 60
+TAPE k=1 s=4 f=0 t=84 nr=63 a0=100 a1=400 a2=150 a3=0
+AUDIT seq=17 tick=84 sys=exec_start target=4 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=2 name=cellcmd prog=4 caps=0x3f uptime=84
+SYSCALL pid=2 nr=6 cpl=3
+TAPE k=3 s=0 f=1 t=84 nr=6 a0=60 a1=0 a2=0 a3=0
+AUDIT seq=18 tick=84 sys=cell_fan target=60 decision=DENY_INTERLOCK reason=no_echo result=-200 tainted=0
+cellcmd: fan 60 -> -200
+TAPE k=3 s=0 f=1 t=84 nr=1 a0=1073746452 a1=13 a2=0 a3=0
+AUDIT seq=19 tick=84 sys=cons_write target=1073746452 decision=ALLOW reason=none result=13 tainted=0
+TAPE k=3 s=0 f=1 t=84 nr=1 a0=2147478444 a1=2 a2=0 a3=0
+AUDIT seq=20 tick=84 sys=cons_write target=2147478444 decision=ALLOW reason=none result=2 tainted=0
+TAPE k=3 s=0 f=1 t=84 nr=1 a0=1073746425 a1=4 a2=0 a3=0
+AUDIT seq=21 tick=84 sys=cons_write target=1073746425 decision=ALLOW reason=none result=4 tainted=0
+TAPE k=3 s=0 f=1 t=84 nr=1 a0=2147478444 a1=4 a2=0 a3=0
+AUDIT seq=22 tick=84 sys=cons_write target=2147478444 decision=ALLOW reason=none result=4 tainted=0
+cellcmd: done
+TAPE k=3 s=0 f=1 t=84 nr=1 a0=1073746438 a1=1 a2=0 a3=0
+AUDIT seq=23 tick=84 sys=cons_write target=1073746438 decision=ALLOW reason=none result=1 tainted=0
+TAPE k=3 s=0 f=1 t=84 nr=1 a0=1073746366 a1=14 a2=0 a3=0
+AUDIT seq=24 tick=84 sys=cons_write target=1073746366 decision=ALLOW reason=none result=14 tainted=0
+EXIT pid=2 code=0
+TAPE k=2 s=0 f=0 t=84 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=25 tick=84 sys=exec_end target=0 decision=ALLOW reason=exec_end result=0 tainted=0
+END pid=2 EXIT ticks=0 uptime=84
+ring3> 
+TAPE k=7 s=0 f=3 t=85 nr=0 a0=65535 a1=5898240 a2=17 a3=866
+TAPE k=7 s=0 f=3 t=90 nr=0 a0=65535 a1=5898240 a2=18 a3=916
+TAPE k=7 s=0 f=3 t=95 nr=0 a0=65535 a1=5898240 a2=19 a3=966
+TAPE k=7 s=0 f=3 t=100 nr=0 a0=300 a1=5898240 a2=20 a3=1016
+TAPE k=7 s=0 f=3 t=105 nr=0 a0=300 a1=5898240 a2=21 a3=1066
+TAPE k=7 s=0 f=3 t=110 nr=0 a0=300 a1=5898240 a2=22 a3=1116
+TAPE k=7 s=0 f=3 t=115 nr=0 a0=300 a1=5898240 a2=23 a3=1166
+run cellcmd fan 60; wait 20
+TAPE k=1 s=4 f=0 t=118 nr=63 a0=100 a1=400 a2=150 a3=0
+AUDIT seq=26 tick=118 sys=exec_start target=4 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=3 name=cellcmd prog=4 caps=0x3f uptime=118
+SYSCALL pid=3 nr=6 cpl=3
+TAPE k=3 s=0 f=1 t=118 nr=6 a0=60 a1=0 a2=0 a3=0
+AUDIT seq=27 tick=118 sys=cell_fan target=60 decision=CONFIRM_PENDING reason=first_fan result=0 tainted=0
+CONFIRM: cellcmd wants cell_fan(60). Allow? [y/N] 
+TAPE k=7 s=0 f=3 t=120 nr=0 a0=300 a1=5898240 a2=24 a3=1216
+y
+TAPE k=5 s=1 f=0 t=121 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=28 tick=121 sys=confirm target=60 decision=CONFIRM_YES reason=first_fan result=0 tainted=0
+cellcmd: fan 60 -> 0
+TAPE k=3 s=0 f=1 t=121 nr=1 a0=1073746452 a1=13 a2=0 a3=0
+AUDIT seq=29 tick=121 sys=cons_write target=1073746452 decision=ALLOW reason=none result=13 tainted=0
+TAPE k=3 s=0 f=1 t=121 nr=1 a0=2147478444 a1=2 a2=0 a3=0
+AUDIT seq=30 tick=121 sys=cons_write target=2147478444 decision=ALLOW reason=none result=2 tainted=0
+TAPE k=3 s=0 f=1 t=121 nr=1 a0=1073746425 a1=4 a2=0 a3=0
+AUDIT seq=31 tick=121 sys=cons_write target=1073746425 decision=ALLOW reason=none result=4 tainted=0
+TAPE k=3 s=0 f=1 t=121 nr=1 a0=2147478444 a1=1 a2=0 a3=0
+AUDIT seq=32 tick=121 sys=cons_write target=2147478444 decision=ALLOW reason=none result=1 tainted=0
+TAPE k=3 s=0 f=1 t=121 nr=1 a0=1073746438 a1=1 a2=0 a3=0
+AUDIT seq=33 tick=121 sys=cons_write target=1073746438 decision=ALLOW reason=none result=1 tainted=0
+TAPE k=7 s=0 f=3 t=125 nr=0 a0=300 a1=5913600 a2=25 a3=1266
+TAPE k=7 s=0 f=3 t=130 nr=0 a0=300 a1=5913600 a2=26 a3=1316
+TAPE k=7 s=0 f=3 t=135 nr=0 a0=300 a1=5913600 a2=27 a3=1366
+TAPE k=7 s=0 f=3 t=140 nr=0 a0=300 a1=5913600 a2=28 a3=1416
+TAPE k=8 s=0 f=0 t=141 nr=0 a0=0 a1=0 a2=0 a3=0
+cellcmd: wait 20 -> 0
+TAPE k=3 s=0 f=1 t=141 nr=1 a0=1073746291 a1=14 a2=0 a3=0
+AUDIT seq=34 tick=141 sys=cons_write target=1073746291 decision=ALLOW reason=none result=14 tainted=0
+TAPE k=3 s=0 f=1 t=141 nr=1 a0=2147478444 a1=2 a2=0 a3=0
+AUDIT seq=35 tick=141 sys=cons_write target=2147478444 decision=ALLOW reason=none result=2 tainted=0
+TAPE k=3 s=0 f=1 t=141 nr=1 a0=1073746425 a1=4 a2=0 a3=0
+AUDIT seq=36 tick=141 sys=cons_write target=1073746425 decision=ALLOW reason=none result=4 tainted=0
+TAPE k=3 s=0 f=1 t=141 nr=1 a0=2147478444 a1=1 a2=0 a3=0
+AUDIT seq=37 tick=141 sys=cons_write target=2147478444 decision=ALLOW reason=none result=1 tainted=0
+cellcmd: done
+TAPE k=3 s=0 f=1 t=141 nr=1 a0=1073746438 a1=1 a2=0 a3=0
+AUDIT seq=38 tick=141 sys=cons_write target=1073746438 decision=ALLOW reason=none result=1 tainted=0
+TAPE k=3 s=0 f=1 t=141 nr=1 a0=1073746366 a1=14 a2=0 a3=0
+AUDIT seq=39 tick=141 sys=cons_write target=1073746366 decision=ALLOW reason=none result=14 tainted=0
+EXIT pid=3 code=0
+TAPE k=2 s=0 f=0 t=141 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=40 tick=141 sys=exec_end target=0 decision=ALLOW reason=exec_end result=0 tainted=0
+END pid=3 EXIT ticks=23 uptime=141
+ring3> 
+TAPE k=7 s=0 f=3 t=145 nr=0 a0=300 a1=5913600 a2=29 a3=1466
+TAPE k=7 s=0 f=3 t=150 nr=0 a0=300 a1=5913600 a2=30 a3=1516
+TAPE k=6 s=0 f=0 t=201 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=41 tick=201 sys=tick target=60 decision=AUTO_HALT reason=stale result=0 tainted=0
+run cellcmd fan 60; wait 110; fan 60
+TAPE k=1 s=4 f=0 t=202 nr=63 a0=100 a1=400 a2=150 a3=0
+AUDIT seq=42 tick=202 sys=exec_start target=4 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=4 name=cellcmd prog=4 caps=0x3f uptime=202
+SYSCALL pid=4 nr=6 cpl=3
+TAPE k=3 s=0 f=1 t=202 nr=6 a0=60 a1=0 a2=0 a3=0
+AUDIT seq=43 tick=202 sys=cell_fan target=60 decision=DENY_LIMIT reason=fan_rate result=-200 tainted=0
+cellcmd: fan 60 -> -200
+TAPE k=3 s=0 f=1 t=202 nr=1 a0=1073746452 a1=13 a2=0 a3=0
+AUDIT seq=44 tick=202 sys=cons_write target=1073746452 decision=ALLOW reason=none result=13 tainted=0
+TAPE k=3 s=0 f=1 t=202 nr=1 a0=2147478444 a1=2 a2=0 a3=0
+AUDIT seq=45 tick=202 sys=cons_write target=2147478444 decision=ALLOW reason=none result=2 tainted=0
+TAPE k=3 s=0 f=1 t=202 nr=1 a0=1073746425 a1=4 a2=0 a3=0
+AUDIT seq=46 tick=202 sys=cons_write target=1073746425 decision=ALLOW reason=none result=4 tainted=0
+TAPE k=3 s=0 f=1 t=202 nr=1 a0=2147478444 a1=4 a2=0 a3=0
+AUDIT seq=47 tick=202 sys=cons_write target=2147478444 decision=ALLOW reason=none result=4 tainted=0
+TAPE k=3 s=0 f=1 t=202 nr=1 a0=1073746438 a1=1 a2=0 a3=0
+AUDIT seq=48 tick=202 sys=cons_write target=1073746438 decision=ALLOW reason=none result=1 tainted=0
+TAPE k=8 s=0 f=0 t=222 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=242 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=262 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=282 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=302 nr=0 a0=0 a1=0 a2=0 a3=0
+cellcmd: wait 110 -> 0
+TAPE k=3 s=0 f=1 t=312 nr=1 a0=1073746291 a1=14 a2=0 a3=0
+AUDIT seq=49 tick=312 sys=cons_write target=1073746291 decision=ALLOW reason=none result=14 tainted=0
+TAPE k=3 s=0 f=1 t=312 nr=1 a0=2147478444 a1=3 a2=0 a3=0
+AUDIT seq=50 tick=312 sys=cons_write target=2147478444 decision=ALLOW reason=none result=3 tainted=0
+TAPE k=3 s=0 f=1 t=312 nr=1 a0=1073746425 a1=4 a2=0 a3=0
+AUDIT seq=51 tick=312 sys=cons_write target=1073746425 decision=ALLOW reason=none result=4 tainted=0
+TAPE k=3 s=0 f=1 t=312 nr=1 a0=2147478444 a1=1 a2=0 a3=0
+AUDIT seq=52 tick=312 sys=cons_write target=2147478444 decision=ALLOW reason=none result=1 tainted=0
+TAPE k=3 s=0 f=1 t=312 nr=1 a0=1073746438 a1=1 a2=0 a3=0
+AUDIT seq=53 tick=312 sys=cons_write target=1073746438 decision=ALLOW reason=none result=1 tainted=0
+TAPE k=3 s=0 f=1 t=312 nr=6 a0=60 a1=0 a2=0 a3=0
+AUDIT seq=54 tick=312 sys=cell_fan target=60 decision=DENY_STALE reason=stale result=-200 tainted=0
+cellcmd: fan 60 -> -200
+TAPE k=3 s=0 f=1 t=312 nr=1 a0=1073746452 a1=13 a2=0 a3=0
+AUDIT seq=55 tick=312 sys=cons_write target=1073746452 decision=ALLOW reason=none result=13 tainted=0
+TAPE k=3 s=0 f=1 t=312 nr=1 a0=2147478444 a1=2 a2=0 a3=0
+AUDIT seq=56 tick=312 sys=cons_write target=2147478444 decision=ALLOW reason=none result=2 tainted=0
+TAPE k=3 s=0 f=1 t=312 nr=1 a0=1073746425 a1=4 a2=0 a3=0
+AUDIT seq=57 tick=312 sys=cons_write target=1073746425 decision=ALLOW reason=none result=4 tainted=0
+TAPE k=3 s=0 f=1 t=312 nr=1 a0=2147478444 a1=4 a2=0 a3=0
+AUDIT seq=58 tick=312 sys=cons_write target=2147478444 decision=ALLOW reason=none result=4 tainted=0
+cellcmd: done
+TAPE k=3 s=0 f=1 t=312 nr=1 a0=1073746438 a1=1 a2=0 a3=0
+AUDIT seq=59 tick=312 sys=cons_write target=1073746438 decision=ALLOW reason=none result=1 tainted=0
+TAPE k=3 s=0 f=1 t=312 nr=1 a0=1073746366 a1=14 a2=0 a3=0
+AUDIT seq=60 tick=312 sys=cons_write target=1073746366 decision=ALLOW reason=none result=14 tainted=0
+EXIT pid=4 code=0
+TAPE k=2 s=0 f=0 t=312 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=61 tick=312 sys=exec_end target=0 decision=ALLOW reason=exec_end result=0 tainted=0
+END pid=4 EXIT ticks=110 uptime=312
+ring3> 
+TAPE k=7 s=0 f=3 t=325 nr=0 a0=300 a1=5898240 a2=31 a3=3266
+TAPE k=7 s=0 f=3 t=330 nr=0 a0=300 a1=5898240 a2=32 a3=3316
+TAPE k=7 s=0 f=3 t=335 nr=0 a0=300 a1=5898240 a2=33 a3=3366
+TAPE k=7 s=0 f=3 t=340 nr=0 a0=300 a1=5898240 a2=34 a3=3416
+TAPE k=7 s=0 f=3 t=345 nr=0 a0=300 a1=5898240 a2=35 a3=3466
+TAPE k=7 s=0 f=3 t=350 nr=0 a0=300 a1=5898240 a2=36 a3=3516
+TAPE k=7 s=0 f=3 t=355 nr=0 a0=300 a1=5898240 a2=37 a3=3566
+TAPE k=7 s=0 f=3 t=360 nr=0 a0=300 a1=5898240 a2=38 a3=3616
+TAPE k=7 s=0 f=3 t=365 nr=0 a0=300 a1=5898240 a2=39 a3=3666
+TAPE k=7 s=0 f=3 t=370 nr=0 a0=300 a1=5898240 a2=40 a3=3716
+TAPE k=7 s=0 f=3 t=375 nr=0 a0=300 a1=5898240 a2=41 a3=3766
+TAPE k=7 s=0 f=3 t=380 nr=0 a0=300 a1=5898240 a2=42 a3=3816
+TAPE k=7 s=0 f=3 t=385 nr=0 a0=300 a1=5898240 a2=43 a3=3866
+TAPE k=7 s=0 f=3 t=390 nr=0 a0=300 a1=5898240 a2=44 a3=3916
+TAPE k=7 s=0 f=3 t=395 nr=0 a0=300 a1=5898240 a2=45 a3=3966
+TAPE k=7 s=0 f=3 t=400 nr=0 a0=300 a1=5898240 a2=46 a3=4016
+TAPE k=7 s=0 f=3 t=405 nr=0 a0=300 a1=5898240 a2=47 a3=4066
+TAPE k=7 s=0 f=3 t=410 nr=0 a0=300 a1=5898240 a2=48 a3=4116
+TAPE k=7 s=0 f=3 t=415 nr=0 a0=300 a1=5898240 a2=49 a3=4166
+TAPE k=7 s=0 f=3 t=420 nr=0 a0=300 a1=5898240 a2=50 a3=4216
+TAPE k=7 s=0 f=3 t=425 nr=0 a0=300 a1=5898240 a2=51 a3=4266
+TAPE k=7 s=0 f=3 t=430 nr=0 a0=300 a1=5898240 a2=52 a3=4316
+TAPE k=7 s=0 f=3 t=435 nr=0 a0=300 a1=5898240 a2=53 a3=4366
+TAPE k=7 s=0 f=3 t=440 nr=0 a0=300 a1=5898240 a2=54 a3=4416
+TAPE k=7 s=0 f=3 t=445 nr=0 a0=300 a1=5898240 a2=55 a3=4466
+run cellcmd fan 60
+TAPE k=1 s=4 f=0 t=446 nr=63 a0=100 a1=400 a2=150 a3=0
+AUDIT seq=62 tick=446 sys=exec_start target=4 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=5 name=cellcmd prog=4 caps=0x3f uptime=446
+SYSCALL pid=5 nr=6 cpl=3
+TAPE k=3 s=0 f=1 t=446 nr=6 a0=60 a1=0 a2=0 a3=0
+AUDIT seq=63 tick=446 sys=cell_fan target=60 decision=CONFIRM_PENDING reason=first_fan result=0 tainted=0
+CONFIRM: cellcmd wants cell_fan(60). Allow? [y/N] y
+TAPE k=5 s=1 f=0 t=449 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=64 tick=449 sys=confirm target=60 decision=CONFIRM_YES reason=first_fan result=0 tainted=0
+cellcmd: fan 60 -> 0
+TAPE k=3 s=0 f=1 t=449 nr=1 a0=1073746452 a1=13 a2=0 a3=0
+AUDIT seq=65 tick=449 sys=cons_write target=1073746452 decision=ALLOW reason=none result=13 tainted=0
+TAPE k=3 s=0 f=1 t=449 nr=1 a0=2147478444 a1=2 a2=0 a3=0
+AUDIT seq=66 tick=449 sys=cons_write target=2147478444 decision=ALLOW reason=none result=2 tainted=0
+TAPE k=3 s=0 f=1 t=449 nr=1 a0=1073746425 a1=4 a2=0 a3=0
+AUDIT seq=67 tick=449 sys=cons_write target=1073746425 decision=ALLOW reason=none result=4 tainted=0
+TAPE k=3 s=0 f=1 t=449 nr=1 a0=2147478444 a1=1 a2=0 a3=0
+AUDIT seq=68 tick=449 sys=cons_write target=2147478444 decision=ALLOW reason=none result=1 tainted=0
+cellcmd: done
+TAPE k=3 s=0 f=1 t=449 nr=1 a0=1073746438 a1=1 a2=0 a3=0
+AUDIT seq=69 tick=449 sys=cons_write target=1073746438 decision=ALLOW reason=none result=1 tainted=0
+TAPE k=3 s=0 f=1 t=449 nr=1 a0=1073746366 a1=14 a2=0 a3=0
+AUDIT seq=70 tick=449 sys=cons_write target=1073746366 decision=ALLOW reason=none result=14 tainted=0
+EXIT pid=5 code=0
+TAPE k=2 s=0 f=0 t=449 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=71 tick=449 sys=exec_end target=0 decision=ALLOW reason=exec_end result=0 tainted=0
+END pid=5 EXIT ticks=3 uptime=449
+ring3> 
+TAPE k=7 s=0 f=3 t=450 nr=0 a0=300 a1=5913600 a2=56 a3=4516
+TAPE k=7 s=0 f=3 t=455 nr=0 a0=300 a1=5913600 a2=57 a3=4566
+TAPE k=7 s=0 f=3 t=460 nr=0 a0=300 a1=5913600 a2=58 a3=4616
+TAPE k=7 s=0 f=3 t=465 nr=0 a0=50 a1=274333696 a2=59 a3=4666
+AUDIT seq=72 tick=465 sys=telemetry target=60 decision=AUTO_HALT reason=presence result=0 tainted=0
+TAPE k=7 s=0 f=3 t=470 nr=0 a0=50 a1=274333696 a2=60 a3=4716
+exit
+audit: dropped=0
+KERNEL ALIVE uptime=471

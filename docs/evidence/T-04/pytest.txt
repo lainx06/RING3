@@ -1,0 +1,19 @@
+........................................................................ [ 24%]
+........................................................................ [ 37%]
+........................................................................ [ 49%]
+......................sss.........s..................................... [ 62%]
+........................................................................ [ 74%]
+....................................s......s............................ [ 87%]
+........................................................................ [ 99%]
+...                                                                      [100%]
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_inv_13_hw.py:96: hardware test: set RING3_HW=1 (board attached)
+SKIPPED [1] tests/test_inv_13_hw.py:125: hardware test: set RING3_HW=1 (board attached)
+SKIPPED [1] tests/test_inv_13_hw.py:177: hardware test: set RING3_HW=1 (board attached)
+SKIPPED [1] tests/test_link_hw.py:86: hardware test: set RING3_HW=1 (board attached)
+SKIPPED [2] tests/witness/test_inv_14_witness.py:80: raised by the verdict stage itself
+573 passed, 6 skipped in 125.04s (0:02:05)
+
+real	2m1.969s
+user	0m49.411s
+sys	0m28.205s

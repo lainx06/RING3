@@ -75,7 +75,7 @@ def observation_text(op_name: str, result: int, output: bytes, truncated: bool) 
         name = next((k for k, v in abi.ERRNO.items() if v == -result), "E?")
         err = f" error={name}"
     if op_name == "cell_status" and result == abi.LINK_CELLST_LEN and len(output) == abi.LINK_CELLST_LEN:
-        body = abi.cell_status_text(output)       # T-04: the fixed 16-byte record, decoded for the model
+        body = abi.cell_status_text(output)  # T-04: the fixed 16-byte record, decoded for the model
     else:
         body = render_output(output)
     if truncated:

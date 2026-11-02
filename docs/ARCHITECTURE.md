@@ -139,7 +139,8 @@ confirmation, the request quota never does.
 **Audit and event tape.** Every policy decision produces an audit record
 `{seq, tick, syscall, target, decision, reason, result, tainted}`. Decisions: `ALLOW`, `DENY_CAP`, `DENY_RULE`,
 `DENY_ARG`, `DENY_FAULT`, `DENY_LIMIT`, `DENY_INTERLOCK`, `DENY_STALE`, `DENY_ESTOP`, `CONFIRM_YES`, `CONFIRM_NO`,
-`FRAME_DROP`, `PROC_FAULT`, `LIMIT`, `AUTO_HALT`. In addition, **every inbound event the policy sees** (console
+`FRAME_DROP`, `PROC_FAULT`, `LIMIT`, `AUTO_HALT`, `BOARD_BOOT` (T-04: the work cell's first frame or a restart; duty 0,
+stale until 3 monotonic frames). In addition, **every inbound event the policy sees** (console
 lines, COM2 frames, COM3 telemetry, timer-driven lease events) is sent to the bridge as `EVENT` frames, so the log
 holds the complete input tape (D-28). Written to `audit_log` (text) and to the bridge.
 
@@ -185,7 +186,12 @@ so the fan's minimum spinning duty is measured in T-06 bring-up and the demo dut
 **Device syscalls:** `cell_status`, `cell_fan`, `cell_servo`, `cell_halt`, `cell_lcd` (table in §3). The buzzer
 and RGB light are driven by the kernel's own decisions, not by the executor.
 `ESTOP_RESET` has **no syscall**: only a human at the console can issue it (kernel command `estop reset` +
-confirmation), like any destructive action (INV-05).
+confirmation), like any destructive action (INV-05). T-04: the line opens `CONFIRM: console wants estop_reset
+... [y/N]`; on `y` the policy re-checks fresh telemetry and the released button at that tick and only then does
+the kernel send `ESTOP_RESET`. A board boot or restart (`seq`/`t_ms` going backwards, D-54) is the `BOARD_BOOT`
+decision: commanded duty 0, servo baseline 90, telemetry stale until 3 monotonic frames, the kernel sends `FAN 0`
+and never re-commands the previous motion; frames of the previous boot delivered after the port open are
+counted and ignored. After `AUTO_HALT` or `BOARD_BOOT` the first-fan confirmation is asked again (D-53).
 
 **Kernel safety policy (D-21, D-25)**, every decision audited:
 - Servo: 30-150°, ≤ 30° per command, ≥ 200 ms apart (`DENY_LIMIT`).

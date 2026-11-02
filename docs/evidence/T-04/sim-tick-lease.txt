@@ -1,0 +1,141 @@
+$ qemu-system-i386 -kernel build/kernel-test.elf -m 64 -display none -serial stdio -serial tcp:127.0.0.1:35061,server=on,wait=off -serial tcp:127.0.0.1:49693,server=on,wait=off -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -append 'taction=200 trequest=3000 tconfirm=500'
+# exit code 33, 3.2 s
+
+RING3 0.1.0 build 940db6e
+policy: default sha256=4101a8cc305078722afb56a4eb09e2b4c3705e2d2c697b418c7ef02885cdef0b
+memory: 65023 KiB usable
+init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, 3713 frames free
+link: COM2 present (bridge link, HELLO sent)
+cell: COM3 present (work cell, IRQ 4 + tick poll)
+TIMER t0=0
+TIMER t1=25
+test image: quotas action=200 request=3000 confirm=500 ticks
+TAPE k=7 s=0 f=3 t=5 nr=0 a0=300 a1=5898240 a2=1 a3=66
+AUDIT seq=1 tick=5 sys=telemetry target=0 decision=BOARD_BOOT reason=board_boot result=0 tainted=0
+TAPE k=7 s=0 f=3 t=10 nr=0 a0=300 a1=5898240 a2=2 a3=116
+TAPE k=7 s=0 f=3 t=15 nr=0 a0=300 a1=5898240 a2=3 a3=166
+TAPE k=7 s=0 f=3 t=20 nr=0 a0=300 a1=5898240 a2=4 a3=216
+ring3> 
+TAPE k=7 s=0 f=3 t=25 nr=0 a0=300 a1=5898240 a2=5 a3=266
+status
+status: fan=0 servo=90 estop_latched=0 tele_valid=1 distance=300 in_request=0 tainted=0 pending=0 seq=1 dropped=0 uptime=26
+link: com2=1 connected=0 rx_frames=0 frames_dropped=0 queued=0 tx_frames=7 tx_dropped=0 stalled=0
+cell: com3=1 synced=1 frames=5 prev_boot=0 old=0 frame_drops=0 resync_bytes=20 lsr_err=0 tx=3 tx_failed=0 pings=0 halts=1
+cell: last seq=5 t_ms=266 fan=0 servo=90 dist=300 estop=0 flags=0x0 ack=3 age_ticks=1
+ring3> spin the fan at 60 % for a moment, then halt
+REQUEST spin the fan at 60 % for a moment, then halt
+TAPE k=1 s=1 f=0 t=29 nr=63 a0=200 a1=3000 a2=500 a3=0
+AUDIT seq=2 tick=29 sys=exec_start target=1 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=1 name=agentsh prog=1 caps=0x3f uptime=29
+SYSCALL pid=1 nr=1 cpl=3
+agentsh: request "spin the fan at 60 % for a moment, then halt"
+TAPE k=3 s=0 f=1 t=29 nr=1 a0=1073754408 a1=64 a2=0 a3=0
+AUDIT seq=3 tick=29 sys=cons_write target=1073754408 decision=ALLOW reason=none result=64 tainted=0
+TAPE k=3 s=0 f=1 t=29 nr=11 a0=2147478528 a1=44 a2=17 a3=0
+AUDIT seq=4 tick=29 sys=agent_send target=2147478528 decision=ALLOW reason=none result=44 tainted=0
+TAPE k=3 s=0 f=1 t=29 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=5 tick=29 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=7 s=0 f=3 t=30 nr=0 a0=300 a1=5898240 a2=6 a3=316
+TAPE k=7 s=0 f=3 t=35 nr=0 a0=300 a1=5898240 a2=7 a3=366
+TAPE k=9 s=0 f=0 t=37 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=37 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=37 nr=6 a0=60 a1=0 a2=0 a3=0
+AUDIT seq=6 tick=37 sys=cell_fan target=60 decision=CONFIRM_PENDING reason=first_fan result=0 tainted=0
+CONFIRM: agentsh wants cell_fan(60). Allow? [y/N] y
+TAPE k=5 s=1 f=0 t=40 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=7 tick=40 sys=confirm target=60 decision=CONFIRM_YES reason=first_fan result=0 tainted=0
+agentsh: action 1 fan_set(60) -> 0
+TAPE k=3 s=0 f=1 t=40 nr=1 a0=1073754408 a1=35 a2=0 a3=0
+AUDIT seq=8 tick=40 sys=cons_write target=1073754408 decision=ALLOW reason=none result=35 tainted=0
+TAPE k=3 s=0 f=1 t=40 nr=11 a0=1073756916 a1=12 a2=18 a3=0
+AUDIT seq=9 tick=40 sys=agent_send target=1073756916 decision=ALLOW reason=none result=12 tainted=0
+TAPE k=3 s=0 f=1 t=40 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=10 tick=40 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=7 s=0 f=3 t=40 nr=0 a0=300 a1=5898240 a2=8 a3=416
+TAPE k=7 s=0 f=3 t=45 nr=0 a0=300 a1=5913600 a2=9 a3=466
+TAPE k=7 s=0 f=3 t=50 nr=0 a0=300 a1=5913600 a2=10 a3=516
+TAPE k=7 s=0 f=3 t=55 nr=0 a0=300 a1=5913600 a2=11 a3=566
+TAPE k=7 s=0 f=3 t=60 nr=0 a0=300 a1=5913600 a2=12 a3=616
+TAPE k=7 s=0 f=3 t=65 nr=0 a0=300 a1=5913600 a2=13 a3=666
+TAPE k=7 s=0 f=3 t=70 nr=0 a0=300 a1=5913600 a2=14 a3=716
+TAPE k=7 s=0 f=3 t=75 nr=0 a0=50 a1=274333696 a2=15 a3=766
+AUDIT seq=11 tick=75 sys=telemetry target=60 decision=AUTO_HALT reason=presence result=0 tainted=0
+TAPE k=7 s=0 f=3 t=80 nr=0 a0=50 a1=274333696 a2=16 a3=816
+TAPE k=7 s=0 f=3 t=85 nr=0 a0=50 a1=274333696 a2=17 a3=866
+TAPE k=7 s=0 f=3 t=90 nr=0 a0=50 a1=274333696 a2=18 a3=916
+TAPE k=7 s=0 f=3 t=95 nr=0 a0=50 a1=274333696 a2=19 a3=966
+TAPE k=7 s=0 f=3 t=100 nr=0 a0=50 a1=274333696 a2=20 a3=1016
+TAPE k=7 s=0 f=3 t=105 nr=0 a0=50 a1=274333696 a2=21 a3=1066
+TAPE k=7 s=0 f=3 t=110 nr=0 a0=50 a1=274333696 a2=22 a3=1116
+TAPE k=7 s=0 f=3 t=115 nr=0 a0=50 a1=274333696 a2=23 a3=1166
+TAPE k=7 s=0 f=3 t=120 nr=0 a0=50 a1=274333696 a2=24 a3=1216
+TAPE k=7 s=0 f=3 t=125 nr=0 a0=50 a1=274333696 a2=25 a3=1266
+TAPE k=7 s=0 f=3 t=130 nr=0 a0=50 a1=274333696 a2=26 a3=1316
+TAPE k=7 s=0 f=3 t=135 nr=0 a0=50 a1=274333696 a2=27 a3=1366
+TAPE k=7 s=0 f=3 t=140 nr=0 a0=50 a1=274333696 a2=28 a3=1416
+TAPE k=7 s=0 f=3 t=145 nr=0 a0=50 a1=274333696 a2=29 a3=1466
+TAPE k=7 s=0 f=3 t=150 nr=0 a0=50 a1=274333696 a2=30 a3=1516
+TAPE k=7 s=0 f=3 t=155 nr=0 a0=50 a1=274333696 a2=31 a3=1566
+TAPE k=7 s=0 f=3 t=160 nr=0 a0=50 a1=274333696 a2=32 a3=1616
+TAPE k=7 s=0 f=3 t=165 nr=0 a0=50 a1=274333696 a2=33 a3=1666
+TAPE k=7 s=0 f=3 t=170 nr=0 a0=50 a1=274333696 a2=34 a3=1716
+TAPE k=7 s=0 f=3 t=175 nr=0 a0=50 a1=274333696 a2=35 a3=1766
+TAPE k=7 s=0 f=3 t=180 nr=0 a0=50 a1=274333696 a2=36 a3=1816
+TAPE k=7 s=0 f=3 t=185 nr=0 a0=50 a1=274333696 a2=37 a3=1866
+TAPE k=7 s=0 f=3 t=190 nr=0 a0=50 a1=274333696 a2=38 a3=1916
+TAPE k=7 s=0 f=3 t=195 nr=0 a0=50 a1=274333696 a2=39 a3=1966
+TAPE k=7 s=0 f=3 t=200 nr=0 a0=50 a1=274333696 a2=40 a3=2016
+TAPE k=7 s=0 f=3 t=205 nr=0 a0=50 a1=274333696 a2=41 a3=2066
+TAPE k=7 s=0 f=3 t=210 nr=0 a0=50 a1=274333696 a2=42 a3=2116
+TAPE k=7 s=0 f=3 t=215 nr=0 a0=50 a1=274333696 a2=43 a3=2166
+TAPE k=7 s=0 f=3 t=220 nr=0 a0=50 a1=274333696 a2=44 a3=2216
+TAPE k=7 s=0 f=3 t=225 nr=0 a0=50 a1=274333696 a2=45 a3=2266
+TAPE k=7 s=0 f=3 t=230 nr=0 a0=50 a1=274333696 a2=46 a3=2316
+TAPE k=7 s=0 f=3 t=235 nr=0 a0=50 a1=274333696 a2=47 a3=2366
+TAPE k=7 s=0 f=3 t=240 nr=0 a0=50 a1=274333696 a2=48 a3=2416
+TAPE k=7 s=0 f=3 t=245 nr=0 a0=50 a1=274333696 a2=49 a3=2466
+TAPE k=7 s=0 f=3 t=250 nr=0 a0=50 a1=274333696 a2=50 a3=2516
+TAPE k=9 s=0 f=0 t=253 nr=0 a0=1 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=253 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=253 nr=8 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=12 tick=253 sys=cell_halt target=0 decision=ALLOW reason=halt result=0 tainted=0
+agentsh: action 2 halt(0) -> 0
+TAPE k=3 s=0 f=1 t=253 nr=1 a0=1073754408 a1=31 a2=0 a3=0
+AUDIT seq=13 tick=253 sys=cons_write target=1073754408 decision=ALLOW reason=none result=31 tainted=0
+TAPE k=3 s=0 f=1 t=253 nr=11 a0=1073756916 a1=12 a2=18 a3=0
+AUDIT seq=14 tick=253 sys=agent_send target=1073756916 decision=ALLOW reason=none result=12 tainted=0
+TAPE k=3 s=0 f=1 t=253 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=15 tick=253 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=7 s=0 f=3 t=255 nr=0 a0=50 a1=274333696 a2=51 a3=2566
+TAPE k=7 s=0 f=3 t=260 nr=0 a0=50 a1=274333696 a2=52 a3=2616
+TAPE k=7 s=0 f=3 t=265 nr=0 a0=50 a1=274333696 a2=53 a3=2666
+TAPE k=7 s=0 f=3 t=270 nr=0 a0=50 a1=274333696 a2=54 a3=2716
+TAPE k=7 s=0 f=3 t=275 nr=0 a0=50 a1=274333696 a2=55 a3=2766
+TAPE k=7 s=0 f=3 t=280 nr=0 a0=50 a1=274333696 a2=56 a3=2816
+TAPE k=7 s=0 f=3 t=285 nr=0 a0=50 a1=274333696 a2=57 a3=2866
+TAPE k=7 s=0 f=3 t=290 nr=0 a0=50 a1=274333696 a2=58 a3=2916
+TAPE k=7 s=0 f=3 t=295 nr=0 a0=50 a1=274333696 a2=59 a3=2966
+TAPE k=8 s=0 f=0 t=298 nr=0 a0=0 a1=0 a2=0 a3=0
+OUTCOME DONE: fan ran at 60 for a moment, then halted
+TAPE k=3 s=0 f=1 t=298 nr=1 a0=1073754408 a1=54 a2=0 a3=0
+AUDIT seq=16 tick=298 sys=cons_write target=1073754408 decision=ALLOW reason=none result=54 tainted=0
+EXECUTED 2 operation(s):
+TAPE k=3 s=0 f=1 t=298 nr=1 a0=1073754408 a1=25 a2=0 a3=0
+AUDIT seq=17 tick=298 sys=cons_write target=1073754408 decision=ALLOW reason=none result=25 tainted=0
+  1 fan_set(60) -> 0
+TAPE k=3 s=0 f=1 t=299 nr=1 a0=1073754408 a1=21 a2=0 a3=0
+AUDIT seq=18 tick=299 sys=cons_write target=1073754408 decision=ALLOW reason=none result=21 tainted=0
+  2 halt(0) -> 0
+TAPE k=3 s=0 f=1 t=299 nr=1 a0=1073754408 a1=17 a2=0 a3=0
+AUDIT seq=19 tick=299 sys=cons_write target=1073754408 decision=ALLOW reason=none result=17 tainted=0
+EXIT pid=1 code=0
+TAPE k=2 s=0 f=0 t=299 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=20 tick=299 sys=exec_end target=0 decision=ALLOW reason=exec_end result=0 tainted=0
+END pid=1 EXIT ticks=270 uptime=299
+ring3> 
+TAPE k=7 s=0 f=3 t=300 nr=0 a0=50 a1=274333696 a2=60 a3=3016
+TAPE k=7 s=0 f=3 t=305 nr=0 a0=50 a1=274333696 a2=61 a3=3066
+TAPE k=7 s=0 f=3 t=310 nr=0 a0=50 a1=274333696 a2=62 a3=3116
+exit
+audit: dropped=0
+KERNEL ALIVE uptime=313

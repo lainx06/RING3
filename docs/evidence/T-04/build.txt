@@ -1,0 +1,18 @@
+$ make 
+diagnostics: 0
+$ make TEST=1
+diagnostics: 0
+$ make KTEST=1
+diagnostics: 0
+$ make TEST=1 POLICY=permissive
+diagnostics: 0
+$ make host-policy
+diagnostics: 0
+
+(a warning or error would also have failed the build: -Wall -Wextra -Werror)
+206920 build/kernel.elf
+307760 build/kernel-test.elf
+355784 build/kernel-ktest.elf
+307480 build/kernel-test-permissive.elf
+279440 build/host/policy_test
+279088 build/host/policy_test_permissive

@@ -1,0 +1,6 @@
+REPLAY MATCH: 103 decisions, 153 tape events (sim device)
+..stop after silence: 479 ms; stop after presence: 75 ms
+......AUTO_HALT while waiting for the model: FAN 0 on COM3 79 ms after the hand
+...REPLAY MATCH: 279 decisions, 291 tape events
+.
+12 passed in 31.35s

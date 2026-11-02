@@ -1,0 +1,63 @@
+$ qemu-system-i386 -kernel build/kernel-test.elf -m 64 -display none -serial stdio -serial null -serial tcp:127.0.0.1:49175,server=on,wait=off -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -append 'taction=100 trequest=400 tconfirm=150'
+# exit code 33, 0.6 s
+
+RING3 0.1.0 build 940db6e
+policy: default sha256=4101a8cc305078722afb56a4eb09e2b4c3705e2d2c697b418c7ef02885cdef0b
+memory: 65023 KiB usable
+init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, 3713 frames free
+link: COM2 present (bridge link, HELLO sent)
+cell: COM3 present (work cell, IRQ 4 + tick poll)
+TIMER t0=0
+TIMER t1=25
+test image: quotas action=100 request=400 confirm=150 ticks
+TAPE k=7 s=0 f=3 t=0 nr=0 a0=300 a1=5898240 a2=0 a3=16
+AUDIT seq=1 tick=0 sys=telemetry target=0 decision=BOARD_BOOT reason=board_boot result=0 tainted=0
+TAPE k=7 s=0 f=3 t=5 nr=0 a0=300 a1=5898240 a2=1 a3=66
+TAPE k=7 s=0 f=3 t=10 nr=0 a0=300 a1=5898240 a2=2 a3=116
+TAPE k=7 s=0 f=3 t=15 nr=0 a0=300 a1=5898240 a2=3 a3=166
+TAPE k=7 s=0 f=3 t=20 nr=0 a0=300 a1=5898240 a2=4 a3=216
+ring3> 
+TAPE k=7 s=0 f=3 t=25 nr=0 a0=300 a1=5898240 a2=5 a3=266
+status
+status: fan=0 servo=90 estop_latched=0 tele_valid=1 distance=300 in_request=0 tainted=0 pending=0 seq=1 dropped=0 uptime=26
+link: com2=1 connected=0 rx_frames=0 frames_dropped=0 queued=0 tx_frames=8 tx_dropped=0 stalled=0
+cell: com3=1 synced=1 frames=6 prev_boot=18 old=0 frame_drops=0 resync_bytes=13 lsr_err=0 tx=4 tx_failed=0 pings=1 halts=1
+cell: last seq=5 t_ms=266 fan=0 servo=90 dist=300 estop=0 flags=0x0 ack=4 age_ticks=1
+ring3> status
+status: fan=0 servo=90 estop_latched=0 tele_valid=1 distance=300 in_request=0 tainted=0 pending=0 seq=1 dropped=0 uptime=27
+link: com2=1 connected=0 rx_frames=0 frames_dropped=0 queued=0 tx_frames=8 tx_dropped=0 stalled=0
+cell: com3=1 synced=1 frames=6 prev_boot=18 old=0 frame_drops=0 resync_bytes=13 lsr_err=0 tx=4 tx_failed=0 pings=1 halts=1
+cell: last seq=5 t_ms=266 fan=0 servo=90 dist=300 estop=0 flags=0x0 ack=4 age_ticks=2
+ring3> status
+status: fan=0 servo=90 estop_latched=0 tele_valid=1 distance=300 in_request=0 tainted=0 pending=0 seq=1 dropped=0 uptime=28
+link: com2=1 connected=0 rx_frames=0 frames_dropped=0 queued=0 tx_frames=8 tx_dropped=0 stalled=0
+cell: com3=1 synced=1 frames=6 prev_boot=18 old=0 frame_drops=0 resync_bytes=13 lsr_err=0 tx=4 tx_failed=0 pings=1 halts=1
+cell: last seq=5 t_ms=266 fan=0 servo=90 dist=300 estop=0 flags=0x0 ack=4 age_ticks=3
+ring3> 
+TAPE k=7 s=0 f=3 t=28 nr=0 a0=300 a1=5898240 a2=0 a3=16
+TAPE k=7 s=0 f=3 t=28 nr=0 a0=300 a1=5898240 a2=1 a3=66
+TAPE k=7 s=0 f=3 t=28 nr=0 a0=300 a1=5898240 a2=2 a3=116
+TAPE k=7 s=0 f=3 t=28 nr=0 a0=300 a1=5898240 a2=3 a3=166
+TAPE k=7 s=0 f=3 t=28 nr=0 a0=300 a1=5898240 a2=4 a3=216
+TAPE k=7 s=0 f=3 t=29 nr=0 a0=300 a1=5898240 a2=5 a3=266
+TAPE k=7 s=0 f=3 t=30 nr=0 a0=300 a1=5898240 a2=6 a3=316
+TAPE k=7 s=0 f=3 t=35 nr=0 a0=300 a1=5898240 a2=7 a3=366
+TAPE k=7 s=0 f=3 t=40 nr=0 a0=300 a1=5898240 a2=8 a3=416
+TAPE k=7 s=0 f=3 t=45 nr=0 a0=300 a1=5898240 a2=9 a3=466
+status
+status: fan=0 servo=90 estop_latched=0 tele_valid=1 distance=300 in_request=0 tainted=0 pending=0 seq=1 dropped=0 uptime=50
+link: com2=1 connected=0 rx_frames=0 frames_dropped=0 queued=0 tx_frames=18 tx_dropped=0 stalled=0
+cell: com3=1 synced=1 frames=16 prev_boot=18 old=6 frame_drops=0 resync_bytes=13 lsr_err=0 tx=5 tx_failed=0 pings=2 halts=1
+cell: last seq=9 t_ms=466 fan=0 servo=90 dist=300 estop=0 flags=0x0 ack=4 age_ticks=5
+ring3> 
+TAPE k=7 s=5 f=0 t=50 nr=0 a0=20 a1=0 a2=0 a3=0
+AUDIT seq=2 tick=50 sys=telemetry target=5 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+TAPE k=7 s=0 f=3 t=50 nr=0 a0=300 a1=5898240 a2=10 a3=516
+status
+status: fan=0 servo=90 estop_latched=0 tele_valid=1 distance=300 in_request=0 tainted=0 pending=0 seq=2 dropped=0 uptime=52
+link: com2=1 connected=0 rx_frames=0 frames_dropped=0 queued=0 tx_frames=21 tx_dropped=0 stalled=0
+cell: com3=1 synced=1 frames=17 prev_boot=18 old=6 frame_drops=1 resync_bytes=13 lsr_err=0 tx=5 tx_failed=0 pings=2 halts=1
+cell: last seq=10 t_ms=516 fan=0 servo=90 dist=300 estop=0 flags=0x0 ack=5 age_ticks=2
+ring3> exit
+audit: dropped=0
+KERNEL ALIVE uptime=53
