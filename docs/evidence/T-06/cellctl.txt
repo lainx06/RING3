@@ -1,0 +1,16 @@
+T-06 A5: tools/cellctl.py against ring3cell (commit 2c6b1ce firmware) on the Uno, /dev/ttyACM0
+Each block is one cellctl run; manual steps prompted by the tool. Hardware per hardware/wiring.md incl. D-48.
+
+$ uv run python tools/cellctl.py a5 /dev/ttyACM0 --only rate,bad_crc
+19:54:56 opened /dev/ttyACM0 raw 115200 8N1; the Uno resets on open, waiting for the first STATE of the new boot
+19:54:57 first STATE of the new boot after 1624 ms (9 pre-reset frames discarded): STATE seq=0 t=16 ms fan=0% servo=90 dist=NO_ECHO estop=0 flags=- ack=0
+19:54:57   boot flags: WDT_RESET=False LINK_LOST=False
+19:54:59 [rate] STATE frames over 5 s
+19:55:04   -> OK: 97 STATE, 19.4 Hz host clock, 20.0 Hz device clock, seq gaps 0, undecodable 2
+19:55:04 [bad_crc] FAN 40 with a corrupted CRC: rejected, BAD_FRAME, fan unchanged
+19:55:05   flagged: STATE seq=145 t=7266 ms fan=0% servo=90 dist=157 mm estop=0 flags=BAD ack=31
+19:55:05   -> OK: BAD_FRAME seen=True, fan stayed 0, ack_seq not advanced to 32=True
+19:55:06 A5 SUMMARY
+19:55:06   rate         OK   97 STATE, 19.4 Hz host clock, 20.0 Hz device clock, seq gaps 0, undecodable 2
+19:55:06   bad_crc      OK   BAD_FRAME seen=True, fan stayed 0, ack_seq not advanced to 32=True
+(note: the 'undecodable 2' above was counted from open, including frames cut by the reset; cellctl now reports pre-sync runs separately)

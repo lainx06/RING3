@@ -37,6 +37,7 @@ FLAG_NAMES = [
     (F_PRESENCE_FAULT, "PRESENCE"),
     (F_LINK_LOST, "LINK_LOST"),
 ]
+BOOT_WINDOW_MS = 3000  # a STATE with t_ms below this comes from the boot that our open caused
 MAX_WIRE = 64  # generous host-side cap; the device's own frames are at most 26 bytes on the wire
 
 
@@ -464,15 +465,37 @@ ALL_CHECKS = ["rate", "clamp", "bad_crc", "estop", "presence", "echo_unplug", "e
 
 
 def open_cell(port: str, log) -> tuple[Cell, State]:
+    """Open, then wait for the first STATE of the fresh boot (the open resets the Uno). Frames left over from
+    before the reset are discarded, and nothing is sent until the new boot's first STATE arrives, so the
+    bootloader never sees our bytes."""
     cell = Cell(port, log)
-    log(f"opened {port} raw 115200 8N1; the Uno resets on open, waiting for the first valid STATE")
+    cell.pinging = False
+    log(f"opened {port} raw 115200 8N1; the Uno resets on open, waiting for the first STATE of the new boot")
     t0 = time.monotonic()
-    first = cell.wait_for(lambda s: True, 6.0)
+    first = None
+    stale = 0
+    while first is None and time.monotonic() - t0 < 6.0:
+        for st in cell.poll():
+            if st.t_ms < BOOT_WINDOW_MS:
+                first = st
+                break
+            stale += 1
     if first is None:
         cell.close()
-        raise SystemExit("ERROR: no valid STATE within 6 s (is ring3cell flashed? is QEMU holding the port?)")
-    log(f"first STATE after {int((time.monotonic() - t0) * 1000)} ms: {first}")
+        raise SystemExit(
+            "ERROR: no STATE from a fresh boot within 6 s (is ring3cell flashed? did the open reset "
+            "the Uno? is QEMU holding the port?)"
+        )
+    log(
+        f"first STATE of the new boot after {int((time.monotonic() - t0) * 1000)} ms "
+        f"({stale} pre-reset frames "
+        f"discarded): {first}"
+    )
     log(f"  boot flags: WDT_RESET={first.has(F_WDT_RESET)} LINK_LOST={first.has(F_LINK_LOST)}")
+    log(f"  undecodable bytes runs before sync (frames cut by the reset): {cell.bad_rx}")
+    cell.bad_rx = 0
+    cell.states.clear()
+    cell.pinging = True
     return cell, first
 
 
