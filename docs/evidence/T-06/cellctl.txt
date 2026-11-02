@@ -190,3 +190,18 @@ $ uv run python tools/cellctl.py a5 /dev/ttyACM0 --only clamp,discard_link   (af
 21:39:34 A5 SUMMARY
 21:39:34   clamp        OK   fan reported 80 clamp=True; servo reported 165 clamp=True
 21:39:34   discard_link OK   LINK_LOST=True, link restored by the FAN=True, fan 0 for 1 s=True, a new FAN starts it=True
+
+$ uv run python tools/cellctl.py a5 /dev/ttyACM0 --only discard_presence   (re-run by the user after fixes #8 and #10, 21:39 ET)
+21:40:23 opened /dev/ttyACM0 raw 115200 8N1; the Uno resets on open, waiting for the first STATE of the new boot
+21:40:24 first STATE of the new boot after 1651 ms (1 pre-reset frames discarded): STATE seq=0 t=16 ms fan=0% servo=90 dist=NO_ECHO estop=0 flags=- ack=0
+21:40:24   boot flags: WDT_RESET=False LINK_LOST=False
+21:40:24   undecodable bytes runs before sync (frames cut by the reset): 1
+21:40:26 [discard_presence] presence fault -> FAN 60 dropped; clearing FAN dropped; only a new FAN starts
+21:40:26   >>> Put your hand about 5 cm in front of the sensor and keep it there until told (30 s).
+21:40:28   fault: STATE seq=60 t=3016 ms fan=0% servo=90 dist=51 mm estop=0 flags=PRESENCE ack=13
+21:40:28   FAN 60 with the hand there (accepted, exact ack): STATE seq=61 t=3066 ms fan=0% servo=90 dist=38 mm estop=0 flags=PRESENCE ack=14
+21:40:28   >>> Take your hand away now.
+21:40:29   clearing FAN 60 (accepted, exact ack): STATE seq=95 t=4766 ms fan=0% servo=90 dist=262 mm estop=0 flags=- ack=22
+21:40:31   -> OK: fan 0 + fault held while the hand was there=True, clearing FAN cleared the fault=True, fan stayed 0 for 1 s=True, a new FAN starts it=True
+21:40:31 A5 SUMMARY
+21:40:31   discard_presence OK   fan 0 + fault held while the hand was there=True, clearing FAN cleared the fault=True, fan stayed 0 for 1 s=True, a new FAN starts it=True
