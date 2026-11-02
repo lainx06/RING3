@@ -1,0 +1,148 @@
+$ qemu-system-i386 -kernel build/kernel-test.elf -m 64 -display none -serial stdio -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -append 'taction=100 trequest=400 tconfirm=150'
+# exit code 33, 2.0 s
+
+RING3 0.1.0 build 455002a
+policy: default sha256=ebb399eb1d6342b882ca3fe35e58e463444e460ac0b42d77deee43b4f6dae06c
+memory: 65023 KiB usable
+init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, 3728 frames free
+TIMER t0=0
+TIMER t1=25
+test image: quotas action=100 request=400 confirm=150 ticks
+ring3> run confirmw
+
+TAPE k=1 s=5 f=0 t=26 nr=3 a0=100 a1=400 a2=150 a3=0
+AUDIT seq=1 tick=26 sys=exec_start target=5 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=1 name=confirmw prog=5 caps=0x3 uptime=26
+SYSCALL pid=1 nr=1 cpl=3
+confirmw: writing maint_notes (prompt expected)
+
+TAPE k=3 s=0 f=1 t=26 nr=1 a0=1073743909 a1=48 a2=0 a3=0
+AUDIT seq=2 tick=26 sys=cons_write target=1073743909 decision=ALLOW reason=none result=48 tainted=0
+TAPE k=3 s=0 f=1 t=26 nr=4 a0=1 a1=1073743898 a2=6 a3=0
+AUDIT seq=3 tick=26 sys=obj_write target=1 decision=CONFIRM_PENDING reason=obj_confirm result=0 tainted=0
+CONFIRM: confirmw wants obj_write(maint_notes, 6 bytes). Allow? [y/N] y
+confirmw: result=6
+EXIT pid=1 code=0
+
+TAPE k=5 s=1 f=0 t=29 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=4 tick=29 sys=confirm target=1 decision=CONFIRM_YES reason=obj_confirm result=0 tainted=0
+TAPE k=3 s=0 f=1 t=29 nr=1 a0=1073743958 a1=17 a2=0 a3=0
+AUDIT seq=5 tick=29 sys=cons_write target=1073743958 decision=ALLOW reason=none result=17 tainted=0
+TAPE k=3 s=0 f=1 t=29 nr=1 a0=2147479488 a1=1 a2=0 a3=0
+AUDIT seq=6 tick=29 sys=cons_write target=2147479488 decision=ALLOW reason=none result=1 tainted=0
+TAPE k=3 s=0 f=1 t=29 nr=1 a0=1073743905 a1=1 a2=0 a3=0
+AUDIT seq=7 tick=29 sys=cons_write target=1073743905 decision=ALLOW reason=none result=1 tainted=0
+TAPE k=2 s=0 f=0 t=29 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=8 tick=29 sys=exec_end target=0 decision=ALLOW reason=exec_end result=0 tainted=0
+END pid=1 EXIT ticks=3 uptime=29
+ring3> run confirmw
+
+TAPE k=1 s=5 f=0 t=30 nr=3 a0=100 a1=400 a2=150 a3=0
+AUDIT seq=9 tick=30 sys=exec_start target=5 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=2 name=confirmw prog=5 caps=0x3 uptime=30
+SYSCALL pid=2 nr=1 cpl=3
+confirmw: writing maint_notes (prompt expected)
+
+TAPE k=3 s=0 f=1 t=30 nr=1 a0=1073743909 a1=48 a2=0 a3=0
+AUDIT seq=10 tick=30 sys=cons_write target=1073743909 decision=ALLOW reason=none result=48 tainted=0
+TAPE k=3 s=0 f=1 t=30 nr=4 a0=1 a1=1073743898 a2=6 a3=0
+AUDIT seq=11 tick=30 sys=obj_write target=1 decision=CONFIRM_PENDING reason=obj_confirm result=0 tainted=0
+CONFIRM: confirmw wants obj_write(maint_notes, 6 bytes). Allow? [y/N] n
+confirmw: result=-125
+EXIT pid=2 code=2
+
+TAPE k=5 s=0 f=0 t=33 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=12 tick=33 sys=confirm target=1 decision=CONFIRM_NO reason=answer result=-125 tainted=0
+TAPE k=3 s=0 f=1 t=33 nr=1 a0=1073743958 a1=17 a2=0 a3=0
+AUDIT seq=13 tick=33 sys=cons_write target=1073743958 decision=ALLOW reason=none result=17 tainted=0
+TAPE k=3 s=0 f=1 t=33 nr=1 a0=2147479488 a1=4 a2=0 a3=0
+AUDIT seq=14 tick=33 sys=cons_write target=2147479488 decision=ALLOW reason=none result=4 tainted=0
+TAPE k=3 s=0 f=1 t=33 nr=1 a0=1073743905 a1=1 a2=0 a3=0
+AUDIT seq=15 tick=33 sys=cons_write target=1073743905 decision=ALLOW reason=none result=1 tainted=0
+TAPE k=2 s=0 f=0 t=33 nr=0 a0=2 a1=0 a2=0 a3=0
+AUDIT seq=16 tick=33 sys=exec_end target=2 decision=ALLOW reason=exec_end result=2 tainted=0
+END pid=2 EXIT ticks=3 uptime=33
+ring3> run confirmw
+
+TAPE k=1 s=5 f=0 t=34 nr=3 a0=100 a1=400 a2=150 a3=0
+AUDIT seq=17 tick=34 sys=exec_start target=5 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=3 name=confirmw prog=5 caps=0x3 uptime=34
+SYSCALL pid=3 nr=1 cpl=3
+confirmw: writing maint_notes (prompt expected)
+
+TAPE k=3 s=0 f=1 t=34 nr=1 a0=1073743909 a1=48 a2=0 a3=0
+AUDIT seq=18 tick=34 sys=cons_write target=1073743909 decision=ALLOW reason=none result=48 tainted=0
+TAPE k=3 s=0 f=1 t=34 nr=4 a0=1 a1=1073743898 a2=6 a3=0
+AUDIT seq=19 tick=34 sys=obj_write target=1 decision=CONFIRM_PENDING reason=obj_confirm result=0 tainted=0
+CONFIRM: confirmw wants obj_write(maint_notes, 6 bytes). Allow? [y/N] yes
+confirmw: result=6
+EXIT pid=3 code=0
+
+TAPE k=5 s=1 f=0 t=37 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=20 tick=37 sys=confirm target=1 decision=CONFIRM_YES reason=obj_confirm result=0 tainted=0
+TAPE k=3 s=0 f=1 t=37 nr=1 a0=1073743958 a1=17 a2=0 a3=0
+AUDIT seq=21 tick=37 sys=cons_write target=1073743958 decision=ALLOW reason=none result=17 tainted=0
+TAPE k=3 s=0 f=1 t=37 nr=1 a0=2147479488 a1=1 a2=0 a3=0
+AUDIT seq=22 tick=37 sys=cons_write target=2147479488 decision=ALLOW reason=none result=1 tainted=0
+TAPE k=3 s=0 f=1 t=37 nr=1 a0=1073743905 a1=1 a2=0 a3=0
+AUDIT seq=23 tick=37 sys=cons_write target=1073743905 decision=ALLOW reason=none result=1 tainted=0
+TAPE k=2 s=0 f=0 t=37 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=24 tick=37 sys=exec_end target=0 decision=ALLOW reason=exec_end result=0 tainted=0
+END pid=3 EXIT ticks=3 uptime=37
+ring3> run confirmw
+
+TAPE k=1 s=5 f=0 t=38 nr=3 a0=100 a1=400 a2=150 a3=0
+AUDIT seq=25 tick=38 sys=exec_start target=5 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=4 name=confirmw prog=5 caps=0x3 uptime=38
+SYSCALL pid=4 nr=1 cpl=3
+confirmw: writing maint_notes (prompt expected)
+
+TAPE k=3 s=0 f=1 t=38 nr=1 a0=1073743909 a1=48 a2=0 a3=0
+AUDIT seq=26 tick=38 sys=cons_write target=1073743909 decision=ALLOW reason=none result=48 tainted=0
+TAPE k=3 s=0 f=1 t=38 nr=4 a0=1 a1=1073743898 a2=6 a3=0
+AUDIT seq=27 tick=38 sys=obj_write target=1 decision=CONFIRM_PENDING reason=obj_confirm result=0 tainted=0
+CONFIRM: confirmw wants obj_write(maint_notes, 6 bytes). Allow? [y/N] maybe
+confirmw: result=-125
+EXIT pid=4 code=2
+
+TAPE k=5 s=0 f=0 t=41 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=28 tick=41 sys=confirm target=1 decision=CONFIRM_NO reason=answer result=-125 tainted=0
+TAPE k=3 s=0 f=1 t=41 nr=1 a0=1073743958 a1=17 a2=0 a3=0
+AUDIT seq=29 tick=41 sys=cons_write target=1073743958 decision=ALLOW reason=none result=17 tainted=0
+TAPE k=3 s=0 f=1 t=41 nr=1 a0=2147479488 a1=4 a2=0 a3=0
+AUDIT seq=30 tick=41 sys=cons_write target=2147479488 decision=ALLOW reason=none result=4 tainted=0
+TAPE k=3 s=0 f=1 t=41 nr=1 a0=1073743905 a1=1 a2=0 a3=0
+AUDIT seq=31 tick=41 sys=cons_write target=1073743905 decision=ALLOW reason=none result=1 tainted=0
+TAPE k=2 s=0 f=0 t=41 nr=0 a0=2 a1=0 a2=0 a3=0
+AUDIT seq=32 tick=41 sys=exec_end target=2 decision=ALLOW reason=exec_end result=2 tainted=0
+END pid=4 EXIT ticks=3 uptime=41
+ring3> run confirmw
+
+TAPE k=1 s=5 f=0 t=42 nr=3 a0=100 a1=400 a2=150 a3=0
+AUDIT seq=33 tick=42 sys=exec_start target=5 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=5 name=confirmw prog=5 caps=0x3 uptime=42
+SYSCALL pid=5 nr=1 cpl=3
+confirmw: writing maint_notes (prompt expected)
+
+TAPE k=3 s=0 f=1 t=42 nr=1 a0=1073743909 a1=48 a2=0 a3=0
+AUDIT seq=34 tick=42 sys=cons_write target=1073743909 decision=ALLOW reason=none result=48 tainted=0
+TAPE k=3 s=0 f=1 t=42 nr=4 a0=1 a1=1073743898 a2=6 a3=0
+AUDIT seq=35 tick=42 sys=obj_write target=1 decision=CONFIRM_PENDING reason=obj_confirm result=0 tainted=0
+CONFIRM: confirmw wants obj_write(maint_notes, 6 bytes). Allow? [y/N] 
+TAPE k=6 s=0 f=0 t=192 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=36 tick=192 sys=tick target=1 decision=CONFIRM_NO reason=timeout result=-125 tainted=0
+
+confirmw: result=-125
+EXIT pid=5 code=2
+
+TAPE k=3 s=0 f=1 t=192 nr=1 a0=1073743958 a1=17 a2=0 a3=0
+AUDIT seq=37 tick=192 sys=cons_write target=1073743958 decision=ALLOW reason=none result=17 tainted=0
+TAPE k=3 s=0 f=1 t=192 nr=1 a0=2147479488 a1=4 a2=0 a3=0
+AUDIT seq=38 tick=192 sys=cons_write target=2147479488 decision=ALLOW reason=none result=4 tainted=0
+TAPE k=3 s=0 f=1 t=192 nr=1 a0=1073743905 a1=1 a2=0 a3=0
+AUDIT seq=39 tick=192 sys=cons_write target=1073743905 decision=ALLOW reason=none result=1 tainted=0
+TAPE k=2 s=0 f=0 t=192 nr=0 a0=2 a1=0 a2=0 a3=0
+AUDIT seq=40 tick=192 sys=exec_end target=2 decision=ALLOW reason=exec_end result=2 tainted=0
+END pid=5 EXIT ticks=150 uptime=192
+ring3> exit
+KERNEL ALIVE uptime=193

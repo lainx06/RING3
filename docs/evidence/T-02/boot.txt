@@ -1,0 +1,15 @@
+$ qemu-system-i386 -kernel build/kernel.elf -m 64 -display none -serial stdio -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot
+# exit code 33, 0.4 s
+
+RING3 0.1.0 build 455002a
+policy: default sha256=ebb399eb1d6342b882ca3fe35e58e463444e460ac0b42d77deee43b4f6dae06c
+memory: 65023 KiB usable
+init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, 3742 frames free
+TIMER t0=0
+TIMER t1=25
+ring3> run hello
+unknown command: run hello
+ring3> help
+commands: help status audit objects 'estop reset' exit
+ring3> exit
+KERNEL ALIVE uptime=28

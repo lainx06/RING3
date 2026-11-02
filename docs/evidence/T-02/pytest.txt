@@ -1,0 +1,26 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0 -- <repo>/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: <repo>
+configfile: pyproject.toml
+testpaths: tests
+collecting ... collected 15 items
+
+tests/test_boot.py::test_boot_banner_prompt_and_exit PASSED              [  6%]
+tests/test_boot.py::test_banner_within_5s PASSED                         [ 13%]
+tests/test_boot.py::test_deliberate_cpl0_panic_dumps_and_exits PASSED    [ 20%]
+tests/test_inv_03_bad_pointers.py::test_bad_pointers_and_strings PASSED  [ 26%]
+tests/test_inv_03_bad_pointers.py::test_syscall_fuzz PASSED              [ 33%]
+tests/test_inv_04_policy_host.py::test_host_policy_tests PASSED          [ 40%]
+tests/test_inv_04_policy_host.py::test_host_policy_permissive_variant PASSED [ 46%]
+tests/test_inv_05_confirm.py::test_confirm_yes_no_timeout PASSED         [ 53%]
+tests/test_inv_05_confirm.py::test_typeahead_does_not_answer PASSED      [ 60%]
+tests/test_inv_05_confirm.py::test_taint_demo PASSED                     [ 66%]
+tests/test_inv_06_fault_containment.py::test_fault_containment PASSED    [ 73%]
+tests/test_inv_07_quotas.py::test_action_and_request_quotas PASSED       [ 80%]
+tests/test_inv_10_replay_match.py::test_kernel_and_host_decisions_match PASSED [ 86%]
+tests/test_ktest.py::test_ktests_pass PASSED                             [ 93%]
+tests/test_permissive.py::test_permissive_labelled_and_different_hash PASSED [100%]
+
+============================= 15 passed in 20.20s ==============================
+exit 0

@@ -1,0 +1,46 @@
+$ make 
+exit 1
+$ make TEST=1
+/usr/bin/llvm-objcopy-18 -O binary build/user/hello.elf build/user/hello.bin
+/usr/bin/llvm-objcopy-18 -O binary build/user/kwrite.elf build/user/kwrite.bin
+/usr/bin/llvm-objcopy-18 -O binary build/user/ticks.elf build/user/ticks.bin
+/usr/bin/llvm-objcopy-18 -O binary build/user/priv.elf build/user/priv.bin
+/usr/bin/llvm-objcopy-18 -O binary build/user/spin.elf build/user/spin.bin
+/usr/bin/llvm-objcopy-18 -O binary build/user/badptr.elf build/user/badptr.bin
+/usr/bin/llvm-objcopy-18 -O binary build/user/null.elf build/user/null.bin
+/usr/bin/llvm-objcopy-18 -O binary build/user/hlt.elf build/user/hlt.bin
+/usr/bin/llvm-objcopy-18 -O binary build/user/ud.elf build/user/ud.bin
+/usr/bin/llvm-objcopy-18 -O binary build/user/div0.elf build/user/div0.bin
+/usr/bin/llvm-objcopy-18 -O binary build/user/stack.elf build/user/stack.bin
+/usr/bin/llvm-objcopy-18 -O binary build/user/dflag.elf build/user/dflag.bin
+/usr/bin/llvm-objcopy-18 -O binary build/user/fuzz.elf build/user/fuzz.bin
+/usr/bin/llvm-objcopy-18 -O binary build/user/taint.elf build/user/taint.bin
+/usr/bin/llvm-objcopy-18 -O binary build/user/confirmw.elf build/user/confirmw.bin
+/usr/bin/llvm-objcopy-18 -O binary build/user/nocap.elf build/user/nocap.bin
+/usr/bin/llvm-objcopy-18 -O binary build/user/objs.elf build/user/objs.bin
+/usr/bin/llvm-objcopy-18 -O binary build/user/fan.elf build/user/fan.bin
+/usr/bin/llvm-objcopy-18 -O binary build/user/multi.elf build/user/multi.bin
+/usr/bin/llvm-objcopy-18 -O binary build/user/lcd.elf build/user/lcd.bin
+exit 0
+$ make KTEST=1
+exit 1
+$ make POLICY=permissive
+exit 1
+$ make TEST=1 POLICY=permissive
+exit 1
+$ make host-policy
+
+$ grep -c -- -Werror Makefile
+4
+$ build/host/policy_test | tail -1
+policy_test: 593 checks, 0 failed
+policy_test: 564 checks, 0 failed
+
+== RING3 toolchain check ==
+clang              Ubuntu clang version 18.1.3 (1ubuntu1)
+ld.lld             Ubuntu LLD 18.1.3 (compatible with GNU linkers)
+llvm-objcopy-18    llvm-objcopy, compatible with GNU objcopy
+make               GNU Make 4.3
+qemu-system-i386   QEMU emulator version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18)
+gdb                GNU gdb (Ubuntu 15.1-1ubuntu1~24.04.1) 15.1
+python3            Python 3.12.3

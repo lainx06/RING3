@@ -1,0 +1,100 @@
+$ qemu-system-i386 -kernel build/kernel-test.elf -m 64 -display none -serial stdio -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -append 'taction=100 trequest=300 tconfirm=1000'
+# exit code 33, 7.4 s
+
+RING3 0.1.0 build 455002a
+policy: default sha256=ebb399eb1d6342b882ca3fe35e58e463444e460ac0b42d77deee43b4f6dae06c
+memory: 65023 KiB usable
+init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, 3728 frames free
+TIMER t0=0
+TIMER t1=25
+test image: quotas action=100 request=300 confirm=1000 ticks
+ring3> run spin
+
+TAPE k=1 s=2 f=0 t=26 nr=1 a0=100 a1=300 a2=1000 a3=0
+AUDIT seq=1 tick=26 sys=exec_start target=2 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=1 name=spin prog=2 caps=0x1 uptime=26
+SYSCALL pid=1 nr=1 cpl=3
+spin: looping forever
+LIMIT pid=1 ticks=100
+
+TAPE k=3 s=0 f=1 t=26 nr=1 a0=1073743836 a1=22 a2=0 a3=0
+AUDIT seq=2 tick=26 sys=cons_write target=1073743836 decision=ALLOW reason=none result=22 tainted=0
+TAPE k=6 s=0 f=0 t=126 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=3 tick=126 sys=tick target=100 decision=LIMIT reason=action_quota result=0 tainted=0
+TAPE k=2 s=2 f=0 t=126 nr=0 a0=100 a1=0 a2=0 a3=0
+AUDIT seq=4 tick=126 sys=exec_end target=100 decision=LIMIT reason=exec_end result=0 tainted=0
+END pid=1 LIMIT ticks=100 uptime=126
+ring3> run multi
+
+TAPE k=1 s=2 f=0 t=127 nr=1 a0=100 a1=300 a2=1000 a3=0
+AUDIT seq=5 tick=127 sys=exec_start target=2 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=2 name=multi prog=2 caps=0x1 uptime=127
+SYSCALL pid=2 nr=1 cpl=3
+multi: action boundaries every 20 ticks
+LIMIT pid=2 ticks=300
+
+TAPE k=3 s=0 f=1 t=127 nr=1 a0=1073743856 a1=40 a2=0 a3=0
+AUDIT seq=6 tick=127 sys=cons_write target=1073743856 decision=ALLOW reason=none result=40 tainted=0
+TAPE k=8 s=0 f=0 t=147 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=167 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=187 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=207 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=227 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=247 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=267 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=287 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=307 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=327 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=347 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=367 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=387 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=407 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=6 s=0 f=0 t=427 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=7 tick=427 sys=tick target=300 decision=LIMIT reason=request_quota result=0 tainted=0
+TAPE k=2 s=2 f=0 t=427 nr=0 a0=300 a1=0 a2=0 a3=0
+AUDIT seq=8 tick=427 sys=exec_end target=300 decision=LIMIT reason=exec_end result=0 tainted=0
+END pid=2 LIMIT ticks=300 uptime=427
+ring3> run ticks
+
+TAPE k=1 s=2 f=0 t=429 nr=1 a0=100 a1=300 a2=1000 a3=0
+AUDIT seq=9 tick=429 sys=exec_start target=2 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=3 name=ticks prog=2 caps=0x1 uptime=429
+SYSCALL pid=3 nr=10 cpl=3
+ticks: t0=429 t1=434
+EXIT pid=3 code=0
+
+TAPE k=3 s=0 f=1 t=434 nr=1 a0=1073743923 a1=10 a2=0 a3=0
+AUDIT seq=10 tick=434 sys=cons_write target=1073743923 decision=ALLOW reason=none result=10 tainted=0
+TAPE k=3 s=0 f=1 t=434 nr=1 a0=2147479484 a1=3 a2=0 a3=0
+AUDIT seq=11 tick=434 sys=cons_write target=2147479484 decision=ALLOW reason=none result=3 tainted=0
+TAPE k=3 s=0 f=1 t=434 nr=1 a0=1073743914 a1=4 a2=0 a3=0
+AUDIT seq=12 tick=434 sys=cons_write target=1073743914 decision=ALLOW reason=none result=4 tainted=0
+TAPE k=3 s=0 f=1 t=434 nr=1 a0=2147479484 a1=3 a2=0 a3=0
+AUDIT seq=13 tick=434 sys=cons_write target=2147479484 decision=ALLOW reason=none result=3 tainted=0
+TAPE k=3 s=0 f=1 t=434 nr=1 a0=1073743919 a1=1 a2=0 a3=0
+AUDIT seq=14 tick=434 sys=cons_write target=1073743919 decision=ALLOW reason=none result=1 tainted=0
+TAPE k=2 s=0 f=0 t=434 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=15 tick=434 sys=exec_end target=0 decision=ALLOW reason=exec_end result=0 tainted=0
+END pid=3 EXIT ticks=5 uptime=434
+ring3> run confirmw
+
+TAPE k=1 s=5 f=0 t=435 nr=3 a0=100 a1=300 a2=1000 a3=0
+AUDIT seq=16 tick=435 sys=exec_start target=5 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=4 name=confirmw prog=5 caps=0x3 uptime=435
+SYSCALL pid=4 nr=1 cpl=3
+confirmw: writing maint_notes (prompt expected)
+
+TAPE k=3 s=0 f=1 t=435 nr=1 a0=1073743909 a1=48 a2=0 a3=0
+AUDIT seq=17 tick=435 sys=cons_write target=1073743909 decision=ALLOW reason=none result=48 tainted=0
+TAPE k=3 s=0 f=1 t=435 nr=4 a0=1 a1=1073743898 a2=6 a3=0
+AUDIT seq=18 tick=435 sys=obj_write target=1 decision=CONFIRM_PENDING reason=obj_confirm result=0 tainted=0
+CONFIRM: confirmw wants obj_write(maint_notes, 6 bytes). Allow? [y/N] 
+TAPE k=6 s=0 f=0 t=735 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=19 tick=735 sys=tick target=300 decision=LIMIT reason=request_quota result=0 tainted=0
+LIMIT pid=4 ticks=300
+
+TAPE k=2 s=2 f=0 t=735 nr=0 a0=300 a1=0 a2=0 a3=0
+AUDIT seq=20 tick=735 sys=exec_end target=300 decision=LIMIT reason=exec_end result=0 tainted=0
+END pid=4 LIMIT ticks=300 uptime=735
+ring3> exit
+KERNEL ALIVE uptime=736
