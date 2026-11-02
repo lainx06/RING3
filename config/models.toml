@@ -22,3 +22,15 @@ price_output_uusd_per_mtok = 4250000
 price_cached_input_uusd_per_mtok = 150000
 price_source = "https://dev.meta.ai/docs/pricing-rate-limits"
 price_checked = "2026-11-01"
+
+# SAM 3.1 for the camera witness (T-07, D-56). Facts from the official docs, checked by the lead on 2026-11-02:
+# https://dev.meta.ai/docs/sam/segmenting and https://dev.meta.ai/docs/sam/reading-segmentation (request and
+# output grammar), https://dev.meta.ai/docs/pricing-rate-limits (price). Read by bridge/ring3bridge/witness/sam.py.
+# PRICE: $2.50 per 1,000 images = 2500 µUSD per image (integer). One image is reserved before every SAM call.
+[sam]
+id = "sam-3.1"
+endpoint = "https://api.meta.ai/v1/responses"
+timeout_s = 60
+price_uusd_per_image = 2500
+price_source = "https://dev.meta.ai/docs/pricing-rate-limits"
+price_checked = "2026-11-02"
