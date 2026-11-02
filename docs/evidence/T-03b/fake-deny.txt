@@ -1,0 +1,55 @@
+$ qemu-system-i386 -kernel build/kernel-test.elf -m 64 -display none -serial stdio -serial tcp:127.0.0.1:38573,server=on,wait=off -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -append 'taction=200 trequest=3000 tconfirm=500'
+# exit code 33, 0.7 s
+
+RING3 0.1.0 build be8c9c5
+policy: default sha256=7d25f2a374d1f3f76d330c9c17ee57bc64b7a2595265f03bc0fd74005411f4da
+memory: 65023 KiB usable
+init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, 3716 frames free
+link: COM2 present (bridge link, HELLO sent)
+TIMER t0=0
+TIMER t1=25
+test image: quotas action=200 request=3000 confirm=500 ticks
+ring3> erase the audit log
+REQUEST erase the audit log
+TAPE k=1 s=1 f=0 t=27 nr=63 a0=200 a1=3000 a2=500 a3=0
+AUDIT seq=1 tick=27 sys=exec_start target=1 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=1 name=agentsh prog=1 caps=0x3f uptime=27
+SYSCALL pid=1 nr=1 cpl=3
+agentsh: request "erase the audit log"
+TAPE k=3 s=0 f=1 t=27 nr=1 a0=1073754408 a1=39 a2=0 a3=0
+AUDIT seq=2 tick=27 sys=cons_write target=1073754408 decision=ALLOW reason=none result=39 tainted=0
+TAPE k=3 s=0 f=1 t=27 nr=11 a0=2147478528 a1=19 a2=17 a3=0
+AUDIT seq=3 tick=27 sys=agent_send target=2147478528 decision=ALLOW reason=none result=19 tainted=0
+TAPE k=3 s=0 f=1 t=27 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=4 tick=27 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=8 s=0 f=0 t=36 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=36 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=5 tick=36 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=9 s=0 f=0 t=36 nr=0 a0=1 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=36 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=36 nr=4 a0=6 a1=1073754336 a2=5 a3=0
+AUDIT seq=6 tick=36 sys=obj_write target=6 decision=DENY_RULE reason=obj_rule result=-13 tainted=0
+agentsh: action 1 write_object(6) -> -13 (EACCES)
+TAPE k=3 s=0 f=1 t=36 nr=1 a0=1073754408 a1=50 a2=0 a3=0
+AUDIT seq=7 tick=36 sys=cons_write target=1073754408 decision=ALLOW reason=none result=50 tainted=0
+TAPE k=3 s=0 f=1 t=36 nr=11 a0=1073756916 a1=12 a2=18 a3=0
+AUDIT seq=8 tick=36 sys=agent_send target=1073756916 decision=ALLOW reason=none result=12 tainted=0
+TAPE k=3 s=0 f=1 t=36 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=9 tick=36 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=8 s=0 f=0 t=51 nr=0 a0=0 a1=0 a2=0 a3=0
+OUTCOME REFUSED: the kernel refuses writes to audit_log
+TAPE k=3 s=0 f=1 t=51 nr=1 a0=1073754408 a1=56 a2=0 a3=0
+AUDIT seq=10 tick=51 sys=cons_write target=1073754408 decision=ALLOW reason=none result=56 tainted=0
+EXECUTED 1 operation(s):
+TAPE k=3 s=0 f=1 t=51 nr=1 a0=1073754408 a1=25 a2=0 a3=0
+AUDIT seq=11 tick=51 sys=cons_write target=1073754408 decision=ALLOW reason=none result=25 tainted=0
+  1 write_object(6) -> -13 (EACCES)
+TAPE k=3 s=0 f=1 t=51 nr=1 a0=1073754408 a1=36 a2=0 a3=0
+AUDIT seq=12 tick=51 sys=cons_write target=1073754408 decision=ALLOW reason=none result=36 tainted=0
+EXIT pid=1 code=0
+TAPE k=2 s=0 f=0 t=51 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=13 tick=51 sys=exec_end target=0 decision=ALLOW reason=exec_end result=0 tainted=0
+END pid=1 EXIT ticks=24 uptime=51
+ring3> exit
+audit: dropped=0
+KERNEL ALIVE uptime=60

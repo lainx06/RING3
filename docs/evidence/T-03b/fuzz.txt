@@ -1,0 +1,4 @@
+fuzz-link: sent 10000 malformed frames in 16.7 s
+  kinds: bad_crc=719, bad_len_field=722, body_too_long=734, body_too_short=712, cobs_noncanonical=716, cobs_overrun=701, cobs_zero_inside=697, k2b_type=757, oversize_decoded=724, oversize_raw=737, random_bytes=678, short_decoded=701, truncated_valid=717, unknown_type=685
+  heartbeats 17 (tick 100 -> 1700), kernel frames_dropped=10000, FRAME_DROP audits=10000 of 10000 audits, bridge-side frame errors=0
+  FUZZ OK: every frame counted and audited, heartbeat continued

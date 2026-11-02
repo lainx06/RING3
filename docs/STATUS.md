@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-11-01 (lead, kickoff review). The builder updates this at the end of every card and at each T-01
+Updated: 2026-11-02 (T-03b builder, at step 9). The builder updates this at the end of every card and at each
 milestone.
 
 ## Now
@@ -27,6 +27,14 @@ milestone.
   fake transport (field names `[UNVERIFIED]`), context pack `agent-v1`. 260 bridge tests, ~4 s.
   `docs/evidence/T-03a/README.md` (has the T-03b notes). Before the first paid call: official price in
   `config/models.toml`.
+- **T-03b at step 9** (2026-11-02, Fable 5.1 / high, D-57 auto mode): steps 0-8 and A7 done and committed
+  (`de5504e` doc merge, `3cbd0e4` D-55, `b6cd299` kernel link + agentsh, `b9366c8` bridge + tests). COM2 link
+  with IRQ 3 and flow control, `EV_ACTION` cap in ring 0, `agent_send`/`agent_recv`, `agentsh`, tape over COM2,
+  bridge run loop, `ring3 run|fuzz-link|replay`, 10,000-frame fuzz (0 panics, every drop audited), six
+  fake-model scenarios, bridge-cannot-confirm, host replay match incl. `EV_ACTION`. D-58 applied (action quota
+  = ring-3 ticks, request quota 120 s, `witness` never an ACTION). Default suite 90 s. **Waiting for the user's
+  live run** (`make run` + `uv run ring3 run --budget-usd 0.50 --requests 2`); then A5, evidence `live-run/`.
+  `docs/evidence/T-03b/README.md`.
 - Second terminal Nov 1: **T-06** (Opus 5.5 / high) once T-01 has made its first commit (D-42).
 - User, while T-01 runs: `SETUP.md` step 8 (usbipd + Uno + arduino-cli in Ubuntu), then wiring per
   `hardware/wiring.md` in the afternoon.
@@ -48,6 +56,13 @@ milestone.
 | M1 | 2026-11-01 19:55 ET | Request lifecycle (`EXEC_START`/`EXEC_END` events, tick-driven action/request quotas via `decide()`, `exec_action_boundary`), full §3 syscall table through `uaccess` + `decide()`, bounded string copies, `TEST=1` image with `run`/`tele`/`tape` commands and quota boot options, 7 fault programs + DF test, `badptr` 18/18, fuzzer 10,000 calls 0 panics. | M2 |
 | M2 | 2026-11-01 20:05 ET | Pure-C `kernel/policy/` (`decide()`, 88-byte state, 28-byte events, no globals/clock), capabilities by profile, 16-slot object store with `cell_spec` / planted `maint_notes` / `scratch_0..3` / bounded `audit_log`, taint, two-phase console confirmation (drain + prompt + tick timeout), audit ring + tape on COM1, `make host-policy` 593 checks. | M3 |
 | M3 | 2026-11-01 20:11 ET | Device rules in `decide()` (D-47 fan 0 or 50–80 with first-step/step/rate, servo range/step/rate, presence incl. `0xFFFF`, stale, E-stop latch + console reset on fresh released telemetry, tick lease `AUTO_HALT` once per hazard), kernel-vs-host decision match on a scripted run (all 16 decision codes), permissive build labelled with a different hash. 15 pytest tests, ~20 s. A1–A9 pass. | Report; T-03a/T-03b next |
+
+## T-03b progress (builder adds one line per milestone)
+| Milestone | Time | State | Next / open bug |
+|---|---|---|---|
+| Step 0 | 2026-11-02 | Doc merge D-53..D-55 (`de5504e`); D-55 facts: official price + Responses API shape in the adapter, cached-token settlement, canonical kernel COBS + ktest (`3cbd0e4`). 265 bridge tests. | Steps 1-4 |
+| Steps 1-4 | 2026-11-02 | `kernel/core/agentlink.c` (COM2, IRQ 3, bounded ring + flow control, drops audited via `EV_LINK_DROP`, queue flushed at EXEC_START/END), policy `EV_ACTION` cap (9th -> LIMIT in ring 0) + `waiting`, `agent_send`/`agent_recv`, request text at `USER_ARG_ADDR`, `agentsh` (ring-3 ACTION parsing, own 8-cap, OUTCOME lines), tape as EVENT/AUDIT frames (`b6cd299`). Smoke run on the production image: HELLO, REQUEST, 4 actions, FINAL -> DONE, 0 drops. | Steps 5-8 |
+| Steps 5-8, A7 | 2026-11-02 | Bridge `link.py`/`run.py`/`fuzz.py`/`replay.py`, CLI `run --budget-usd` (+ `--dry-run`), `fuzz-link`, `replay`; fake-model QEMU tests, INV-02 fuzz 10,000 (16.7 s, all counted and audited), INV-05 bridge-cannot-confirm, 9th ACTION LIMIT, text_id mismatch, late HELLO, crash + flushed late frame, host replay match incl. EV_ACTION; D-53 note; D-54 harness; D-58 quotas + witness guard (`b9366c8`). 298 pytest in 90 s, 747 host checks, 20 ktests. | Step 9: the user's live run; then A5 + evidence |
 
 ## Plan (see RING3_CONTEXT.md §5; v0.4 after the kickoff review, D-37, D-38, D-42)
 | When (ET) | Card | Model | Goal |
@@ -71,6 +86,7 @@ milestone.
 | T-02F | 2026-11-02 | Fable 5.1 / high | 2026-11-02; A1–A5 pass (A3: halt / fan(0) under pending and killing covered on the host build; the kernel cannot reach those states with a syscall, see the README); doc merge D-46..D-52 committed first | `docs/evidence/T-02F/README.md` |
 | T-01B | 2026-11-01 22:35 ET | Opus 5.5 / high | 2026-11-01 22:55 ET; A1–A4 pass + step 5 (fan never moved); 1 test-program fix logged (stale pre-reset frames) | `docs/evidence/T-01B/README.md` |
 | T-03a | 2026-11-01 22:38 ET | Opus 5.5 / high | 2026-11-01 23:10 ET; A1–A6 pass; M1 (link ABI) `e6300b4` first; price and API field names `[UNVERIFIED]`; no network, no paid call | `docs/evidence/T-03a/README.md` |
+| T-03b | 2026-11-02 10:00 ET | Fable 5.1 / high | in progress: A1-A4, A6, A7 pass; A5 pending the user's live run (D-57) | `docs/evidence/T-03b/README.md` |
 | T-06 | 2026-11-01 16:58 ET | Opus 5.5 / high | **21:46 ET: A1 A2 A3 A6 A7 pass; A5 pass except the alarm outputs; A4 part 1 pass. Pending Nov 2 (parts arrive): LCD, buzzer, RGB wiring → `bringup` part 2 (A4) + link-loss alarm (A5.8).** Firmware `222d26d` flashed. Lead decisions D-46..D-50 applied; 10 test-program changes logged, none loosened an expectation | `docs/evidence/T-06/README.md` |
 
 ## Last evidence

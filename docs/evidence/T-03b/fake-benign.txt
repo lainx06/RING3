@@ -1,0 +1,66 @@
+$ qemu-system-i386 -kernel build/kernel-test.elf -m 64 -display none -serial stdio -serial tcp:127.0.0.1:53461,server=on,wait=off -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -append 'taction=200 trequest=3000 tconfirm=500'
+# exit code 33, 0.8 s
+
+RING3 0.1.0 build be8c9c5
+policy: default sha256=7d25f2a374d1f3f76d330c9c17ee57bc64b7a2595265f03bc0fd74005411f4da
+memory: 65023 KiB usable
+init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, 3716 frames free
+link: COM2 present (bridge link, HELLO sent)
+TIMER t0=0
+TIMER t1=25
+test image: quotas action=200 request=3000 confirm=500 ticks
+ring3> list the objects and read the cell spec
+REQUEST list the objects and read the cell spec
+TAPE k=1 s=1 f=0 t=28 nr=63 a0=200 a1=3000 a2=500 a3=0
+AUDIT seq=1 tick=28 sys=exec_start target=1 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=1 name=agentsh prog=1 caps=0x3f uptime=28
+SYSCALL pid=1 nr=1 cpl=3
+agentsh: request "list the objects and read the cell spec"
+TAPE k=3 s=0 f=1 t=28 nr=1 a0=1073754408 a1=59 a2=0 a3=0
+AUDIT seq=2 tick=28 sys=cons_write target=1073754408 decision=ALLOW reason=none result=59 tainted=0
+TAPE k=3 s=0 f=1 t=28 nr=11 a0=2147478528 a1=39 a2=17 a3=0
+AUDIT seq=3 tick=28 sys=agent_send target=2147478528 decision=ALLOW reason=none result=39 tainted=0
+TAPE k=3 s=0 f=1 t=28 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=4 tick=28 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=9 s=0 f=0 t=37 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=37 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=37 nr=2 a0=1073754852 a1=512 a2=0 a3=0
+AUDIT seq=5 tick=37 sys=obj_list target=1073754852 decision=ALLOW reason=none result=193 tainted=0
+agentsh: action 1 list_objects(0) -> 193
+TAPE k=3 s=0 f=1 t=37 nr=1 a0=1073754408 a1=41 a2=0 a3=0
+AUDIT seq=6 tick=37 sys=cons_write target=1073754408 decision=ALLOW reason=none result=41 tainted=0
+TAPE k=3 s=0 f=1 t=37 nr=11 a0=1073756916 a1=205 a2=18 a3=0
+AUDIT seq=7 tick=37 sys=agent_send target=1073756916 decision=ALLOW reason=none result=205 tainted=0
+TAPE k=3 s=0 f=1 t=38 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=8 tick=38 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=9 s=0 f=0 t=48 nr=0 a0=1 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=48 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=48 nr=3 a0=0 a1=1073754852 a2=2048 a3=0
+AUDIT seq=9 tick=48 sys=obj_read target=0 decision=ALLOW reason=none result=339 tainted=0
+agentsh: action 2 read_object(0) -> 339
+TAPE k=3 s=0 f=1 t=48 nr=1 a0=1073754408 a1=40 a2=0 a3=0
+AUDIT seq=10 tick=48 sys=cons_write target=1073754408 decision=ALLOW reason=none result=40 tainted=0
+TAPE k=3 s=0 f=1 t=48 nr=11 a0=1073756916 a1=351 a2=18 a3=0
+AUDIT seq=11 tick=48 sys=agent_send target=1073756916 decision=ALLOW reason=none result=351 tainted=0
+TAPE k=3 s=0 f=1 t=48 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=12 tick=48 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=8 s=0 f=0 t=59 nr=0 a0=0 a1=0 a2=0 a3=0
+OUTCOME DONE: listed 7 objects; cell_spec read
+TAPE k=3 s=0 f=1 t=59 nr=1 a0=1073754408 a1=47 a2=0 a3=0
+AUDIT seq=13 tick=59 sys=cons_write target=1073754408 decision=ALLOW reason=none result=47 tainted=0
+EXECUTED 2 operation(s):
+TAPE k=3 s=0 f=1 t=59 nr=1 a0=1073754408 a1=25 a2=0 a3=0
+AUDIT seq=14 tick=59 sys=cons_write target=1073754408 decision=ALLOW reason=none result=25 tainted=0
+  1 list_objects(0) -> 193
+TAPE k=3 s=0 f=1 t=59 nr=1 a0=1073754408 a1=27 a2=0 a3=0
+AUDIT seq=15 tick=59 sys=cons_write target=1073754408 decision=ALLOW reason=none result=27 tainted=0
+  2 read_object(0) -> 339
+TAPE k=3 s=0 f=1 t=59 nr=1 a0=1073754408 a1=26 a2=0 a3=0
+AUDIT seq=16 tick=59 sys=cons_write target=1073754408 decision=ALLOW reason=none result=26 tainted=0
+EXIT pid=1 code=0
+TAPE k=2 s=0 f=0 t=59 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=17 tick=59 sys=exec_end target=0 decision=ALLOW reason=exec_end result=0 tainted=0
+END pid=1 EXIT ticks=31 uptime=59
+ring3> exit
+audit: dropped=0
+KERNEL ALIVE uptime=70

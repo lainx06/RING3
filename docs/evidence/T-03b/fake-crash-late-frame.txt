@@ -1,0 +1,76 @@
+$ qemu-system-i386 -kernel build/kernel-test.elf -m 64 -display none -serial stdio -serial tcp:127.0.0.1:41835,server=on,wait=off -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -append 'taction=200 trequest=3000 tconfirm=500'
+# exit code 33, 2.5 s
+
+RING3 0.1.0 build be8c9c5
+policy: default sha256=7d25f2a374d1f3f76d330c9c17ee57bc64b7a2595265f03bc0fd74005411f4da
+memory: 65023 KiB usable
+init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, 3716 frames free
+link: COM2 present (bridge link, HELLO sent)
+TIMER t0=0
+TIMER t1=25
+test image: quotas action=200 request=3000 confirm=500 ticks
+ring3> agent-test show crash on the panel
+REQUEST show crash on the panel
+TAPE k=1 s=1 f=0 t=27 nr=63 a0=200 a1=3000 a2=500 a3=0
+AUDIT seq=1 tick=27 sys=exec_start target=1 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=1 name=agentsh_test prog=1 caps=0x3f uptime=27
+SYSCALL pid=1 nr=1 cpl=3
+agentsh: request "show crash on the panel"
+TAPE k=3 s=0 f=1 t=27 nr=1 a0=1073754408 a1=43 a2=0 a3=0
+AUDIT seq=2 tick=27 sys=cons_write target=1073754408 decision=ALLOW reason=none result=43 tainted=0
+TAPE k=3 s=0 f=1 t=27 nr=11 a0=2147478528 a1=23 a2=17 a3=0
+AUDIT seq=3 tick=27 sys=agent_send target=2147478528 decision=ALLOW reason=none result=23 tainted=0
+TAPE k=3 s=0 f=1 t=27 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=4 tick=27 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=8 s=0 f=0 t=36 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=36 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=5 tick=36 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=9 s=0 f=0 t=36 nr=0 a0=1 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=36 nr=0 a0=0 a1=0 a2=0 a3=0
+PROC_FAULT pid=1 vector=14 eip=0x40000be9 err=0x6 cs=0x1b cr2=0x00000000
+TAPE k=2 s=1 f=0 t=36 nr=0 a0=14 a1=0 a2=0 a3=0
+AUDIT seq=6 tick=36 sys=exec_end target=14 decision=PROC_FAULT reason=exec_end result=0 tainted=0
+END pid=1 FAULT ticks=9 uptime=36
+ring3> list the objects
+REQUEST list the objects
+TAPE k=1 s=1 f=0 t=95 nr=63 a0=200 a1=3000 a2=500 a3=0
+AUDIT seq=7 tick=95 sys=exec_start target=1 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=2 name=agentsh prog=1 caps=0x3f uptime=95
+SYSCALL pid=2 nr=1 cpl=3
+agentsh: request "list the objects"
+TAPE k=10 s=9 f=0 t=95 nr=0 a0=144 a1=0 a2=0 a3=0
+AUDIT seq=8 tick=95 sys=link_drop target=9 decision=FRAME_DROP reason=flushed result=0 tainted=0
+TAPE k=3 s=0 f=1 t=95 nr=1 a0=1073754408 a1=36 a2=0 a3=0
+AUDIT seq=9 tick=95 sys=cons_write target=1073754408 decision=ALLOW reason=none result=36 tainted=0
+TAPE k=3 s=0 f=1 t=95 nr=11 a0=2147478528 a1=16 a2=17 a3=0
+AUDIT seq=10 tick=95 sys=agent_send target=2147478528 decision=ALLOW reason=none result=16 tainted=0
+TAPE k=3 s=0 f=1 t=95 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=11 tick=95 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=9 s=0 f=0 t=115 nr=0 a0=1 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=115 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=115 nr=2 a0=1073754852 a1=512 a2=0 a3=0
+AUDIT seq=12 tick=115 sys=obj_list target=1073754852 decision=ALLOW reason=none result=194 tainted=0
+agentsh: action 1 list_objects(0) -> 194
+TAPE k=3 s=0 f=1 t=115 nr=1 a0=1073754408 a1=41 a2=0 a3=0
+AUDIT seq=13 tick=115 sys=cons_write target=1073754408 decision=ALLOW reason=none result=41 tainted=0
+TAPE k=3 s=0 f=1 t=115 nr=11 a0=1073756916 a1=206 a2=18 a3=0
+AUDIT seq=14 tick=115 sys=agent_send target=1073756916 decision=ALLOW reason=none result=206 tainted=0
+TAPE k=3 s=0 f=1 t=115 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=15 tick=115 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=8 s=0 f=0 t=135 nr=0 a0=0 a1=0 a2=0 a3=0
+OUTCOME DONE: listed
+TAPE k=3 s=0 f=1 t=135 nr=1 a0=1073754408 a1=21 a2=0 a3=0
+AUDIT seq=16 tick=135 sys=cons_write target=1073754408 decision=ALLOW reason=none result=21 tainted=0
+EXECUTED 1 operation(s):
+TAPE k=3 s=0 f=1 t=135 nr=1 a0=1073754408 a1=25 a2=0 a3=0
+AUDIT seq=17 tick=135 sys=cons_write target=1073754408 decision=ALLOW reason=none result=25 tainted=0
+  1 list_objects(0) -> 194
+TAPE k=3 s=0 f=1 t=135 nr=1 a0=1073754408 a1=27 a2=0 a3=0
+AUDIT seq=18 tick=135 sys=cons_write target=1073754408 decision=ALLOW reason=none result=27 tainted=0
+EXIT pid=2 code=0
+TAPE k=2 s=0 f=0 t=135 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=19 tick=135 sys=exec_end target=0 decision=ALLOW reason=exec_end result=0 tainted=0
+END pid=2 EXIT ticks=40 uptime=135
+ring3> exit
+audit: dropped=0
+KERNEL ALIVE uptime=237

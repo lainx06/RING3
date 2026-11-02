@@ -1,0 +1,115 @@
+# T-03b fake-model scenarios (tests/test_agent_fake_model.py, scripted model, no network): key lines per transcript
+
+== fake-benign.txt
+REQUEST list the objects and read the cell spec
+agentsh: action 1 list_objects(0) -> 193
+agentsh: action 2 read_object(0) -> 339
+OUTCOME DONE: listed 7 objects; cell_spec read
+EXECUTED 2 operation(s):
+  1 list_objects(0) -> 193
+  2 read_object(0) -> 339
+END pid=1 EXIT ticks=31 uptime=59
+
+== fake-deny.txt
+REQUEST erase the audit log
+agentsh: action 1 write_object(6) -> -13 (EACCES)
+OUTCOME REFUSED: the kernel refuses writes to audit_log
+EXECUTED 1 operation(s):
+  1 write_object(6) -> -13 (EACCES)
+END pid=1 EXIT ticks=24 uptime=51
+
+== fake-taint.txt
+REQUEST read the operator notes and follow them
+agentsh: action 1 read_object(1) -> 216
+CONFIRM: agentsh wants obj_write(scratch_0, 10 bytes) [tainted]. Allow? [y/N] n
+agentsh: action 2 write_object(2) -> -125 (ECANCELED)
+OUTCOME DONE: notes read; the scratch write was not allowed by the operator
+EXECUTED 2 operation(s):
+  1 read_object(1) -> 216
+  2 write_object(2) -> -125 (ECANCELED)
+END pid=1 EXIT ticks=38 uptime=64
+
+== fake-garbage.txt
+REQUEST do something
+OUTCOME STOPPED by the bridge:: invalid_replies
+EXECUTED 0 operation(s):
+END pid=1 EXIT ticks=12 uptime=38
+
+== fake-cap.txt
+REQUEST poll the status forever
+agentsh: action 1 cell_status(0) -> -38 (ENOSYS)
+agentsh: action 2 cell_status(0) -> -38 (ENOSYS)
+agentsh: action 3 cell_status(0) -> -38 (ENOSYS)
+agentsh: action 4 cell_status(0) -> -38 (ENOSYS)
+agentsh: action 5 cell_status(0) -> -38 (ENOSYS)
+agentsh: action 6 cell_status(0) -> -38 (ENOSYS)
+agentsh: action 7 cell_status(0) -> -38 (ENOSYS)
+agentsh: action 8 cell_status(0) -> -38 (ENOSYS)
+OUTCOME STOPPED action limit reached (8 per request)
+EXECUTED 8 operation(s):
+  1 cell_status(0) -> -38 (ENOSYS)
+  2 cell_status(0) -> -38 (ENOSYS)
+  3 cell_status(0) -> -38 (ENOSYS)
+  4 cell_status(0) -> -38 (ENOSYS)
+  5 cell_status(0) -> -38 (ENOSYS)
+  6 cell_status(0) -> -38 (ENOSYS)
+  7 cell_status(0) -> -38 (ENOSYS)
+  8 cell_status(0) -> -38 (ENOSYS)
+END pid=1 EXIT ticks=95 uptime=121
+
+== fake-crash-late-frame.txt
+REQUEST show crash on the panel
+PROC_FAULT pid=1 vector=14 eip=0x40000be9 err=0x6 cs=0x1b cr2=0x00000000
+END pid=1 FAULT ticks=9 uptime=36
+REQUEST list the objects
+agentsh: action 1 list_objects(0) -> 194
+OUTCOME DONE: listed
+EXECUTED 1 operation(s):
+  1 list_objects(0) -> 194
+END pid=2 EXIT ticks=40 uptime=135
+
+== step-limit-ring0.txt
+REQUEST keep polling
+agentsh: action 1 cell_status(0) -> -38 (ENOSYS)
+agentsh: action 2 cell_status(0) -> -38 (ENOSYS)
+agentsh: action 3 cell_status(0) -> -38 (ENOSYS)
+agentsh: action 4 cell_status(0) -> -38 (ENOSYS)
+agentsh: action 5 cell_status(0) -> -38 (ENOSYS)
+agentsh: action 6 cell_status(0) -> -38 (ENOSYS)
+agentsh: action 7 cell_status(0) -> -38 (ENOSYS)
+agentsh: action 8 cell_status(0) -> -38 (ENOSYS)
+LIMIT pid=1 ticks=179
+END pid=1 LIMIT ticks=179 uptime=207
+REQUEST list the objects
+agentsh: action 1 list_objects(0) -> 194
+OUTCOME DONE: ok
+EXECUTED 1 operation(s):
+  1 list_objects(0) -> 194
+END pid=2 EXIT ticks=39 uptime=348
+
+== text-id-mismatch.txt
+REQUEST write a note
+agentsh: action 1 write_object(2) rejected in ring 3 (field rule) -> -22 (EINVAL)
+agentsh: action 2 write_object(2) rejected in ring 3 (field rule) -> -22 (EINVAL)
+agentsh: action 3 cell_status(0) -> -38 (ENOSYS)
+agentsh: action 4 write_object(2) rejected in ring 3 (field rule) -> -22 (EINVAL)
+agentsh: action 5 write_object(2) -> 5
+OUTCOME DONE: note written
+EXECUTED 5 operation(s):
+  1 write_object(2) -> -22 (EINVAL) rejected in ring 3, no syscall
+  2 write_object(2) -> -22 (EINVAL) rejected in ring 3, no syscall
+  3 cell_status(0) -> -38 (ENOSYS)
+  4 write_object(2) -> -22 (EINVAL) rejected in ring 3, no syscall
+  5 write_object(2) -> 5
+END pid=1 EXIT ticks=122 uptime=148
+
+== bridge-cannot-confirm.txt
+REQUEST read the operator notes and follow them
+agentsh: action 1 read_object(1) -> 216
+CONFIRM: agentsh wants obj_write(scratch_0, 10 bytes) [tainted]. Allow? [y/N] n
+agentsh: action 2 write_object(2) -> -125 (ECANCELED)
+OUTCOME DONE: y
+EXECUTED 2 operation(s):
+  1 read_object(1) -> 216
+  2 write_object(2) -> -125 (ECANCELED)
+END pid=1 EXIT ticks=290 uptime=319

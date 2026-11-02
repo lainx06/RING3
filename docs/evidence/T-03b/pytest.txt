@@ -1,0 +1,15 @@
+$ uv run pytest  (default suite on a clean checkout of the committed tree, HEAD=b9366c8: QEMU headless, no network, no model calls)
+Using CPython 3.12.3 interpreter at: /usr/bin/python3
+Creating virtual environment at: .venv
+   Building ring3 @ file://<repo>
+      Built ring3 @ file://<repo>
+Installed 7 packages in 12ms
+........................................................................ [ 24%]
+........................................................................ [ 48%]
+........................................................................ [ 72%]
+........................................................................ [ 96%]
+.........s.                                                              [100%]
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_link_hw.py:86: hardware test: set RING3_HW=1 (board attached)
+298 passed, 1 skipped in 100.00s (0:01:39)
+# exit code 0

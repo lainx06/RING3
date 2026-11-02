@@ -1,0 +1,17 @@
+$ qemu-system-i386 -kernel build/kernel.elf -m 64 -display none -serial stdio -serial tcp:127.0.0.1:48941,server=on,wait=off -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot
+# exit code 33, 17.1 s
+
+RING3 0.1.0 build be8c9c5
+policy: default sha256=7d25f2a374d1f3f76d330c9c17ee57bc64b7a2595265f03bc0fd74005411f4da
+memory: 65023 KiB usable
+init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, 3737 frames free
+link: COM2 present (bridge link, HELLO sent)
+TIMER t0=0
+TIMER t1=25
+ring3> 
+status
+status: fan=0 servo=90 estop_latched=0 tele_valid=0 distance=0 in_request=0 tainted=0 pending=0 seq=10000 dropped=0 uptime=1701
+link: com2=1 connected=0 rx_frames=0 frames_dropped=10000 queued=0 tx_frames=20021 tx_dropped=0 stalled=0
+ring3> exit
+audit: dropped=0
+KERNEL ALIVE uptime=1703

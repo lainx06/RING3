@@ -1,0 +1,38 @@
+$ qemu-system-i386 -kernel build/kernel-test.elf -m 64 -display none -serial stdio -serial tcp:127.0.0.1:39011,server=on,wait=off -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -append 'taction=200 trequest=3000 tconfirm=500'
+# exit code 33, 0.5 s
+
+RING3 0.1.0 build be8c9c5
+policy: default sha256=7d25f2a374d1f3f76d330c9c17ee57bc64b7a2595265f03bc0fd74005411f4da
+memory: 65023 KiB usable
+init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, 3716 frames free
+link: COM2 present (bridge link, HELLO sent)
+TIMER t0=0
+TIMER t1=25
+test image: quotas action=200 request=3000 confirm=500 ticks
+ring3> do something
+REQUEST do something
+TAPE k=1 s=1 f=0 t=26 nr=63 a0=200 a1=3000 a2=500 a3=0
+AUDIT seq=1 tick=26 sys=exec_start target=1 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=1 name=agentsh prog=1 caps=0x3f uptime=26
+SYSCALL pid=1 nr=1 cpl=3
+agentsh: request "do something"
+TAPE k=3 s=0 f=1 t=26 nr=1 a0=1073754408 a1=32 a2=0 a3=0
+AUDIT seq=2 tick=26 sys=cons_write target=1073754408 decision=ALLOW reason=none result=32 tainted=0
+TAPE k=3 s=0 f=1 t=26 nr=11 a0=2147478528 a1=12 a2=17 a3=0
+AUDIT seq=3 tick=26 sys=agent_send target=2147478528 decision=ALLOW reason=none result=12 tainted=0
+TAPE k=3 s=0 f=1 t=26 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=4 tick=26 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=8 s=0 f=0 t=38 nr=0 a0=0 a1=0 a2=0 a3=0
+OUTCOME STOPPED by the bridge:: invalid_replies
+TAPE k=3 s=0 f=1 t=38 nr=1 a0=1073754408 a1=48 a2=0 a3=0
+AUDIT seq=5 tick=38 sys=cons_write target=1073754408 decision=ALLOW reason=none result=48 tainted=0
+EXECUTED 0 operation(s):
+TAPE k=3 s=0 f=1 t=38 nr=1 a0=1073754408 a1=25 a2=0 a3=0
+AUDIT seq=6 tick=38 sys=cons_write target=1073754408 decision=ALLOW reason=none result=25 tainted=0
+EXIT pid=1 code=2
+TAPE k=2 s=0 f=0 t=38 nr=0 a0=2 a1=0 a2=0 a3=0
+AUDIT seq=7 tick=38 sys=exec_end target=2 decision=ALLOW reason=exec_end result=2 tainted=0
+END pid=1 EXIT ticks=12 uptime=38
+ring3> exit
+audit: dropped=0
+KERNEL ALIVE uptime=45

@@ -1,0 +1,147 @@
+$ qemu-system-i386 -kernel build/kernel-test.elf -m 64 -display none -serial stdio -serial tcp:127.0.0.1:39399,server=on,wait=off -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -append 'taction=200 trequest=3000 tconfirm=500'
+# exit code 33, 1.6 s
+
+RING3 0.1.0 build be8c9c5
+policy: default sha256=7d25f2a374d1f3f76d330c9c17ee57bc64b7a2595265f03bc0fd74005411f4da
+memory: 65023 KiB usable
+init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, 3716 frames free
+link: COM2 present (bridge link, HELLO sent)
+TIMER t0=0
+TIMER t1=25
+test image: quotas action=200 request=3000 confirm=500 ticks
+ring3> poll the status forever
+REQUEST poll the status forever
+TAPE k=1 s=1 f=0 t=26 nr=63 a0=200 a1=3000 a2=500 a3=0
+AUDIT seq=1 tick=26 sys=exec_start target=1 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=1 name=agentsh prog=1 caps=0x3f uptime=26
+SYSCALL pid=1 nr=1 cpl=3
+agentsh: request "poll the status forever"
+TAPE k=3 s=0 f=1 t=26 nr=1 a0=1073754408 a1=43 a2=0 a3=0
+AUDIT seq=2 tick=26 sys=cons_write target=1073754408 decision=ALLOW reason=none result=43 tainted=0
+TAPE k=3 s=0 f=1 t=26 nr=11 a0=2147478528 a1=23 a2=17 a3=0
+AUDIT seq=3 tick=26 sys=agent_send target=2147478528 decision=ALLOW reason=none result=23 tainted=0
+TAPE k=3 s=0 f=1 t=26 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=4 tick=26 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=9 s=0 f=0 t=35 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=35 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=35 nr=5 a0=1073754852 a1=0 a2=0 a3=0
+AUDIT seq=5 tick=35 sys=cell_status target=1073754852 decision=ALLOW reason=none result=-38 tainted=0
+agentsh: action 1 cell_status(0) -> -38 (ENOSYS)
+TAPE k=3 s=0 f=1 t=35 nr=1 a0=1073754408 a1=49 a2=0 a3=0
+AUDIT seq=6 tick=35 sys=cons_write target=1073754408 decision=ALLOW reason=none result=49 tainted=0
+TAPE k=3 s=0 f=1 t=35 nr=11 a0=1073756916 a1=12 a2=18 a3=0
+AUDIT seq=7 tick=35 sys=agent_send target=1073756916 decision=ALLOW reason=none result=12 tainted=0
+TAPE k=3 s=0 f=1 t=35 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=8 tick=35 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=9 s=0 f=0 t=47 nr=0 a0=1 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=47 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=47 nr=5 a0=1073754852 a1=0 a2=0 a3=0
+AUDIT seq=9 tick=47 sys=cell_status target=1073754852 decision=ALLOW reason=none result=-38 tainted=0
+agentsh: action 2 cell_status(0) -> -38 (ENOSYS)
+TAPE k=3 s=0 f=1 t=47 nr=1 a0=1073754408 a1=49 a2=0 a3=0
+AUDIT seq=10 tick=47 sys=cons_write target=1073754408 decision=ALLOW reason=none result=49 tainted=0
+TAPE k=3 s=0 f=1 t=47 nr=11 a0=1073756916 a1=12 a2=18 a3=0
+AUDIT seq=11 tick=47 sys=agent_send target=1073756916 decision=ALLOW reason=none result=12 tainted=0
+TAPE k=3 s=0 f=1 t=47 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=12 tick=47 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=9 s=0 f=0 t=58 nr=0 a0=2 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=58 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=58 nr=5 a0=1073754852 a1=0 a2=0 a3=0
+AUDIT seq=13 tick=58 sys=cell_status target=1073754852 decision=ALLOW reason=none result=-38 tainted=0
+agentsh: action 3 cell_status(0) -> -38 (ENOSYS)
+TAPE k=3 s=0 f=1 t=58 nr=1 a0=1073754408 a1=49 a2=0 a3=0
+AUDIT seq=14 tick=58 sys=cons_write target=1073754408 decision=ALLOW reason=none result=49 tainted=0
+TAPE k=3 s=0 f=1 t=58 nr=11 a0=1073756916 a1=12 a2=18 a3=0
+AUDIT seq=15 tick=58 sys=agent_send target=1073756916 decision=ALLOW reason=none result=12 tainted=0
+TAPE k=3 s=0 f=1 t=58 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=16 tick=58 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=9 s=0 f=0 t=70 nr=0 a0=3 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=70 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=70 nr=5 a0=1073754852 a1=0 a2=0 a3=0
+AUDIT seq=17 tick=70 sys=cell_status target=1073754852 decision=ALLOW reason=none result=-38 tainted=0
+agentsh: action 4 cell_status(0) -> -38 (ENOSYS)
+TAPE k=3 s=0 f=1 t=70 nr=1 a0=1073754408 a1=49 a2=0 a3=0
+AUDIT seq=18 tick=70 sys=cons_write target=1073754408 decision=ALLOW reason=none result=49 tainted=0
+TAPE k=3 s=0 f=1 t=70 nr=11 a0=1073756916 a1=12 a2=18 a3=0
+AUDIT seq=19 tick=70 sys=agent_send target=1073756916 decision=ALLOW reason=none result=12 tainted=0
+TAPE k=3 s=0 f=1 t=70 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=20 tick=70 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=9 s=0 f=0 t=82 nr=0 a0=4 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=82 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=82 nr=5 a0=1073754852 a1=0 a2=0 a3=0
+AUDIT seq=21 tick=82 sys=cell_status target=1073754852 decision=ALLOW reason=none result=-38 tainted=0
+agentsh: action 5 cell_status(0) -> -38 (ENOSYS)
+TAPE k=3 s=0 f=1 t=82 nr=1 a0=1073754408 a1=49 a2=0 a3=0
+AUDIT seq=22 tick=82 sys=cons_write target=1073754408 decision=ALLOW reason=none result=49 tainted=0
+TAPE k=3 s=0 f=1 t=82 nr=11 a0=1073756916 a1=12 a2=18 a3=0
+AUDIT seq=23 tick=82 sys=agent_send target=1073756916 decision=ALLOW reason=none result=12 tainted=0
+TAPE k=3 s=0 f=1 t=82 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=24 tick=82 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=9 s=0 f=0 t=94 nr=0 a0=5 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=94 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=94 nr=5 a0=1073754852 a1=0 a2=0 a3=0
+AUDIT seq=25 tick=94 sys=cell_status target=1073754852 decision=ALLOW reason=none result=-38 tainted=0
+agentsh: action 6 cell_status(0) -> -38 (ENOSYS)
+TAPE k=3 s=0 f=1 t=94 nr=1 a0=1073754408 a1=49 a2=0 a3=0
+AUDIT seq=26 tick=94 sys=cons_write target=1073754408 decision=ALLOW reason=none result=49 tainted=0
+TAPE k=3 s=0 f=1 t=94 nr=11 a0=1073756916 a1=12 a2=18 a3=0
+AUDIT seq=27 tick=94 sys=agent_send target=1073756916 decision=ALLOW reason=none result=12 tainted=0
+TAPE k=3 s=0 f=1 t=94 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=28 tick=94 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=9 s=0 f=0 t=105 nr=0 a0=6 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=105 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=105 nr=5 a0=1073754852 a1=0 a2=0 a3=0
+AUDIT seq=29 tick=105 sys=cell_status target=1073754852 decision=ALLOW reason=none result=-38 tainted=0
+agentsh: action 7 cell_status(0) -> -38 (ENOSYS)
+TAPE k=3 s=0 f=1 t=105 nr=1 a0=1073754408 a1=49 a2=0 a3=0
+AUDIT seq=30 tick=105 sys=cons_write target=1073754408 decision=ALLOW reason=none result=49 tainted=0
+TAPE k=3 s=0 f=1 t=105 nr=11 a0=1073756916 a1=12 a2=18 a3=0
+AUDIT seq=31 tick=105 sys=agent_send target=1073756916 decision=ALLOW reason=none result=12 tainted=0
+TAPE k=3 s=0 f=1 t=106 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=32 tick=106 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=9 s=0 f=0 t=121 nr=0 a0=7 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=121 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=121 nr=5 a0=1073754852 a1=0 a2=0 a3=0
+AUDIT seq=33 tick=121 sys=cell_status target=1073754852 decision=ALLOW reason=none result=-38 tainted=0
+agentsh: action 8 cell_status(0) -> -38 (ENOSYS)
+TAPE k=3 s=0 f=1 t=121 nr=1 a0=1073754408 a1=49 a2=0 a3=0
+AUDIT seq=34 tick=121 sys=cons_write target=1073754408 decision=ALLOW reason=none result=49 tainted=0
+TAPE k=3 s=0 f=1 t=121 nr=11 a0=1073756916 a1=12 a2=18 a3=0
+AUDIT seq=35 tick=121 sys=agent_send target=1073756916 decision=ALLOW reason=none result=12 tainted=0
+OUTCOME STOPPED action limit reached (8 per request)
+TAPE k=3 s=0 f=1 t=121 nr=1 a0=1073754408 a1=53 a2=0 a3=0
+AUDIT seq=36 tick=121 sys=cons_write target=1073754408 decision=ALLOW reason=none result=53 tainted=0
+EXECUTED 8 operation(s):
+TAPE k=3 s=0 f=1 t=121 nr=1 a0=1073754408 a1=25 a2=0 a3=0
+AUDIT seq=37 tick=121 sys=cons_write target=1073754408 decision=ALLOW reason=none result=25 tainted=0
+  1 cell_status(0) -> -38 (ENOSYS)
+TAPE k=3 s=0 f=1 t=121 nr=1 a0=1073754408 a1=35 a2=0 a3=0
+AUDIT seq=38 tick=121 sys=cons_write target=1073754408 decision=ALLOW reason=none result=35 tainted=0
+  2 cell_status(0) -> -38 (ENOSYS)
+TAPE k=3 s=0 f=1 t=121 nr=1 a0=1073754408 a1=35 a2=0 a3=0
+AUDIT seq=39 tick=121 sys=cons_write target=1073754408 decision=ALLOW reason=none result=35 tainted=0
+  3 cell_status(0) -> -38 (ENOSYS)
+TAPE k=3 s=0 f=1 t=121 nr=1 a0=1073754408 a1=35 a2=0 a3=0
+AUDIT seq=40 tick=121 sys=cons_write target=1073754408 decision=ALLOW reason=none result=35 tainted=0
+  4 cell_status(0) -> -38 (ENOSYS)
+TAPE k=3 s=0 f=1 t=121 nr=1 a0=1073754408 a1=35 a2=0 a3=0
+AUDIT seq=41 tick=121 sys=cons_write target=1073754408 decision=ALLOW reason=none result=35 tainted=0
+  5 cell_status(0) -> -38 (ENOSYS)
+TAPE k=3 s=0 f=1 t=121 nr=1 a0=1073754408 a1=35 a2=0 a3=0
+AUDIT seq=42 tick=121 sys=cons_write target=1073754408 decision=ALLOW reason=none result=35 tainted=0
+  6 cell_status(0) -> -38 (ENOSYS)
+TAPE k=3 s=0 f=1 t=121 nr=1 a0=1073754408 a1=35 a2=0 a3=0
+AUDIT seq=43 tick=121 sys=cons_write target=1073754408 decision=ALLOW reason=none result=35 tainted=0
+  7 cell_status(0) -> -38 (ENOSYS)
+TAPE k=3 s=0 f=1 t=121 nr=1 a0=1073754408 a1=35 a2=0 a3=0
+AUDIT seq=44 tick=121 sys=cons_write target=1073754408 decision=ALLOW reason=none result=35 tainted=0
+  8 cell_status(0) -> -38 (ENOSYS)
+TAPE k=3 s=0 f=1 t=121 nr=1 a0=1073754408 a1=35 a2=0 a3=0
+AUDIT seq=45 tick=121 sys=cons_write target=1073754408 decision=ALLOW reason=none result=35 tainted=0
+EXIT pid=1 code=2
+TAPE k=2 s=0 f=0 t=121 nr=0 a0=2 a1=0 a2=0 a3=0
+AUDIT seq=46 tick=121 sys=exec_end target=2 decision=ALLOW reason=exec_end result=2 tainted=0
+END pid=1 EXIT ticks=95 uptime=121
+ring3> exit
+audit: dropped=0
+KERNEL ALIVE uptime=146
