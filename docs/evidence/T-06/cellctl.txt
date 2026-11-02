@@ -205,3 +205,17 @@ $ uv run python tools/cellctl.py a5 /dev/ttyACM0 --only discard_presence   (re-r
 21:40:31   -> OK: fan 0 + fault held while the hand was there=True, clearing FAN cleared the fault=True, fan stayed 0 for 1 s=True, a new FAN starts it=True
 21:40:31 A5 SUMMARY
 21:40:31   discard_presence OK   fan 0 + fault held while the hand was there=True, clearing FAN cleared the fault=True, fan stayed 0 for 1 s=True, a new FAN starts it=True
+
+$ uv run python tools/cellctl.py a5 /dev/ttyACM0 --only echo_unplug   (run by the user in their terminal, 21:41 ET)
+21:41:37 opened /dev/ttyACM0 raw 115200 8N1; the Uno resets on open, waiting for the first STATE of the new boot
+21:41:37 first STATE of the new boot after 1646 ms (0 pre-reset frames discarded): STATE seq=0 t=16 ms fan=0% servo=90 dist=NO_ECHO estop=0 flags=- ack=0
+21:41:37   boot flags: WDT_RESET=False LINK_LOST=False
+21:41:37   undecodable bytes runs before sync (frames cut by the reset): 0
+21:41:39 [echo_unplug] fan 60, ECHO wire pulled from D3 -> fan 0 within ~150 ms + PRESENCE latched
+21:41:39   >>> Pull the ECHO wire out of Uno D3 now (30 s). Keep fingers off the fan.
+21:41:57   first NO_ECHO: STATE seq=366 t=18316 ms fan=60% servo=90 dist=NO_ECHO estop=0 flags=- ack=75
+21:41:57   fan 0:         STATE seq=368 t=18416 ms fan=0% servo=90 dist=NO_ECHO estop=0 flags=PRESENCE ack=75
+21:41:57   >>> Put the ECHO wire back into D3.
+21:42:04   -> OK: fan 0 100 ms (device clock) after the first NO_ECHO STATE; the 3-miss window starts up to ~100 ms earlier; PRESENCE latched=True; wire back=True
+21:42:05 A5 SUMMARY
+21:42:05   echo_unplug  OK   fan 0 100 ms (device clock) after the first NO_ECHO STATE; the 3-miss window starts up to ~100 ms earlier; PRESENCE latched=True; wire back=True
