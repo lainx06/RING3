@@ -54,6 +54,14 @@ def cmd_replay(a: argparse.Namespace) -> int:
     return 0 if r.ok else 1
 
 
+def cmd_tape(a: argparse.Namespace) -> int:
+    """T-04 step 9: the run's event records as TAPE lines for `build/host/policy_test --replay` (the
+    converter `ring3 replay` uses; printed so the host build can be driven by hand)."""
+    for line in replay.tape_lines(replay.read_records(_run_dir(a.run))):
+        print(line)
+    return 0
+
+
 def cmd_fuzz_link(a: argparse.Namespace) -> int:
     from ring3bridge.fuzz import run_fuzz
     from ring3bridge.link import Link
@@ -176,6 +184,9 @@ def main(argv: list[str] | None = None) -> int:
     r = sub.add_parser("replay", help="host replay: feed a run's event tape through the host policy build")
     r.add_argument("run", help="run directory, or a run id under runs/")
     r.set_defaults(fn=cmd_replay)
+    t = sub.add_parser("tape", help="print a run's event tape as TAPE lines (input of policy_test --replay)")
+    t.add_argument("run")
+    t.set_defaults(func=cmd_tape)
     z = sub.add_parser("fuzz-link", help="send seeded malformed frames to a running kernel's COM2 (INV-02)")
     z.add_argument("--host", default="127.0.0.1")
     z.add_argument("--port", type=int, default=DEFAULT_PORT)

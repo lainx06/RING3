@@ -267,3 +267,34 @@ def test_b2k_text_final_stop_rules():
         assert isinstance(abi.decode_body(t, b"\x01" * (hi + 1)), abi.BodyError)
         if lo:
             assert isinstance(abi.decode_body(t, b"\x01" * (lo - 1)), abi.BodyError)
+
+
+def test_cell_status_record_decodes_for_the_model():
+    """T-04: the 16-byte cell_status output (LINK_CELLST_*) becomes key=value text; no banned words."""
+    rec = bytes(
+        [0x38, 0x01, 60, 120, 0, 0x22, 1, 0]  # 312 mm, fan 60, servo 120, released, CLAMP|LINK_LOST, fresh
+        + list((40).to_bytes(4, "little"))
+        + list((1234).to_bytes(2, "little"))
+        + [60, 120]
+    )
+    d = abi.decode_cell_status(rec)
+    assert d == {
+        "distance_mm": 312, "fan": 60, "servo": 120, "estop": 0, "flags": 0x22, "fresh": 1,
+        "estop_latched": 0, "age_ms": 40, "seq": 1234, "cmd_fan": 60, "cmd_servo": 120,
+    }  # fmt: skip
+    text = abi.cell_status_text(rec)
+    assert text == (
+        "distance_mm=312 fan_pct=60 servo_deg=120 estop_pressed=0 device_flags=CLAMP,LINK_LOST "
+        "telemetry_fresh=1 estop_latched=0 age_ms=40 seq=1234 commanded_fan_pct=60 commanded_servo_deg=120"
+    )
+    none = bytes([0xFF, 0xFF, 0, 0, 1, 0x08, 0, 1]) + b"\xff\xff\xff\xff" + bytes(4)
+    assert "distance_mm=no_echo" in abi.cell_status_text(none) and "age_ms=none" in abi.cell_status_text(none)
+    assert "ESTOP_LATCHED" in abi.cell_status_text(none)
+    with pytest.raises(ValueError):
+        abi.decode_cell_status(rec[:-1])
+    # the run loop renders it only for a cell_status observation of exactly 16 bytes
+    from ring3bridge.run import observation_text
+
+    assert "fan_pct=60" in observation_text("cell_status", 16, rec, False)
+    assert "fan_pct" not in observation_text("read_object", 16, rec, False)
+    assert "fan_pct" not in observation_text("cell_status", -38, b"", False)
