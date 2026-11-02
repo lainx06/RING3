@@ -8,6 +8,7 @@
 #include "kmalloc.h"
 #include "ktest.h"
 #include "kstring.h"
+#include "linkprobe.h"
 #include "multiboot.h"
 #include "objstore.h"
 #include "paging.h"
@@ -81,6 +82,10 @@ void kmain(uint32_t magic, uint32_t mbi_addr)
     wait_ticks(25);
     printk("TIMER t1=%u\n", ticks_now());
 
+#ifdef KTEST_LINK
+    if (boot_opt("linktest"))
+        linkprobe_run();                 /* T-01B: exits QEMU with the pass/fail code */
+#endif
 #ifdef KTEST
     if (boot_opt("ktest"))
         ktest_run_all();                 /* exits QEMU with the pass/fail code */

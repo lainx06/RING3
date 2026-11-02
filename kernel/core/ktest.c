@@ -1,6 +1,7 @@
 /* In-kernel unit tests (A3). Built only with KTEST=1; run with the `ktest` boot option. */
 #include "ktest.h"
 #ifdef KTEST
+#include "cellframe.h"
 #include "cobs.h"
 #include "crc16.h"
 #include "exec.h"
@@ -398,6 +399,98 @@ static void t_serial(void)
     end();
 }
 
+/* ---- COM3 work-cell frames (T-01B): firmware/test/link_vectors.txt, kernel receiver side ---- */
+static const uint8_t v_ping[] = { 0x03, 0x01, 0x01, 0x01, 0x01, 0x03, 0xe9, 0xcd, 0x00 };
+static const uint8_t v_fan40[] = { 0x03, 0x02, 0x02, 0x02, 0x01, 0x04, 0x28, 0x89, 0x53, 0x00 };
+static const uint8_t v_fan40_badcrc[] = { 0x03, 0x02, 0x02, 0x02, 0x01, 0x04, 0x28, 0x89, 0x52, 0x00 };
+static const uint8_t v_fan_lenmis[] = { 0x03, 0x02, 0x02, 0x02, 0x02, 0x04, 0x28, 0xd9, 0x0a, 0x00 };
+static const uint8_t v_lcd18[] = { 0x03, 0x04, 0x02, 0x02, 0x12, 0x01, 0x14, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41,
+                                   0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x0a, 0xe1, 0x00 };
+static const uint8_t v_state_running[] = { 0x03, 0x81, 0x64, 0x02, 0x0c, 0x04, 0x40, 0xe2, 0x01, 0x05, 0x28,
+                                           0x5a, 0x38, 0x01, 0x01, 0x02, 0x02, 0x03, 0x03, 0x9c, 0x00 };
+static const uint8_t v_state_estop[] = { 0x02, 0x81, 0x03, 0x01, 0x0c, 0x04, 0x40, 0x0d, 0x03, 0x01, 0x0a,
+                                         0xa5, 0xff, 0xff, 0x01, 0x1e, 0x02, 0x01, 0x16, 0x32, 0x00 };
+
+/* Decodes a wire vector (trailing 0x00 stripped). */
+static enum cell_rx dec_wire(const uint8_t *w, size_t n, struct cell_state *st)
+{
+    CHECK(n > 0 && w[n - 1] == 0x00);
+    return cell_state_decode(w, n - 1, st);
+}
+
+/* Builds a STATE-shaped frame: `len_field` in the header, `body_n` body bytes, valid CRC unless `bad_crc`. */
+static enum cell_rx dec_built(uint8_t type, uint16_t len_field, const uint8_t *body, size_t body_n, int bad_crc)
+{
+    uint8_t d[64], e[80];
+    struct cell_state st;
+    d[0] = type;
+    d[1] = 7;
+    d[2] = 0;
+    d[3] = (uint8_t)len_field;
+    d[4] = (uint8_t)(len_field >> 8);
+    memcpy(d + 5, body, body_n);
+    uint16_t crc = crc16_ccitt_false(d, 5 + body_n);
+    d[5 + body_n] = (uint8_t)crc;
+    d[6 + body_n] = (uint8_t)((crc >> 8) ^ (bad_crc ? 0x5A : 0));
+    size_t n = cobs_encode(d, 7 + body_n, e, sizeof e);
+    return cell_state_decode(e, n, &st);
+}
+
+static void t_cellframe(void)
+{
+    struct cell_state st;
+    begin("cell_frame_vectors");
+    CHECK(dec_wire(v_state_running, sizeof v_state_running, &st) == CELL_RX_OK);
+    CHECK(st.seq == 100 && st.t_ms == 123456 && st.fan == 40 && st.servo == 90 && st.dist_mm == 312 &&
+          st.estop == 0 && st.flags == 0 && st.ack_seq == 2);
+    CHECK(dec_wire(v_state_estop, sizeof v_state_estop, &st) == CELL_RX_OK);
+    CHECK(st.seq == 256 && st.t_ms == 200000 && st.fan == 0 && st.servo == 165 && st.dist_mm == CELL_DIST_NO_ECHO &&
+          st.estop == 1 && st.flags == 0x1e && st.ack_seq == 258);
+    uint8_t w[CELL_MAX_WIRE];
+    size_t n = cell_cmd_encode(CELL_T_PING, 1, 0, 0, w, sizeof w);
+    CHECK(n == sizeof v_ping && memcmp(w, v_ping, n) == 0);
+    uint8_t duty = 40;
+    n = cell_cmd_encode(CELL_T_FAN, 2, &duty, 1, w, sizeof w); /* encoder only: the probe never sends FAN */
+    CHECK(n == sizeof v_fan40 && memcmp(w, v_fan40, n) == 0);
+    CHECK(cell_cmd_encode(CELL_T_PING, 1, 0, 0, w, 8) == 0);      /* doesn't fit: refused, not truncated */
+    CHECK(cell_cmd_encode(CELL_T_LCD, 1, w, CELL_MAX_BODY + 1, w, sizeof w) == 0);
+    end();
+
+    begin("cell_frame_rejects");
+    /* Vectors seen from the kernel side: a command frame travelling to the kernel is `type`. */
+    CHECK(dec_wire(v_fan40, sizeof v_fan40, &st) == CELL_RX_TYPE);
+    CHECK(dec_wire(v_fan40_badcrc, sizeof v_fan40_badcrc, &st) == CELL_RX_CRC);
+    CHECK(dec_wire(v_fan_lenmis, sizeof v_fan_lenmis, &st) == CELL_RX_LEN);
+    CHECK(dec_wire(v_lcd18, sizeof v_lcd18, &st) == CELL_RX_OVERSIZE);
+    uint8_t body[CELL_STATE_LEN + 8];
+    memset(body, 0, sizeof body);
+    body[CELL_ST_SERVO] = 90;
+    CHECK(dec_built(CELL_T_STATE, CELL_STATE_LEN, body, CELL_STATE_LEN, 0) == CELL_RX_OK);
+    CHECK(dec_built(CELL_T_STATE, CELL_STATE_LEN, body, CELL_STATE_LEN, 1) == CELL_RX_CRC);
+    CHECK(dec_built(CELL_T_STATE, CELL_STATE_LEN - 1, body, CELL_STATE_LEN - 1, 0) == CELL_RX_BODY_LEN);
+    CHECK(dec_built(CELL_T_STATE, CELL_STATE_LEN - 1, body, CELL_STATE_LEN, 0) == CELL_RX_LEN);
+    CHECK(dec_built(CELL_T_STATE, CELL_MAX_BODY + 1, body, CELL_STATE_LEN, 0) == CELL_RX_OVERSIZE);
+    CHECK(dec_built(0x82, CELL_STATE_LEN, body, CELL_STATE_LEN, 0) == CELL_RX_TYPE);
+    body[CELL_ST_ESTOP] = 2;
+    CHECK(dec_built(CELL_T_STATE, CELL_STATE_LEN, body, CELL_STATE_LEN, 0) == CELL_RX_FIELD);
+    body[CELL_ST_ESTOP] = 0;
+    body[CELL_ST_FLAGS] = 0x40;
+    CHECK(dec_built(CELL_T_STATE, CELL_STATE_LEN, body, CELL_STATE_LEN, 0) == CELL_RX_FIELD);
+    body[CELL_ST_FLAGS] = 0x80;
+    CHECK(dec_built(CELL_T_STATE, CELL_STATE_LEN, body, CELL_STATE_LEN, 0) == CELL_RX_FIELD);
+    const uint8_t shortf[] = { 0x05, 0x81, 0x01, 0x01, 0x01 }; /* decodes to 4 bytes */
+    CHECK(cell_state_decode(shortf, sizeof shortf, &st) == CELL_RX_SHORT);
+    const uint8_t zero_in[] = { 0x03, 0x81, 0x00, 0x01 };
+    CHECK(cell_state_decode(zero_in, sizeof zero_in, &st) == CELL_RX_COBS);
+    const uint8_t overrun[] = { 0x09, 0x81, 0x01 };
+    CHECK(cell_state_decode(overrun, sizeof overrun, &st) == CELL_RX_COBS);
+    uint8_t big[CELL_MAX_ENCODED + 1];
+    memset(big, 0x01, sizeof big);
+    CHECK(cell_state_decode(big, sizeof big, &st) == CELL_RX_OVERSIZE);
+    CHECK(cell_state_decode(big, 0, &st) == CELL_RX_SHORT);
+    end();
+}
+
 void ktest_run_all(void)
 {
     printk("KTEST begin\n");
@@ -410,6 +503,7 @@ void ktest_run_all(void)
     t_uaccess_more();
     t_lib();
     t_serial();
+    t_cellframe();
     printk("KTEST SUMMARY pass=%d fail=%d\n", pass_count, fail_count);
     qemu_exit(fail_count ? QEMU_EXIT_FAIL : QEMU_EXIT_PASS);
     for (;;)

@@ -4,6 +4,9 @@
 #   make KTEST=1             in-kernel unit tests image (implies TEST=1)
 #   make POLICY=permissive   permissive policy variant (ARCHITECTURE §7), labelled, different policy hash
 #   make host-policy         build/host/policy_test{,_permissive}: the policy source compiled for the host
+#   make KTEST_LINK=1        COM3 link smoke-test image (build/kernel-link.elf, T-01B): polling COM3 probe
+#   make test-link           boot it with the Uno as COM3 (CELL_PORT, default /dev/ttyACM0); pass = exit 33
+#   make run-link            like `make run`, with COM2 null and the Uno as COM3
 VERSION    := 0.1.0
 BUILD_HASH := $(shell git rev-parse --short HEAD 2>/dev/null || echo nogit)
 POLICY     ?= default
@@ -26,7 +29,13 @@ else
   $(error POLICY must be default or permissive)
 endif
 
-ifeq ($(KTEST),1)
+ifeq ($(KTEST_LINK),1)
+  ifneq ($(TEST)$(POLICY),default)
+    $(error KTEST_LINK=1 is a standalone image: no TEST/KTEST, POLICY=default)
+  endif
+  BUILD := build/link
+  KERNEL := build/kernel-link.elf
+else ifeq ($(KTEST),1)
   BUILD := build/ktest$(SUF)
   KERNEL := build/kernel-ktest$(SUF).elf
 else ifeq ($(TEST),1)
@@ -51,6 +60,9 @@ ifeq ($(KTEST),1)
   CFLAGS  += -DKTEST=1
   ASFLAGS += -DKTEST=1
 endif
+ifeq ($(KTEST_LINK),1)
+  CFLAGS  += -DKTEST_LINK=1
+endif
 ifeq ($(TEST),1)
   CFLAGS  += -DRING3_TEST=1
   ASFLAGS += -DRING3_TEST=1
@@ -71,8 +83,11 @@ UBIN    := $(patsubst %,build/user/%.bin,$(UPROGS))
 
 QEMU_BASE := $(QEMU) -m 64 -display none -serial stdio -monitor none \
              -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot
+# The Uno (ring3cell firmware) as the guest's third serial port = COM3 (0x3E8, IRQ 4). COM2 stays null here.
+CELL_PORT ?= /dev/ttyACM0
+QEMU_LINK := $(QEMU_BASE) -serial null -serial $(CELL_PORT)
 
-.PHONY: all clean run test-kernel user host-policy
+.PHONY: all clean run run-link test-link test-kernel user host-policy
 .SECONDARY: $(patsubst %,build/user/%.elf,$(UPROGS))
 all: $(KERNEL)
 
@@ -112,6 +127,14 @@ build/user/%.bin: build/user/%.elf
 
 run: $(KERNEL)
 	$(QEMU_BASE) -kernel $(KERNEL) $(QEMU_EXTRA)
+
+run-link: $(KERNEL)
+	$(QEMU_LINK) -kernel $(KERNEL) $(QEMU_EXTRA)
+
+test-link:
+	$(MAKE) KTEST_LINK=1
+	$(QEMU_LINK) -kernel build/kernel-link.elf -append "linktest" $(QEMU_EXTRA); rc=$$?; \
+	  echo "qemu exit code $$rc"; [ $$rc -eq 33 ]
 
 test-kernel:
 	$(MAKE) KTEST=1

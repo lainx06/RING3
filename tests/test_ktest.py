@@ -22,6 +22,8 @@ REQUIRED = {
     "string_helpers",
     "printk_formats",
     "serial_line_start",
+    "cell_frame_vectors",
+    "cell_frame_rejects",
 }
 
 

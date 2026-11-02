@@ -13,6 +13,10 @@ from tests.qemu import (
 )
 
 
+def pytest_configure(config):
+    config.addinivalue_line("markers", "hw: needs the real work cell attached (opt-in: RING3_HW=1)")
+
+
 @pytest.fixture(scope="session", autouse=True)
 def build_all():
     """Build every image and the host policy tests once per session (tests run the current source)."""
