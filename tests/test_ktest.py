@@ -21,6 +21,7 @@ REQUIRED = {
     "objstore_audit_log_keeps_newest",
     "string_helpers",
     "printk_formats",
+    "serial_line_start",
 }
 
 

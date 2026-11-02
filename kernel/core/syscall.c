@@ -15,6 +15,7 @@
 #include "uaccess.h"
 
 #define CELL_STATUS_BYTES 16u        /* fixed struct size reserved for T-04 */
+#define SYSCALL_DRAIN_MAX 4u         /* audit records printed per syscall return (F5): >= 1 produced per call */
 
 static int32_t do_cons_write(uint32_t buf, uint32_t len)
 {
@@ -127,25 +128,22 @@ static void dispatch(struct trap_frame *f)
     struct pol_decision dec;
     int idx = audit_feed(&ev, &dec);
     if (dec.action == ACT_PROMPT) {
-        audit_flush(0);
-        confirm_run(&ev, &dec);                  /* may not return (LIMIT) */
+        confirm_run(&ev, &dec);                  /* may not return (LIMIT); flushes before the prompt */
         idx = -1;
     }
     if (dec.action != ACT_EXEC) {
         /* A call that is not executed never reports a non-negative result (F4, D-52): DEC_NONE from a stray
          * answer or any silent decision reads as a cancelled call. */
         f->eax = (uint32_t)(dec.result < 0 ? dec.result : -ECANCELED);
-        audit_flush(0);
+        audit_drain(SYSCALL_DRAIN_MAX);
         return;
     }
-    if (nr == SYS_EXIT) {
-        audit_flush(0);
-        exec_on_exit((int)b);                    /* does not return */
-    }
+    if (nr == SYS_EXIT)
+        exec_on_exit((int)b);                    /* does not return; EXEC_END flushes everything */
     int32_t r = execute(nr, b, c, d);
     audit_set_result(idx, r);
     f->eax = (uint32_t)r;
-    audit_flush(0);
+    audit_drain(SYSCALL_DRAIN_MAX);              /* F5: bounded, polled, interrupts stay off */
 }
 
 void syscall_dispatch(struct trap_frame *f)

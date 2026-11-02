@@ -1,0 +1,28 @@
+# F5 before the fix (Nov 1 audit/serial code + the new tests and test hooks). Excerpt of the pytest log.
+# 1. ktest serial_line_start: line_start never true after the CR LF pair.
+# 2. drain-at-line-start: spin's cons_write audit held in the ring until LIMIT (never drained at line start).
+# 3. per-tick: 300 tick-IRQ telemetry records with no drain fill the 256-slot ring; the LIMIT audit record
+#    itself is dropped (no 'decision=LIMIT' line) and only 258 telemetry tape lines survive.
+
+check failed: serial_at_line_start() == 1 (kernel/core/ktest.c:389)
+check failed: serial_at_line_start() == 1 (kernel/core/ktest.c:393)
+check failed: serial_at_line_start() == 1 (kernel/core/ktest.c:397)
+KTEST serial_line_start FAIL
+
+66:>           assert audit.start() < limit.start(), f"the cons_write audit was held until the LIMIT:\n{t}"
+AssertionError: the cons_write audit was held until the LIMIT:
+
+>           assert re.search(r"decision=LIMIT reason=action_quota", t), t
+AssertionError: 
+TAPE k=7 s=0 f=1 t=28 nr=0 a0=300 a1=0 a2=0 a3=0
+run spin
+
+TAPE k=1 s=2 f=0 t=28 nr=1 a0=300 a1=400 a2=150 a3=0
+AUDIT seq=1 tick=28 sys=exec_start target=2 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=1 name=spin prog=2 caps=0x1 uptime=28
+SYSCALL pid=1 nr=1 cpl=3
+spin: looping forever
+LIMIT pid=1 ticks=300
+[... 258 TAPE k=7 lines, no decision=LIMIT audit line ...]
+
+3 failed in 5.97s

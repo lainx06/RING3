@@ -24,14 +24,19 @@ static int line_start = 1;
 
 int serial_at_line_start(void) { return line_start; }
 
-void serial_putc(char c)
+static void put_raw(char c)
 {
-    line_start = c == '\n';
-    if (c == '\n')
-        serial_putc('\r');
     while ((inb(COM1_PORT + REG_LSR) & 0x20) == 0)
         ;
     outb(COM1_PORT + REG_DATA, (uint8_t)c);
+}
+
+void serial_putc(char c)
+{
+    if (c == '\n')
+        put_raw('\r');
+    put_raw(c);
+    line_start = c == '\n';                 /* after the whole CR LF pair (F5, D-52) */
 }
 
 void serial_write(const char *s, uint32_t n)

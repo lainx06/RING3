@@ -14,6 +14,7 @@
 #include "pmm.h"
 #include "printk.h"
 #include "qemu.h"
+#include "serial.h"
 #include "syscall.h"
 #include "uaccess.h"
 
@@ -380,6 +381,23 @@ static void t_lib(void)
     end();
 }
 
+/* ---- serial (F5, D-52): line_start must be true after the CR LF pair the console writes for '\n' ---- */
+static void t_serial(void)
+{
+    begin("serial_line_start");
+    printk("\n");
+    CHECK(serial_at_line_start() == 1);
+    printk("x");
+    CHECK(serial_at_line_start() == 0);
+    printk("y\n");
+    CHECK(serial_at_line_start() == 1);
+    printk("ab\ncd");
+    CHECK(serial_at_line_start() == 0);
+    printk("\n");
+    CHECK(serial_at_line_start() == 1);
+    end();
+}
+
 void ktest_run_all(void)
 {
     printk("KTEST begin\n");
@@ -391,6 +409,7 @@ void ktest_run_all(void)
     t_uaccess();
     t_uaccess_more();
     t_lib();
+    t_serial();
     printk("KTEST SUMMARY pass=%d fail=%d\n", pass_count, fail_count);
     qemu_exit(fail_count ? QEMU_EXIT_FAIL : QEMU_EXIT_PASS);
     for (;;)

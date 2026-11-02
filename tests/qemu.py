@@ -51,6 +51,17 @@ class Run:
     def has_panic(self) -> bool:
         return any(line.startswith("PANIC:") for line in self.lines())
 
+    def dropped(self) -> list[int]:
+        """Every `dropped=N` the kernel printed (`status` lines and the `audit:` line before KERNEL ALIVE)."""
+        return [int(m) for m in re.findall(r"\bdropped=(\d+)", self.output)]
+
+    def check(self, expect_panic: bool = False) -> None:
+        """INV-12: an unexpected PANIC fails the run; F5 (D-52): any dropped audit record fails the run."""
+        if self.has_panic() and not expect_panic:
+            raise AssertionError(f"unexpected PANIC (INV-12):\n{self.output}")
+        if any(self.dropped()):
+            raise AssertionError(f"audit records dropped (F5): {self.dropped()}\n{self.output}")
+
     def after(self, marker: str) -> str:
         """Output after the first line containing `marker` (empty if absent)."""
         i = self.output.find(marker)
@@ -103,8 +114,7 @@ def run_qemu(
         out = (e.stdout or b"").decode("utf-8", "replace")
         code = EXIT_TIMEOUT
     run = Run(cmd, out.replace("\r\n", "\n"), code, time.monotonic() - t0)
-    if run.has_panic() and not expect_panic:
-        raise AssertionError(f"unexpected PANIC (INV-12):\n{run.output}")
+    run.check(expect_panic)
     return run
 
 
@@ -193,8 +203,7 @@ class Session:
                 self.exit_code = EXIT_TIMEOUT
             self._reader.join(timeout=5)
         run = Run(self.cmd, self.output, self.exit_code, time.monotonic() - self.t0)
-        if run.has_panic() and not expect_panic:
-            raise AssertionError(f"unexpected PANIC (INV-12):\n{run.output}")
+        run.check(expect_panic)
         return run
 
     def __enter__(self) -> Session:

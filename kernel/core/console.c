@@ -150,7 +150,8 @@ static void dispatch(const char *l)
     if (word(l, "help", &rest)) {
         printk("commands: help status audit objects 'estop reset' exit"
 #ifdef RING3_TEST
-               " 'run <prog>' 'tele <mm> <estop> [bad]' 'tape on|off' 'confirmrace on|off' panic"
+               " 'run <prog>' 'tele <mm> <estop> [bad]' 'teletick <mm> <estop> <n>|off' 'tape on|off'"
+               " 'confirmrace on|off' panic"
 #endif
                "\n");
         feed_console(CONSOLE_OTHER);
@@ -167,6 +168,8 @@ static void dispatch(const char *l)
         feed_console(CONSOLE_ESTOP_RESET);
     } else if (word(l, "exit", &rest)) {
         feed_console(CONSOLE_OTHER);
+        audit_flush(1);
+        printk("audit: dropped=%u\n", audit_dropped());     /* F5: any drop fails every QEMU test */
         printk("KERNEL ALIVE uptime=%u\n", ticks_now());
         qemu_exit(QEMU_EXIT_PASS);
         printk("(no exit device; halting)\n");
@@ -192,6 +195,22 @@ static void dispatch(const char *l)
         int off = word(rest, "off", &rest);
         audit_set_tape(!off);
         printk("tape %s\n", off ? "off" : "on");
+    } else if (word(l, "teletick", &rest)) {
+        feed_console(CONSOLE_OTHER);
+        if (word(rest, "off", &rest)) {
+            audit_set_tick_telemetry(0, 0, 0);
+            printk("teletick off\n");
+            return;
+        }
+        int ok = 1;
+        const char *p = rest;
+        int32_t mm = parse_int(&p, &ok), estop = parse_int(&p, &ok), every = parse_int(&p, &ok);
+        if (!ok || every <= 0) {
+            printk("teletick: usage teletick <distance_mm> <estop> <every_n_ticks> | off\n");
+            return;
+        }
+        audit_set_tick_telemetry(mm, estop, (uint32_t)every);
+        printk("teletick every %d\n", every);
     } else if (word(l, "confirmrace", &rest)) {
         feed_console(CONSOLE_OTHER);
         int on = word(rest, "on", &rest);

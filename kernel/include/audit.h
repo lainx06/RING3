@@ -12,12 +12,21 @@ const struct pol_state *audit_state(void);
 /* Returns the ring index of the queued record, or -1 when nothing was queued. */
 int audit_feed(const struct pol_event *ev, struct pol_decision *out);
 void audit_set_result(int idx, int32_t result);      /* the real result of an executed call */
-/* Prints queued records. Without `force` it waits while the console is mid-line (so a program's own output
- * stays intact) unless the ring is three quarters full; with `force` it starts a new line if needed. */
+/* Prints queued records (kernel loop). Without `force` it waits while the console is mid-line (so a
+ * program's own output stays intact) unless the ring is three quarters full; with `force` it starts a new
+ * line if needed. Never changes the interrupt state. */
 void audit_flush(int force);
+/* Bounded drain (F5, D-52): at most `max` records, same line discipline as audit_flush(0), interrupts left
+ * exactly as found (off inside a syscall). Used at every syscall return and per tick while ring 3 runs.
+ * A full ring never drops a record: audit_feed() drains synchronously until the new one fits. */
+uint32_t audit_drain(uint32_t max);
 uint32_t audit_dropped(void);
 void audit_set_tape(int on);
 void audit_print_banner(void);
 /* Timer path (IRQ context): feeds a tick; acts on LIMIT (kill) and AUTO_HALT. */
 void audit_on_tick(struct trap_frame *f);
+#ifdef RING3_TEST
+/* Test images: inject a valid telemetry sample from the tick IRQ every `every` ticks (0 = off). */
+void audit_set_tick_telemetry(int32_t mm, int32_t estop, uint32_t every);
+#endif
 #endif
