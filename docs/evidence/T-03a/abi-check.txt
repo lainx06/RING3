@@ -1,0 +1,25 @@
+# A1: abi/link_abi.h vs bridge/ring3bridge/abi.py (and kernel/policy tables)
+# commit of the ABI (M1): e6300b4
+
+$ uv run pytest tests/bridge/test_abi.py -v
+tests/bridge/test_abi.py::test_header_includes_only_stdint PASSED        [  8%]
+tests/bridge/test_abi.py::test_header_compiles_freestanding_i686 PASSED  [ 16%]
+tests/bridge/test_abi.py::test_every_c_constant_matches_abi_py PASSED    [ 25%]
+tests/bridge/test_abi.py::test_frame_sizes_are_consistent PASSED         [ 33%]
+tests/bridge/test_abi.py::test_fixed_layouts PASSED                      [ 41%]
+tests/bridge/test_abi.py::test_op_table_is_the_complete_allowlist PASSED [ 50%]
+tests/bridge/test_abi.py::test_object_table_matches_kernel PASSED        [ 58%]
+tests/bridge/test_abi.py::test_policy_name_tables_match_kernel PASSED    [ 66%]
+tests/bridge/test_abi.py::test_action_roundtrip_and_zero_rules PASSED    [ 75%]
+tests/bridge/test_abi.py::test_action_field_rules PASSED                 [ 83%]
+tests/bridge/test_abi.py::test_k2b_bodies_roundtrip_and_reserved_bytes PASSED [ 91%]
+tests/bridge/test_abi.py::test_b2k_text_final_stop_rules PASSED          [100%]
+============================== 12 passed in 0.20s ==============================
+
+# LINK_* constants in the header (each compared by value with abi.py):
+135
+
+$ uv run ring3 frames-selftest
+shared vectors: 25 lines from firmware/test/link_vectors.txt
+COM2 types: 10, max decoded 531 B, max encoded 534 B
+FRAMES OK: 57/57 checks

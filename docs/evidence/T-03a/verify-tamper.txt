@@ -1,0 +1,35 @@
+# A4: ring3 verify detects a one-byte edit in the log and in a blob (sample run from tests/bridge/sample_run.py)
+
+$ uv run ring3 verify r-sample      # as written
+CHAIN OK: 13 records, 6 blobs
+(exit 0)
+
+$ uv run ring3 verify r-sample      # one byte of events.jsonl changed at offset 2006: 0x61 -> 0x60
+BROKEN at record #6: hash mismatch
+(exit 1)
+
+$ uv run ring3 verify r-sample      # restored
+CHAIN OK: 13 records, 6 blobs
+(exit 0)
+
+$ uv run ring3 verify r-sample      # first byte of blob 6f68581ca562025d... changed: 0x03 -> 0x02
+BROKEN blob 6f68581ca562025d: content does not match its SHA-256
+(exit 1)
+
+$ uv run ring3 verify r-sample      # restored
+CHAIN OK: 13 records, 6 blobs
+(exit 0)
+
+# exhaustive version (every byte of the log x 3 replacement values, every byte of every blob):
+$ uv run pytest tests/bridge/test_inv_10_chain_tamper.py -v
+tests/bridge/test_inv_10_chain_tamper.py::test_sample_run_verifies PASSED [ 11%]
+tests/bridge/test_inv_10_chain_tamper.py::test_inv_10_chain_tamper_every_log_byte PASSED [ 22%]
+tests/bridge/test_inv_10_chain_tamper.py::test_inv_10_chain_tamper_every_blob_byte PASSED [ 33%]
+tests/bridge/test_inv_10_chain_tamper.py::test_missing_blob_and_extra_file PASSED [ 44%]
+tests/bridge/test_inv_10_chain_tamper.py::test_deleted_reordered_and_truncated_records PASSED [ 55%]
+tests/bridge/test_inv_10_chain_tamper.py::test_rewritten_record_with_recomputed_hash_breaks_the_next_link PASSED [ 66%]
+tests/bridge/test_inv_10_chain_tamper.py::test_writer_refuses_floats_bools_unknown_types_and_dangling_blobs PASSED [ 77%]
+tests/bridge/test_inv_10_chain_tamper.py::test_non_integer_number_in_a_rehashed_log_is_rejected PASSED [ 88%]
+tests/bridge/test_inv_10_chain_tamper.py::test_copy_of_run_verifies_identically PASSED [100%]
+============================== 9 passed in 2.83s ===============================
+sample log bytes: 3673 ; blob bytes: 204

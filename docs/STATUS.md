@@ -21,6 +21,12 @@ milestone.
   (device clock 20.0 Hz). **T-04 notes:** stale pre-reset frames (sometimes the same block repeated) arrive after
   the open, so sync on the new boot (`t_ms`/`seq` restart); the reset follows QEMU's open, not COM3 init.
   `docs/evidence/T-01B/README.md`. usbipd/QEMU COM3 path: verified; D-20 fallback not needed.
+- **T-03a complete** (2026-11-01 23:10 ET): link ABI (`abi/link_abi.h` + `abi.py`, M1 `e6300b4`), canonical
+  COBS/CRC framing on the shared vectors, strict JSON (113 cases), deterministic ACTION serializer, spend ledger
+  (price unset `[UNVERIFIED]` → fails closed), hash-chained event log + `ring3 verify`, Muse Spark adapter behind a
+  fake transport (field names `[UNVERIFIED]`), context pack `agent-v1`. 260 bridge tests, ~4 s.
+  `docs/evidence/T-03a/README.md` (has the T-03b notes). Before the first paid call: official price in
+  `config/models.toml`.
 - Second terminal Nov 1: **T-06** (Opus 5.5 / high) once T-01 has made its first commit (D-42).
 - User, while T-01 runs: `SETUP.md` step 8 (usbipd + Uno + arduino-cli in Ubuntu), then wiring per
   `hardware/wiring.md` in the afternoon.
@@ -64,6 +70,7 @@ milestone.
 | T-02 | 2026-11-01 19:36 ET | Fable 5.1 / high | 2026-11-01 20:11 ET; A1–A9 pass; M3 before the 11:59 PM time-box | `docs/evidence/T-02/README.md` |
 | T-02F | 2026-11-02 | Fable 5.1 / high | 2026-11-02; A1–A5 pass (A3: halt / fan(0) under pending and killing covered on the host build; the kernel cannot reach those states with a syscall, see the README); doc merge D-46..D-52 committed first | `docs/evidence/T-02F/README.md` |
 | T-01B | 2026-11-01 22:35 ET | Opus 5.5 / high | 2026-11-01 22:55 ET; A1–A4 pass + step 5 (fan never moved); 1 test-program fix logged (stale pre-reset frames) | `docs/evidence/T-01B/README.md` |
+| T-03a | 2026-11-01 22:38 ET | Opus 5.5 / high | 2026-11-01 23:10 ET; A1–A6 pass; M1 (link ABI) `e6300b4` first; price and API field names `[UNVERIFIED]`; no network, no paid call | `docs/evidence/T-03a/README.md` |
 | T-06 | 2026-11-01 16:58 ET | Opus 5.5 / high | **21:46 ET: A1 A2 A3 A6 A7 pass; A5 pass except the alarm outputs; A4 part 1 pass. Pending Nov 2 (parts arrive): LCD, buzzer, RGB wiring → `bringup` part 2 (A4) + link-loss alarm (A5.8).** Firmware `222d26d` flashed. Lead decisions D-46..D-50 applied; 10 test-program changes logged, none loosened an expectation | `docs/evidence/T-06/README.md` |
 
 ## Last evidence
