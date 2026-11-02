@@ -125,7 +125,8 @@ static uint8_t code_for_hazard(uint8_t reason)
  * because the commanded duty drops to 0 in `next`. */
 static void lease(const struct pol_state *s, uint32_t tick, struct pol_state *n, struct pol_decision *d)
 {
-    if (s->fan_duty == 0)
+    uint8_t duty = s->fan_duty;               /* F7: `s` may alias `n` (the telemetry path evaluates `next`) */
+    if (duty == 0)
         return;
     uint8_t h = hazard(s, tick);
     if (h == R_NONE)
@@ -134,7 +135,7 @@ static void lease(const struct pol_state *s, uint32_t tick, struct pol_state *n,
     n->fan_change_tick = tick;
     n->fan_changed = 1;
     set(d, DEC_AUTO_HALT, h, 0, ACT_HALT);
-    d->target = s->fan_duty;
+    d->target = duty;                         /* the duty that was running */
 }
 
 static void resolve_pending(const struct pol_state *s, uint32_t tick, struct pol_state *n)

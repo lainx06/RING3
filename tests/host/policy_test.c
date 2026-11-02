@@ -927,6 +927,24 @@ static void t_F3(void)
     ok();
 }
 
+static void t_F7(void)
+{
+    begin("F7_autohalt_target (a telemetry-path AUTO_HALT records the duty that was running)");
+    struct pol_state s = fresh(CAP_ALL, 1);
+    fan(&s, T, 60);
+    struct pol_decision d = step(&s, ev_tele(T + 10, 80, 0, 1));          /* a hand */
+    CHECK(d.code == DEC_AUTO_HALT && d.reason == R_PRESENCE && d.target == 60 && s.fan_duty == 0);
+    step(&s, ev_tele(T + 200, 300, 0, 1));
+    fan(&s, T + 200, 60);
+    d = step(&s, ev_tele(T + 210, 0xFFFF, 0, 1));                        /* no echo */
+    CHECK(d.code == DEC_AUTO_HALT && d.reason == R_NO_ECHO && d.target == 60 && s.fan_duty == 0);
+    step(&s, ev_tele(T + 400, 300, 0, 1));
+    fan(&s, T + 400, 60);
+    d = step(&s, ev_tele(T + 410, 300, 1, 1));                           /* E-stop pressed */
+    CHECK(d.code == DEC_AUTO_HALT && d.reason == R_ESTOP && d.target == 60 && s.fan_duty == 0);
+    ok();
+}
+
 /* ---- replay: TAPE lines in, AUDIT lines out, same format as kernel/core/audit.c ---- */
 static int replay(void)
 {
@@ -981,6 +999,7 @@ int main(int argc, char **argv)
     t_R7();
     t_R8();
     t_F3();
+    t_F7();
     t_names();
     printf("policy_test: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;
