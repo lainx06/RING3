@@ -14,7 +14,7 @@ Wire in this order (D-41f): **power rails → E-stop → presence sensor → ser
 | **D2** | E-stop button | in, `INPUT_PULLUP` | — | **INT0**, falling edge. Pressed = LOW. |
 | **D3** | HC-SR04 ECHO | in, `INPUT_PULLUP` | Timer2 pin, PWM unused | **INT1**, `CHANGE`. Pull-up: an unplugged wire reads "no echo". |
 | D4 | HC-SR04 TRIG | out | — | 10 µs pulse. |
-| **D5** | Fan: L293D pin 1 (EN1,2) | out, PWM | **Timer0** (OC0B, ~980 Hz) | D-43: fan PWM on D5 or D6 only. |
+| **D5** | Fan: L293D pin 1 (EN1,2) | out, PWM | **Timer0** (OC0B, ~980 Hz) | D-43: fan PWM on D5 or D6 only. 10 kΩ pull-down on L293D pin 1 (D-48). |
 | D6 | spare | — | Timer0 (OC0A) | |
 | D7 | Active buzzer + | out | — | `digitalWrite` on/off; no `tone()` (Timer2). |
 | D8 | LCD RS (LCD pin 4) | out | — | |
@@ -41,9 +41,13 @@ L293D EN3,4 (pin 9) → GND, so the second channel is off; LCD RW (pin 5) → GN
 
 ## Before you start (read once)
 
-- **Wire with power off.** For every part: switch the power module **off** and pull the **Uno 5V → LOGIC +**
-  jumper out of the rail. The USB cable can stay plugged in, so the board stays attached to Ubuntu. Put the
-  jumper back and switch the module on only for the check.
+- **Power order rule (D-48): the module stays ON whenever the LOGIC rail is powered.** With the module off and
+  the Uno powered, the L293D leaks from its logic side (pin 16 VCC1, IN1 tied to LOGIC +) into the unpowered MOTOR
+  rail; the module's LED then glows dimly. So:
+  - **Powering down to wire:** first pull the **Uno 5V → LOGIC +** jumper, **then** switch the module off.
+  - **Powering up:** first switch the module **on**, **then** put the Uno 5V jumper back.
+  - The USB cable can stay plugged in (the board stays attached to Ubuntu); with the Uno 5V jumper out, the LOGIC
+    rail is dead and nothing leaks.
 - **"A → B"** means one jumper wire from A to B. "Row 10" means the 5-hole column numbered 10 on the breadboard.
 - **Split rails:** on some breadboards the red/blue power lines stop halfway along, which means the rail is cut in two
   there. If yours has a gap, bridge each rail across the gap with a short jumper (+ to +, − to −).
@@ -54,7 +58,7 @@ L293D EN3,4 (pin 9) → GND, so the second channel is off; LCD RW (pin 5) → GN
 - Flash `bringup` once at the start (the commands are in the T-06 session). Each part's check is one key in
   the monitor: `e s v f l b r`. `a` runs all of them and asks which parts are wired.
 
-## 1. Power rails (D-31, D-43)
+## 1. Power rails (D-31, D-43, D-47, D-48)
 
 Two separate 5 V supplies that share **ground only**:
 
@@ -78,13 +82,17 @@ Parts: breadboard power module, 9 V DC wall adapter (barrel plug), 3 jumper wire
    - MOTOR **−** (row-a side blue) → LOGIC **−** (row-j side blue). This ties the grounds even if the module is unplugged.
 4. **Never** connect MOTOR + to LOGIC +, and never put the Uno 5V wire on the MOTOR rail. The two 5 V supplies must
    not meet.
-5. Plug the 9 V adapter into the module's barrel jack. Leave the module switched off. `[UNVERIFIED]`: from 9 V the
+5. **Order (D-48):** module on before the Uno 5V jumper goes in; jumper out before the module goes off. Never leave
+   the module off while the Uno feeds the LOGIC rail (see "Power order rule" above).
+6. Plug the 9 V adapter into the module's barrel jack. Leave the module switched off. `[UNVERIFIED]`: from 9 V the
    module's 5 V regulator turns about 4 V × the motor + servo current into heat; after a long fan run, touch-check
    that the regulator isn't too hot to hold. If the fan or servo stutters, a regulator in thermal limit is the first
    suspect (the Uno, on its own supply, keeps running).
 
 **Check:** module switched on → its power LED lights. The Uno's `ON` LED stays lit, and `arduino-cli board list`
-still shows the Uno. Switching the module on and off must not reset the Uno: the `bringup` banner must not reprint.
+still shows the Uno. Switching the module on must not reset the Uno: the `bringup` banner must not reprint. If you
+ever see the module's LED glowing **dimly** while it is switched off, that is the L293D leak (D-48): switch the
+module on or pull the Uno 5V jumper, and keep to the power order.
 
 ## 2. E-stop button (D2, INT0)
 
@@ -140,7 +148,7 @@ probably on the LOGIC rail, or the grounds aren't joined.
 
 ## 5. Fan (DC motor + blade through the L293D, EN on D5)
 
-Parts: L293D chip (16 pins), DC motor with the fan blade, about 10 jumper wires. The L293D has diodes built in for the
+Parts: L293D chip (16 pins), DC motor with the fan blade, one 10 kΩ resistor (pull-down, D-48), about 10 jumper wires. The L293D has diodes built in for the
 motor, so no extra diode is needed.
 
 1. Find the **notch** (a half-moon) at one end of the chip. Push the chip in so it **straddles the centre gap**,
@@ -154,7 +162,7 @@ motor, so no extra diode is needed.
    ```
    | Pin | Name | Wire to |
    |---|---|---|
-   | 1 | EN1,2 (speed) | Uno **D5** |
+   | 1 | EN1,2 (speed) | Uno **D5**, and a **10 kΩ resistor from pin 1 to LOGIC −** (pull-down, D-48) |
    | 2 | IN1 | LOGIC **+** (hard-wired HIGH) |
    | 3 | OUT1 | motor wire A |
    | 4 | GND | LOGIC **−** |
@@ -169,6 +177,11 @@ motor, so no extra diode is needed.
 2. Motor: its two wires go to pin 3 and pin 6 (either way round). Press the fan blade onto the shaft. Put the motor
    where the blade can spin freely, away from the sensor beam and from your hand on the E-stop.
 3. Double-check pins 8 and 16: **8 = MOTOR +**, **16 = LOGIC +**. They are on opposite corners of the chip.
+4. **Pull-down on pin 1 (D-48).** While the Uno resets (after an upload, a port open or the reset button) every pin
+   is an input for about a second, so EN floats and the fan can blip on its own. A 10 kΩ resistor from L293D pin 1
+   to LOGIC − holds EN low until the firmware drives it. (Reference build: pin 1 at b40, resistor b40 → GND.)
+
+**Check (pull-down):** press the Uno's reset button (or upload a sketch): the fan must not move at all.
 
 **Check (`f`):** the fan ramps from 30 % to 100 % in 10 % steps, 1 s each. Note the step where the blade **first
 starts turning** and type it in. That is the **minimum spinning duty** (the L293D loses about 2 V, D-43); it goes in

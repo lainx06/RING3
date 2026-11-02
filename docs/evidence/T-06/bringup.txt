@@ -31,3 +31,12 @@ Notes
 
 Part 2: after LCD, buzzer, RGB
 PENDING (parts arrive 2026-11-02).
+
+Hardware changes after part 1 (lead D-48, reported by the user 2026-11-01 evening, after flashing ring3cell)
+- (a) Fan blip during reset: while the Uno reset after the ring3cell upload, the fan blipped on its own (D5 is an
+  input during reset and the bootloader, so L293D EN1 floated). Fix: 10 kΩ pull-down from L293D pin 1 (b40) to GND.
+  After the fix, pressing the Uno reset button no longer moves the fan. hardware/wiring.md section 5 updated.
+- (b) Back-feed: with the power module switched off, its LED glowed dimly; removing both L293D pin 16 VCC1 (j40)
+  and IN1 (a41) wires made it go dark, so the chip leaks from its logic side into the unpowered MOTOR rail. Both
+  wires are back. Rule: the module stays on whenever the Uno powers the LOGIC rail (power up: module first, then
+  the Uno 5V jumper; power down: jumper first, then module). hardware/wiring.md "Power order rule" and section 1.
