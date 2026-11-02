@@ -1,4 +1,4 @@
-T-06 compile evidence (A3, A6). Generated 2026-11-01 21:18 EST at commit 1b31592 + working tree (this commit).
+T-06 compile evidence (A3, A6). Generated 2026-11-01 21:18 EST at commit 222d26d (sources as committed there).
 Home directory paths are shown as ~.
 
 == toolchain
