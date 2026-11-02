@@ -37,6 +37,7 @@ FLAG_NAMES = [
     (F_PRESENCE_FAULT, "PRESENCE"),
     (F_LINK_LOST, "LINK_LOST"),
 ]
+LINK_LOSS_FAN = 60  # above the 50 % minimum spinning duty (D-47), so the stop is visible
 BOOT_WINDOW_MS = 3000  # a STATE with t_ms below this comes from the boot that our open caused
 MAX_WIRE = 64  # generous host-side cap; the device's own frames are at most 26 bytes on the wire
 
@@ -429,14 +430,14 @@ class Checks:
         self.record("estop_flood", ok, f"press seen={pressed_at is not None}, fan stayed 0={not bad_after}")
 
     def link_loss(self) -> None:
-        self.log("[link_loss] fan 40 + servo 120, then silence -> fan 0, servo 90, LINK_LOST after 1 s")
+        self.log("[link_loss] fan 60 + servo 120, then silence -> fan 0, servo 90, LINK_LOST after 1 s")
         if not self.clear_reading():
             self.record("link_loss", False, "no clear presence reading")
             return
         self.c.send(T_SERVO, bytes([120]))
         self.c.run(0.4)
-        self.c.send(T_FAN, bytes([40]))
-        run = self.c.wait_for(lambda s: s.fan == 40, 1.0)
+        self.c.send(T_FAN, bytes([LINK_LOSS_FAN]))
+        run = self.c.wait_for(lambda s: s.fan == LINK_LOSS_FAN, 1.0)
         last_sent = time.monotonic()
         self.c.pinging = False
         st = self.c.wait_for(lambda s: s.has(F_LINK_LOST), 3.0)

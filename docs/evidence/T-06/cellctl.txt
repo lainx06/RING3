@@ -14,3 +14,8 @@ $ uv run python tools/cellctl.py a5 /dev/ttyACM0 --only rate,bad_crc
 19:55:06   rate         OK   97 STATE, 19.4 Hz host clock, 20.0 Hz device clock, seq gaps 0, undecodable 2
 19:55:06   bad_crc      OK   BAD_FRAME seen=True, fan stayed 0, ack_seq not advanced to 32=True
 (note: the 'undecodable 2' above was counted from open, including frames cut by the reset; cellctl now reports pre-sync runs separately)
+
+$ uv run python tools/cellctl.py watch /dev/ttyACM0 --seconds 3   (20:34 ET, backstop re-read before the moving checks)
+60 STATE frames; dist tally: 148-153 mm x50, 162-163 mm x8, NO_ECHO x1 (the boot STATE before the first reading).
+Not the 264-290 mm keyboard backstop seen in bring-up: an object about 15 cm out. Moving checks held until the
+beam is clear (user had moved the fan motor out of the beam at this point; the reading did not change).
