@@ -163,14 +163,17 @@ static void test_estop() {
     }
     check(all, "estop: loop backstop ignores LOW of 0.5, 5 and 19 ms");
   }
-  // Characterisation, not a pass rule: a glitch that is still LOW when the ISR runs latches (D-49 design).
+  // Restated D-49 requirement (lead, 2026-11-01): anything still LOW when the ISR runs latches (the stopping
+  // direction). A 500 us glitch is such a case.
   {
     timeline t = {};
     add_low(&t, 80000, 80500);
-    sim_result r = simulate(&t, END, true, 6, 1000);
-    printf("info  estop: a 500 us glitch %s via the ISR (D-49 latches on 'still LOW when the ISR runs'; "
-           "open item in docs/evidence/T-06/README.md)\n",
-           r.latched ? "LATCHES" : "does not latch");
+    bool all = true;
+    for (uint32_t d : delays) {
+      sim_result r = simulate(&t, END, true, d, 1000);
+      all = all && r.latched && r.by_isr;
+    }
+    check(all, "estop: a 500 us glitch still LOW when the ISR runs latches (restated D-49: stopping direction)");
   }
 }
 
