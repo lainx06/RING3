@@ -1,6 +1,6 @@
 # RING3 work cell: wiring guide (T-06)
 
-Parts are from the ELEGOO Super Starter Kit, plus the breadboard power module fed by a USB phone charger (D-34) and
+Parts are from the ELEGOO Super Starter Kit, plus the breadboard power module fed by a 9 V DC wall adapter into its barrel jack (D-47; D-34's USB charger also works) and
 the 1000 µF capacitor (D-19). Everything sits on one breadboard and the desk: no cutting, no soldering (D-24).
 
 Wire in this order (D-41f): **power rails → E-stop → presence sensor → servo → fan** (target 90 min), then the
@@ -60,25 +60,28 @@ Two separate 5 V supplies that share **ground only**:
 
 | Rail | Fed by | Feeds |
 |---|---|---|
-| **MOTOR** (top rail pair) | Breadboard power module, its jumper on **5V** | L293D pin 8 (VCC2, motor supply) and the servo |
-| **LOGIC** (bottom rail pair) | The Uno's 5V pin; the module's jumper on this side **OFF** (or pulled out) | L293D pin 16 (VCC1), HC-SR04, LCD, buzzer, RGB |
+| **MOTOR** (the rail pair on the row-**a** side) | Breadboard power module, its jumper on **5V** | L293D pin 8 (VCC2, motor supply) and the servo |
+| **LOGIC** (the rail pair on the row-**j** side) | The Uno's 5V pin; the module's jumper on this side **OFF** (or pulled out) | L293D pin 16 (VCC1), HC-SR04, LCD, buzzer, RGB |
 
-Parts: breadboard power module, USB phone charger + cable, 3 jumper wires. Optional: a tape label "M" and "L".
+Parts: breadboard power module, 9 V DC wall adapter (barrel plug), 3 jumper wires. Optional: a tape label "M" and "L".
 
 1. Plug the power module into one end of the breadboard so its pins go into **both** rail pairs. Line its `+`/`−`
    markings up with the breadboard's red (+) and blue (−) lines on both sides.
 2. Find the two voltage jumpers on the module. `[UNVERIFIED]`: on most of these modules each side has positions
    marked `5V`, `OFF` and `3.3V`; check the silkscreen printed on **your** module.
-   - Top side (**MOTOR**): jumper on **5V**.
-   - Bottom side (**LOGIC**): jumper on **OFF**, or pull it out and keep it where you can find it. Pulling it out is the
+   - Row-a side (**MOTOR**): jumper on **5V**.
+   - Row-j side (**LOGIC**): jumper on **OFF**, or pull it out and keep it where you can find it. Pulling it out is the
      surest way to keep the module from driving this rail.
 3. Wires:
-   - Uno **5V** → LOGIC **+** (bottom red line). *This is the jumper you pull out while wiring.*
-   - Uno **GND** → LOGIC **−** (bottom blue line).
-   - MOTOR **−** (top blue) → LOGIC **−** (bottom blue). This ties the grounds even if the module is unplugged.
-4. **Never** connect MOTOR + to LOGIC +, and never put the Uno 5V wire on the top rail. The two 5 V supplies must
+   - Uno **5V** → LOGIC **+** (row-j side red line). *This is the jumper you pull out while wiring.*
+   - Uno **GND** → LOGIC **−** (row-j side blue line).
+   - MOTOR **−** (row-a side blue) → LOGIC **−** (row-j side blue). This ties the grounds even if the module is unplugged.
+4. **Never** connect MOTOR + to LOGIC +, and never put the Uno 5V wire on the MOTOR rail. The two 5 V supplies must
    not meet.
-5. Plug the phone charger into the module's USB input. Leave the module switched off.
+5. Plug the 9 V adapter into the module's barrel jack. Leave the module switched off. `[UNVERIFIED]`: from 9 V the
+   module's 5 V regulator turns about 4 V × the motor + servo current into heat; after a long fan run, touch-check
+   that the regulator isn't too hot to hold. If the fan or servo stutters, a regulator in thermal limit is the first
+   suspect (the Uno, on its own supply, keeps running).
 
 **Check:** module switched on → its power LED lights. The Uno's `ON` LED stays lit, and `arduino-cli board list`
 still shows the Uno. Switching the module on and off must not reset the Uno: the `bringup` banner must not reprint.

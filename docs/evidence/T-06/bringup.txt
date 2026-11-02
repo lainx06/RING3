@@ -1,0 +1,33 @@
+T-06 bring-up evidence (A4)
+===========================
+
+Part 1: after the four safety parts (E-stop, presence sensor, servo, fan)
+Recorded: 2026-11-01 19:29 ET. Sketch: firmware/bringup (commit 89e2812, pins.h as of 7916b93), flashed by the user.
+Source: the user's report of the `a` summary in `arduino-cli monitor -p /dev/ttyACM0 -c baudrate=115200`.
+The raw monitor output was not captured into this session; the lines below are the user-reported summary, not a
+verbatim transcript. (If the scrollback is pasted later, it is appended below as "verbatim".)
+
+  SUMMARY (boot #7)
+    E-stop   OK
+    Sensor   OK  backstop ~264-290 mm (a keyboard on the desk)
+    Servo    OK
+    Fan      OK  min spinning duty 50 %   (ramped to 100 % with no Uno reset)
+    LCD      SKIPPED (not wired yet)  -> PENDING: parts arrive 2026-11-02
+    Buzzer   SKIPPED (not wired yet)  -> PENDING: parts arrive 2026-11-02
+    RGB      SKIPPED (not wired yet)  -> PENDING: parts arrive 2026-11-02
+
+  Boot #7 across the session; no reset during the servo sweep or the fan ramp (banner did not reprint).
+
+Notes
+- Minimum spinning duty: 50 % (L293D drop, D-43). The firmware clamp is 80 % and the kernel limit 0-80 %, so the
+  usable fan band is about 50-80 %; the lead sets demo duties from this.
+- Backstop: a keyboard at ~264-290 mm. Spread ~26 mm, inside the check's <= 30 mm window.
+- Power (D-47): 9 V DC wall adapter into the power module's barrel jack. MOTOR rail = the near rails (row-a
+  side), module jumper 5V. LOGIC rail = the far rails (row-j side), module jumper OFF, fed from the Uno 5V pin.
+  Grounds common.
+- Board: genuine Arduino UNO (arduino-cli board list: "Arduino UNO", arduino:avr:uno) on /dev/ttyACM0 via
+  usbipd. The user runs usbipd with --auto-attach; after a USB drop the node comes back root:dialout and the user
+  runs `sudo chmod a+rw /dev/ttyACM0`.
+
+Part 2: after LCD, buzzer, RGB
+PENDING (parts arrive 2026-11-02).
