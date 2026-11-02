@@ -48,6 +48,7 @@ static uint32_t q_action = QUOTA_ACTION_TICKS, q_request = QUOTA_REQUEST_TICKS,
                 q_confirm = CONFIRM_TIMEOUT_TICKS;
 
 int exec_current_pid(void) { return cur.active ? cur.pid : 0; }
+uint32_t exec_confirm_ticks(void) { return q_confirm; }
 const char *exec_current_name(void) { return cur.active ? cur.name : "kernel"; }
 int exec_kill_pending(void) { return cur.active && cur.kill_pending; }
 
@@ -269,7 +270,7 @@ int exec_request_agent(const char *text, int variant)
 #ifdef RING3_TEST
 UPROG(hello) UPROG(kwrite) UPROG(ticks) UPROG(priv) UPROG(spin) UPROG(badptr) UPROG(null) UPROG(hlt)
 UPROG(ud) UPROG(div0) UPROG(stack) UPROG(dflag) UPROG(fuzz) UPROG(taint) UPROG(confirmw) UPROG(nocap)
-UPROG(objs) UPROG(fan) UPROG(multi) UPROG(lcd) UPROG(audspin)
+UPROG(objs) UPROG(fan) UPROG(multi) UPROG(lcd) UPROG(audspin) UPROG(cellcmd)
 static struct uprog progs[] = {
     ENTRY(hello, PROG_TEST_CONSOLE), ENTRY(kwrite, PROG_TEST_CONSOLE), ENTRY(ticks, PROG_TEST_CONSOLE),
     ENTRY(priv, PROG_TEST_CONSOLE),  ENTRY(spin, PROG_TEST_CONSOLE),   ENTRY(badptr, PROG_TEST_CONSOLE),
@@ -278,6 +279,7 @@ static struct uprog progs[] = {
     ENTRY(fuzz, PROG_TEST_CONSOLE),  ENTRY(taint, PROG_TEST_OBJ),      ENTRY(confirmw, PROG_TEST_OBJ),
     ENTRY(nocap, PROG_TEST_NOCAP),   ENTRY(objs, PROG_TEST_OBJ),       ENTRY(fan, PROG_TEST_FULL),
     ENTRY(multi, PROG_TEST_CONSOLE), ENTRY(lcd, PROG_TEST_FULL),     ENTRY(audspin, PROG_TEST_CONSOLE),
+    ENTRY(cellcmd, PROG_TEST_FULL),
 };
 
 static void fill_lengths(void)
@@ -288,19 +290,20 @@ static void fill_lengths(void)
     done = 1;
     uint32_t lens[] = { LEN(hello), LEN(kwrite), LEN(ticks), LEN(priv), LEN(spin), LEN(badptr), LEN(null),
                         LEN(hlt), LEN(ud), LEN(div0), LEN(stack), LEN(dflag), LEN(fuzz), LEN(taint),
-                        LEN(confirmw), LEN(nocap), LEN(objs), LEN(fan), LEN(multi), LEN(lcd), LEN(audspin) };
+                        LEN(confirmw), LEN(nocap), LEN(objs), LEN(fan), LEN(multi), LEN(lcd), LEN(audspin),
+                        LEN(cellcmd) };
     for (unsigned i = 0; i < sizeof progs / sizeof progs[0]; i++)
         progs[i].image_len = lens[i];
 }
 
-int exec_request_by_name(const char *name)
+int exec_request_by_name(const char *name, const char *arg)
 {
     fill_lengths();
     for (unsigned i = 0; i < sizeof progs / sizeof progs[0]; i++) {
         if (strncmp(name, progs[i].name, 32) == 0) {
             static int first = 1;
             uint32_t before = pmm_free_frames();
-            struct exec_outcome o = exec_request(&progs[i], 0);
+            struct exec_outcome o = exec_request(&progs[i], arg);
             if (o.kind == EXEC_REFUSED)
                 return 1;                        /* nothing was mapped */
             /* The first request allocates the (kept) user page tables; after that every request must give

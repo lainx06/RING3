@@ -24,8 +24,13 @@ uint32_t audit_dropped(void);
 void audit_set_tape(int on);
 void audit_print_banner(void);
 const char *audit_policy_hash(void);                 /* 64 hex chars: the SHA-256 of the compiled policy source */
-/* Timer path (IRQ context): feeds a tick; acts on LIMIT (kill) and AUTO_HALT. */
+/* Timer path (IRQ context): polls COM3, feeds a tick; acts on LIMIT (kill) and AUTO_HALT (FAN 0). */
 void audit_on_tick(struct trap_frame *f);
+/* Another IRQ handler (COM3, T-04) that feeds events: marks interrupt context around its audit_feed()
+ * calls so a full ring is handled as in audit_on_tick (printed when ring 3 was interrupted, counted as a
+ * drop when kernel code was). */
+void audit_irq_enter(struct trap_frame *f);
+void audit_irq_leave(void);
 #ifdef RING3_TEST
 /* Test images: inject a valid telemetry sample from the tick IRQ every `every` ticks (0 = off). */
 void audit_set_tick_telemetry(int32_t mm, int32_t estop, uint32_t every);

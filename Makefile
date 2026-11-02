@@ -8,6 +8,7 @@
 #   make test-link           boot it with the Uno as COM3 (CELL_PORT, default /dev/ttyACM0); pass = exit 33
 #   make run-link            like `make run`, with COM2 null and the Uno as COM3
 #   make run                 COM1 on this terminal, COM2 = tcp:127.0.0.1:$(COM2_PORT) for `uv run ring3 run`
+#   make run-cell            `make run` plus the Uno as COM3 (T-04 live run; TEST=1 for the scripted hw checks)
 VERSION    := 0.1.0
 BUILD_HASH := $(shell git rev-parse --short HEAD 2>/dev/null || echo nogit)
 POLICY     ?= default
@@ -69,7 +70,7 @@ ifeq ($(TEST),1)
   ASFLAGS += -DRING3_TEST=1
   UPROGS  := agentsh agentsh_test agentsh_nocap \
              hello kwrite ticks priv spin badptr null hlt ud div0 stack dflag fuzz taint confirmw nocap objs \
-             fan multi lcd audspin
+             fan multi lcd audspin cellcmd
 else
   UPROGS  := agentsh
 endif
@@ -91,8 +92,9 @@ QEMU_RUN  := $(QEMU_BASE) -serial tcp:127.0.0.1:$(COM2_PORT),server=on,wait=off
 # The Uno (ring3cell firmware) as the guest's third serial port = COM3 (0x3E8, IRQ 4). COM2 stays null here.
 CELL_PORT ?= /dev/ttyACM0
 QEMU_LINK := $(QEMU_BASE) -serial null -serial $(CELL_PORT)
+QEMU_CELL := $(QEMU_RUN) -serial $(CELL_PORT)
 
-.PHONY: all clean run run-link test-link test-kernel user host-policy
+.PHONY: all clean run run-link run-cell test-link test-kernel user host-policy
 .SECONDARY: $(patsubst %,build/user/%.elf,$(UPROGS))
 all: $(KERNEL)
 
@@ -151,6 +153,9 @@ run: $(KERNEL)
 
 run-link: $(KERNEL)
 	$(QEMU_LINK) -kernel $(KERNEL) $(QEMU_EXTRA)
+
+run-cell: $(KERNEL)
+	$(QEMU_CELL) -kernel $(KERNEL) $(QEMU_EXTRA)
 
 test-link:
 	$(MAKE) KTEST_LINK=1

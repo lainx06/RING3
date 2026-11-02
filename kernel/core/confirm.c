@@ -50,9 +50,14 @@ void confirm_run(const struct pol_event *call, struct pol_decision *d)
     idle_ticks(2);
     console_drain();
     audit_flush(1);
-    printk("CONFIRM: %s wants %s(", exec_current_name(), policy_syscall_name(call->nr));
-    print_args(call);
-    printk(")%s. Allow? [y/N] ", audit_state()->tainted ? " [tainted]" : "");
+    if (call->kind == EV_CONSOLE) {
+        /* T-04: the console E-stop reset (no syscall; the rules re-run at the answer's tick, R10) */
+        printk("CONFIRM: console wants estop_reset (button released, fresh telemetry). Allow? [y/N] ");
+    } else {
+        printk("CONFIRM: %s wants %s(", exec_current_name(), policy_syscall_name(call->nr));
+        print_args(call);
+        printk(")%s. Allow? [y/N] ", audit_state()->tainted ? " [tainted]" : "");
+    }
 
     char line[CONSOLE_LINE_MAX + 1];
     for (;;) {

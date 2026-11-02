@@ -36,4 +36,5 @@ UPROG fan
 UPROG multi
 UPROG lcd
 UPROG audspin
+UPROG cellcmd
 #endif

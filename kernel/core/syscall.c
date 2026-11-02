@@ -1,12 +1,13 @@
 /* int 0x80 dispatcher (ARCHITECTURE §3): eax = number, ebx ecx edx esi = args, eax = result (negative =
  * -errno). Order per call (R3, R5): uaccess on every user pointer -> one policy event through decide() ->
  * prompt if CONFIRM_PENDING -> execute only on ALLOW/CONFIRM_YES. No syscall dereferences a user pointer
- * before uaccess passed (INV-3). Numbers without a driver yet (cell_*, agent_*) return -ENOSYS after the
- * decision. */
+ * before uaccess passed (INV-3). cell_* calls reach the COM3 driver only on ALLOW / CONFIRM_YES (T-04);
+ * without a COM3 device they return -ENOSYS after the decision. */
 #include "syscall.h"
 #include "agentlink.h"
 #include "audit.h"
 #include "confirm.h"
+#include "device.h"
 #include "exec.h"
 #include "io.h"
 #include "kstring.h"
@@ -17,7 +18,7 @@
 #include "serial.h"
 #include "uaccess.h"
 
-#define CELL_STATUS_BYTES 16u        /* fixed struct size reserved for T-04 */
+#define CELL_STATUS_BYTES LINK_CELLST_LEN   /* the 16-byte record of abi/link_abi.h */
 #define SYSCALL_DRAIN_MAX 4u         /* audit records printed per syscall return (F5): >= 1 produced per call */
 #define AGENT_RECV_MIN_CAP (LINK_HDR_LEN + LINK_FINAL_MAX)   /* 206: any bridge frame fits */
 
@@ -123,18 +124,43 @@ static int32_t do_agent_recv(uint32_t buf, uint32_t cap, uint32_t timeout)
     return r;
 }
 
+static char lcd_text[LCD_TEXT_MAX + 1];           /* cell_lcd text, copied under uaccess before the decision */
+static int lcd_len;
+
+static int32_t do_cell_status(uint32_t buf)
+{
+    uint8_t rec[LINK_CELLST_LEN];
+    int r = device_status(rec);
+    if (r < 0)
+        return r;
+    memcpy((void *)(uintptr_t)buf, rec, sizeof rec);  /* uaccess checked [buf, buf+16) */
+    return r;
+}
+
+/* The result is what was sent (0) or why nothing was (-ENOSYS no COM3, -ETIMEDOUT not sent). */
 static int32_t execute(uint32_t nr, uint32_t b, uint32_t c, uint32_t d)
 {
     switch (nr) {
-    case SYS_CONS_WRITE: return do_cons_write(b, c);
-    case SYS_OBJ_LIST:   return do_obj_list(b, c);
-    case SYS_OBJ_READ:   return do_obj_read(b, c, d);
-    case SYS_OBJ_WRITE:  return do_obj_write(b, c, d);
-    case SYS_UPTIME:     return (int32_t)ticks_now();
-    case SYS_AGENT_SEND: return do_agent_send(b, c, d);
-    case SYS_AGENT_RECV: return do_agent_recv(b, c, d);
-    default:             return -ENOSYS;        /* cell_*: the driver arrives in T-04 */
+    case SYS_CONS_WRITE:  return do_cons_write(b, c);
+    case SYS_OBJ_LIST:    return do_obj_list(b, c);
+    case SYS_OBJ_READ:    return do_obj_read(b, c, d);
+    case SYS_OBJ_WRITE:   return do_obj_write(b, c, d);
+    case SYS_CELL_STATUS: return do_cell_status(b);
+    case SYS_CELL_FAN:    return device_fan(b);
+    case SYS_CELL_SERVO:  return device_servo(b);
+    case SYS_CELL_HALT:   return device_halt();
+    case SYS_CELL_LCD:    return device_lcd(b, lcd_text, (uint32_t)lcd_len);
+    case SYS_UPTIME:      return (int32_t)ticks_now();
+    case SYS_AGENT_SEND:  return do_agent_send(b, c, d);
+    case SYS_AGENT_RECV:  return do_agent_recv(b, c, d);
+    default:              return -ENOSYS;
     }
+}
+
+static int is_cell_call(uint32_t nr)
+{
+    return nr == SYS_CELL_STATUS || nr == SYS_CELL_FAN || nr == SYS_CELL_SERVO || nr == SYS_CELL_HALT ||
+           nr == SYS_CELL_LCD;
 }
 
 static int logged_pid;
@@ -168,7 +194,7 @@ static void dispatch(struct trap_frame *f)
     }
 #endif
     struct pol_event ev = { EV_SYSCALL, 0, 0, 0, ticks_now(), nr, { (int32_t)b, (int32_t)c, (int32_t)d, (int32_t)s } };
-    char text[LCD_TEXT_MAX + 1];
+    char *text = lcd_text;
     int ua = 0;
     switch (nr) {
     case SYS_CONS_WRITE:
@@ -180,6 +206,7 @@ static void dispatch(struct trap_frame *f)
     case SYS_CELL_STATUS: ua = uaccess_check(b, CELL_STATUS_BYTES, 1); break;
     case SYS_CELL_LCD: {
         int r = uaccess_copy_string(c, text, LCD_TEXT_MAX);
+        lcd_len = r < 0 ? 0 : r;
         if (r == -EINVAL) {
             ev.flags |= EVF_STR_BAD;
         } else if (r < 0) {
@@ -200,9 +227,13 @@ static void dispatch(struct trap_frame *f)
     struct pol_decision dec;
     int idx = audit_feed(&ev, &dec);
     if (dec.action == ACT_PROMPT) {
+        if (is_cell_call(nr))
+            device_show(nr, &dec);               /* "ASK ..." on the panel while the human decides */
         confirm_run(&ev, &dec);                  /* may not return (LIMIT); flushes before the prompt */
         idx = -1;
     }
+    if (is_cell_call(nr))
+        device_show(nr, &dec);                   /* T-04: the kernel's decision in plain words (INV-11) */
     if (dec.action != ACT_EXEC) {
         /* A call that is not executed never reports a non-negative result (F4, D-52): DEC_NONE from a stray
          * answer or any silent decision reads as a cancelled call. */

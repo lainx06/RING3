@@ -1,5 +1,6 @@
 #include "audit.h"
 #include "agentlink.h"
+#include "device.h"
 #include "exec.h"
 #include "io.h"
 #include "kstring.h"
@@ -191,12 +192,21 @@ void audit_set_tick_telemetry(int32_t mm, int32_t estop, uint32_t every)
 }
 #endif
 
+void audit_irq_enter(struct trap_frame *f)
+{
+    irq_ctx = 1;
+    irq_from_user = trap_from_user(f);
+}
+
+void audit_irq_leave(void) { irq_ctx = 0; }
+
 void audit_on_tick(struct trap_frame *f)
 {
     struct pol_event ev = { EV_TICK, 0, 0, 0, ticks_now(), 0, { 0, 0, 0, 0 } };
     struct pol_decision d;
     irq_ctx = 1;
     irq_from_user = trap_from_user(f);
+    device_on_tick();                      /* T-04: COM3 poll backstop (frames -> decide()), PING */
 #ifdef RING3_TEST
     if (tt_every && ticks_now() % tt_every == 0) {
         struct pol_event te = { EV_TELEMETRY, 0, EVF_TELE_VALID, 0, ticks_now(), 0, { tt_mm, tt_estop, 0, 0 } };
@@ -204,6 +214,8 @@ void audit_on_tick(struct trap_frame *f)
     }
 #endif
     audit_feed(&ev, &d);
+    if (d.action == ACT_HALT)
+        device_auto_halt(&d);              /* INV-16: the lease failed on this tick: FAN 0 from the kernel */
     if (d.action == ACT_KILL) {
         irq_ctx = 0;
         exec_kill_limit(f);                /* from ring 3: EOI + abandon now; from the kernel: flag */
@@ -214,5 +226,4 @@ void audit_on_tick(struct trap_frame *f)
         audit_drain(TICK_DRAIN_MAX);
     }
     irq_ctx = 0;
-    /* ACT_HALT: the device driver (T-04) commands FAN 0 here; the decision is already on the tape. */
 }

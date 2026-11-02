@@ -1,6 +1,7 @@
 #include "agentlink.h"
 #include "audit.h"
 #include "console.h"
+#include "device.h"
 #include "exec.h"
 #include "gdt.h"
 #include "idt.h"
@@ -75,10 +76,12 @@ void kmain(uint32_t magic, uint32_t mbi_addr)
     objstore_init();
     audit_init();
     agentlink_init();
+    device_init();
     sti();
     printk("init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, %u frames free\n",
            pmm_free_frames());
     printk("link: COM2 %s\n", agentlink_present() ? "present (bridge link, HELLO sent)" : "absent (no bridge link)");
+    printk("cell: COM3 %s\n", device_present() ? "present (work cell, IRQ 4 + tick poll)" : "absent (no work cell)");
 
     uint32_t t0 = ticks_now();
     printk("TIMER t0=%u\n", t0);

@@ -29,16 +29,33 @@ def _scripted_run() -> str:
         s.expect(r"CONFIRM: fan wants cell_fan\(60\)\. Allow\? \[y/N\] ")
         s.send("y")
         s.expect(r"^END pid=\d+ \S+ ticks=\d+ uptime=\d+$")
-        for line in (
-            "tele 300 0",
-            "estop reset",
-            "tele 300 1 bad",
-            "tele 300 0",
-            "estop reset",
-            "estop reset",
-        ):
+        # T-04: `estop reset` is two-phase (CONFIRM_PENDING, then the R10 rules at the answer's tick)
+        s.prompt()
+        s.send("tele 300 0")
+        s.prompt()
+        s.send("estop reset")
+        s.expect(r"CONFIRM: console wants estop_reset .*Allow\? \[y/N\] ")
+        s.send("y")
+        s.expect(r"^estop reset: CONFIRM_YES estop_reset.*$")
+        for line in ("tele 300 1 bad", "tele 300 0", "estop reset"):  # bad frame; not latched -> DENY_RULE
             s.prompt()
             s.send(line)
+        s.prompt()
+        s.send("tele 300 1")  # latch again (AUTO_HALT estop with nothing moving)
+        s.prompt()
+        s.send("estop reset")  # n -> CONFIRM_NO
+        s.expect(r"CONFIRM: console wants estop_reset .*Allow\? \[y/N\] ")
+        s.send("n")
+        s.expect(r"^estop reset: CONFIRM_NO answer$")
+        s.prompt()
+        s.send("estop reset")  # y with the button still pressed -> DENY_ESTOP estop_button
+        s.expect(r"CONFIRM: console wants estop_reset .*Allow\? \[y/N\] ")
+        s.send("y")
+        s.expect(r"^estop reset: DENY_ESTOP estop_button$")
+        s.prompt()
+        s.send("estop reset")  # no answer -> CONFIRM_NO timeout on a tick
+        s.expect(r"CONFIRM: console wants estop_reset .*Allow\? \[y/N\] ")
+        s.expect(r"^estop reset: CONFIRM_NO timeout$", 15)
         s.run_prog("spin")  # LIMIT on a tick
         s.prompt()
         s.send("run confirmw")  # timeout on a tick
@@ -92,4 +109,6 @@ def test_kernel_and_host_decisions_match():
         "AUTO_HALT",
     ):
         assert want in decisions, f"{want} never exercised in the scripted run: {sorted(decisions)}"
+    resets = [k for k in kernel if k["sys"] == "console" or (k["sys"] == "confirm" and k["target"] == "0")]
+    assert [k["decision"] for k in resets if k["sys"] == "console"].count("CONFIRM_PENDING") == 4, resets
     print(f"REPLAY MATCH: {len(kernel)} decisions, {len(tape)} tape events")

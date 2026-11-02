@@ -4,6 +4,7 @@
 #include "agentlink.h"
 #include "audit.h"
 #include "confirm.h"
+#include "device.h"
 #include "exec.h"
 #include "io.h"
 #include "kernel.h"
@@ -115,6 +116,7 @@ static void cmd_status(void)
            s->fan_duty, s->servo_deg, s->estop_latched, s->tele_valid, s->distance_mm, s->in_request,
            s->tainted, s->pending, s->seq, audit_dropped(), ticks_now());
     agentlink_print_status();
+    device_print_status();
 }
 
 static void cmd_audit(void)
@@ -135,14 +137,28 @@ static void cmd_objects(void)
 
 static void feed_console(uint8_t sub)
 {
-    struct pol_event ev = { EV_CONSOLE, sub, 0, 0, ticks_now(), 0, { 0, 0, 0, 0 } };
+    struct pol_event ev = { EV_CONSOLE, sub, 0, 0, ticks_now(), 0, { (int32_t)exec_confirm_ticks(), 0, 0, 0 } };
     struct pol_decision d;
     cli();
     audit_feed(&ev, &d);
     sti();
     audit_flush(1);
-    if (sub == CONSOLE_ESTOP_RESET)
-        printk("estop reset: %s %s\n", policy_code_name(d.code), policy_reason_name(d.reason));
+    if (sub != CONSOLE_ESTOP_RESET)
+        return;
+    /* T-04: `estop reset` opens a confirmation (INV-05); on y the policy re-checks the button and the
+     * telemetry at that tick and only then does the kernel send ESTOP_RESET on COM3. */
+    if (d.action == ACT_PROMPT) {
+        cli();
+        confirm_run(&ev, &d);
+        sti();
+    }
+    int r = 0;
+    if (d.action == ACT_EXEC)
+        r = device_estop_reset();
+    device_show(PEND_ESTOP_RESET, &d);
+    audit_flush(1);
+    printk("estop reset: %s %s%s\n", policy_code_name(d.code), policy_reason_name(d.reason),
+           d.action != ACT_EXEC ? "" : r == 0 ? " (ESTOP_RESET sent)" : " (no COM3 device: nothing sent)");
 }
 
 /* A plain-English line is a request: agentsh (ring 3, the production capability set) carries it to the
@@ -170,8 +186,8 @@ static void dispatch(const char *l)
     if (word(l, "help", &rest)) {
         printk("commands: help status audit objects 'estop reset' exit; any other line is a request for the agent"
 #ifdef RING3_TEST
-               "; test: 'run <prog>' 'agent-test <text>' 'agent-nocap <text>' 'tele <mm> <estop> [bad]'"
-               " 'teletick <mm> <estop> <n>|off' 'tape on|off' 'confirmrace on|off' panic"
+               "; test: 'run <prog> [args]' 'agent-test <text>' 'agent-nocap <text>' 'tele <mm> <estop> [bad]'"
+               " 'teletick <mm> <estop> <n>|off' 'tape on|off' 'confirmrace on|off' 'cellmute <ticks>' panic"
 #endif
                "\n");
         feed_console(CONSOLE_OTHER);
@@ -198,8 +214,30 @@ static void dispatch(const char *l)
 #ifdef RING3_TEST
     } else if (word(l, "run", &rest)) {
         feed_console(CONSOLE_OTHER);
-        if (!exec_request_by_name(rest))
-            printk("run: unknown program '%s'\n", rest);
+        /* `run <prog> [args...]`: the rest of the line reaches the program at USER_ARG_ADDR (cellcmd) */
+        char name[32];
+        uint32_t n = 0;
+        while (rest[n] && rest[n] != ' ' && n < sizeof name - 1) {
+            name[n] = rest[n];
+            n++;
+        }
+        name[n] = 0;
+        const char *arg = rest + n;
+        while (*arg == ' ')
+            arg++;
+        if (!exec_request_by_name(name, *arg ? arg : 0))
+            printk("run: unknown program '%s'\n", name);
+    } else if (word(l, "cellmute", &rest)) {
+        feed_console(CONSOLE_OTHER);
+        int ok = 1;
+        const char *p = rest;
+        int32_t ticks = parse_int(&p, &ok);
+        if (!ok || ticks < 0) {
+            printk("cellmute: usage cellmute <ticks> (0 = off)\n");
+            return;
+        }
+        device_mute((uint32_t)ticks);
+        printk("cellmute %d ticks (no COM3 frames sent meanwhile)\n", ticks);
     } else if (word(l, "tele", &rest)) {
         feed_console(CONSOLE_OTHER);
         int ok = 1;

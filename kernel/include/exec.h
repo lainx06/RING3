@@ -53,8 +53,9 @@ void exec_kill_limit(struct trap_frame *f);
 int exec_kill_pending(void);
 void exec_abandon_limit(void) __attribute__((noreturn));    /* from a kernel wait on the program's behalf */
 
+uint32_t exec_confirm_ticks(void);               /* the confirmation timeout in force (console prompts too) */
 #ifdef RING3_TEST
-int exec_request_by_name(const char *name);      /* 0 if unknown */
+int exec_request_by_name(const char *name, const char *arg);   /* 0 if unknown; arg (may be 0) -> USER_ARG */
 void exec_set_quotas(uint32_t action, uint32_t request, uint32_t confirm);
 void exec_inject_telemetry(int32_t distance_mm, int32_t estop, int valid);
 #endif

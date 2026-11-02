@@ -70,7 +70,8 @@ def incomplete_body(tin: int = 1700, tout: int = 2048) -> bytes:
 
 class ScriptedModel:
     """A transport whose replies are the given model texts (or raw Responses API bodies as ``bytes``), in
-    order; records every request body."""
+    order; records every request body. A callable entry is called for its text (it may sleep first: a slow
+    model while the executor waits in agent_recv, T-04)."""
 
     def __init__(self, replies: list[str | bytes]):
         self.replies = list(replies)
@@ -81,6 +82,8 @@ class ScriptedModel:
         if not self.replies:
             raise AssertionError("the scripted model has no reply left: the bridge asked once too often")
         reply = self.replies.pop(0)
+        if callable(reply):
+            reply = reply()
         return TransportResponse(200, reply if isinstance(reply, bytes) else responses_body(reply))
 
     @property

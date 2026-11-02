@@ -79,10 +79,16 @@ def free_port() -> int:
 
 
 def qemu_command(
-    kernel: Path, append: str = "", memory_mb: int = 64, com2_port: int | None = None
+    kernel: Path,
+    append: str = "",
+    memory_mb: int = 64,
+    com2_port: int | None = None,
+    com3_port: int | str | None = None,
 ) -> list[str]:
     """`com2_port`: expose COM2 as `tcp:127.0.0.1:<port>,server=on,wait=off` (the bridge link, T-03b);
-    None leaves QEMU without a second serial port (the kernel reports `link: COM2 absent`)."""
+    None leaves QEMU without a second serial port (the kernel reports `link: COM2 absent`). `com3_port`:
+    the same for COM3, the work cell (T-04, `tests/sim_cell.py` connects there), or a device path such as
+    /dev/ttyACM0 (the real board, hardware tests); it needs a COM2 (null if `com2_port` is None)."""
     cmd = [
         QEMU,
         "-kernel",
@@ -96,6 +102,12 @@ def qemu_command(
     ]
     if com2_port is not None:
         cmd += ["-serial", f"tcp:127.0.0.1:{com2_port},server=on,wait=off"]
+    elif com3_port is not None:
+        cmd += ["-serial", "null"]
+    if isinstance(com3_port, str):
+        cmd += ["-serial", com3_port]
+    elif com3_port is not None:
+        cmd += ["-serial", f"tcp:127.0.0.1:{com3_port},server=on,wait=off"]
     cmd += [
         "-monitor",
         "none",
@@ -143,10 +155,16 @@ class Session:
     """
 
     def __init__(
-        self, kernel: Path = KERNEL_TEST, append: str = FAST_QUOTAS, timeout: float = 30.0, com2: bool = False
+        self,
+        kernel: Path = KERNEL_TEST,
+        append: str = FAST_QUOTAS,
+        timeout: float = 30.0,
+        com2: bool = False,
+        com3: bool | str = False,
     ):
         self.com2_port: int | None = free_port() if com2 else None
-        self.cmd = qemu_command(kernel, append, com2_port=self.com2_port)
+        self.com3_port: int | str | None = com3 if isinstance(com3, str) else free_port() if com3 else None
+        self.cmd = qemu_command(kernel, append, com2_port=self.com2_port, com3_port=self.com3_port)
         self.timeout = timeout
         self.t0 = time.monotonic()
         self.proc = subprocess.Popen(
@@ -158,6 +176,7 @@ class Session:
         self._reader = threading.Thread(target=self._read, daemon=True)
         self._reader.start()
         self.pos = 0  # consumed up to here
+        self.sent_at = 0  # output length when the last line was sent (prompt() looks from here)
         self.exit_code: int | None = None
 
     def _read(self) -> None:
@@ -195,11 +214,26 @@ class Session:
 
     def send(self, line: str) -> None:
         assert self.proc.stdin is not None
+        self.sent_at = len(self.output)
         self.proc.stdin.write((line + "\n").encode())
         self.proc.stdin.flush()
 
     def prompt(self, timeout: float | None = None) -> None:
-        self.expect(r"ring3> ", timeout)
+        """Waits until the console is at `ring3> ` again: a prompt printed any time after the last line was
+        sent counts, even one that `expect()` already read past (asynchronous AUDIT/TAPE lines from COM3
+        telemetry can land after the prompt, T-04)."""
+        deadline = time.monotonic() + (timeout if timeout is not None else self.timeout)
+        while True:
+            text = self.output
+            i = text.find("ring3> ", self.sent_at)
+            if i >= 0:
+                self.pos = max(self.pos, i + len("ring3> "))
+                return
+            if "PANIC:" in text[self.pos :]:
+                raise AssertionError(f"unexpected PANIC (INV-12):\n{text}")
+            if self._eof.is_set() or time.monotonic() > deadline:
+                raise AssertionError(f"timeout waiting for the prompt; output so far:\n{text}")
+            time.sleep(0.01)
 
     def run_prog(self, name: str, timeout: float | None = None) -> str:
         """`run <name>` at the prompt; returns the transcript from RUN to END (consumes it)."""

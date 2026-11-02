@@ -4,6 +4,7 @@
 #include "trap.h"
 #include "agentlink.h"
 #include "audit.h"
+#include "device.h"
 #include "panic.h"
 #include "pic.h"
 #include "pit.h"
@@ -32,6 +33,8 @@ void isr_dispatch(struct trap_frame *f)
             audit_on_tick(f);                 /* may not return (LIMIT from ring 3): sends EOI itself first */
         } else if (irq == 3) {
             agentlink_on_irq();               /* COM2: bytes into the link ring, nothing else */
+        } else if (irq == 4) {
+            device_on_irq(f);                 /* COM3 (shared with the polled COM1, D-39a): frames -> decide() */
         }
         pic_eoi(irq);
         return;
