@@ -1,0 +1,138 @@
+{
+  "band_half_width_deg": 5,
+  "crop": {
+    "px_per_mm": 5,
+    "x_max": 92.0,
+    "x_min": -92.0,
+    "y_max": 92.0,
+    "y_min": -22.0
+  },
+  "dial": {
+    "r_interior": 50.0,
+    "r_ring_inner": 56.0,
+    "r_ring_outer": 80.0
+  },
+  "frame": "origin at the servo pivot; +x right, +y up the page; angles counter-clockwise from +x",
+  "markers": {
+    "corner_order": "TL,TR,BR,BL of the upright marker",
+    "corners": {
+      "0": [
+        [
+          -93.0,
+          100.0
+        ],
+        [
+          -63.0,
+          100.0
+        ],
+        [
+          -63.0,
+          70.0
+        ],
+        [
+          -93.0,
+          70.0
+        ]
+      ],
+      "1": [
+        [
+          63.0,
+          100.0
+        ],
+        [
+          93.0,
+          100.0
+        ],
+        [
+          93.0,
+          70.0
+        ],
+        [
+          63.0,
+          70.0
+        ]
+      ],
+      "2": [
+        [
+          63.0,
+          -12.0
+        ],
+        [
+          93.0,
+          -12.0
+        ],
+        [
+          93.0,
+          -42.0
+        ],
+        [
+          63.0,
+          -42.0
+        ]
+      ],
+      "3": [
+        [
+          -93.0,
+          -12.0
+        ],
+        [
+          -63.0,
+          -12.0
+        ],
+        [
+          -63.0,
+          -42.0
+        ],
+        [
+          -93.0,
+          -42.0
+        ]
+      ]
+    },
+    "dictionary": "DICT_4X4_50",
+    "size_mm": 30.0
+  },
+  "pivot": [
+    0.0,
+    0.0
+  ],
+  "pivot_on_page_mm": {
+    "a4": [
+      105.0,
+      171.5
+    ],
+    "letter": [
+      107.95,
+      162.7
+    ]
+  },
+  "scale_deg": [
+    25,
+    155
+  ],
+  "servo_body_mm": [
+    -6.1,
+    -17.0,
+    6.1,
+    5.5
+  ],
+  "units": "mm",
+  "version": 1,
+  "zones": [
+    {
+      "hi_deg": 70,
+      "lo_deg": 30,
+      "name": "LOW"
+    },
+    {
+      "hi_deg": 110,
+      "lo_deg": 70,
+      "name": "MID"
+    },
+    {
+      "hi_deg": 150,
+      "lo_deg": 110,
+      "name": "HIGH"
+    }
+  ]
+}
