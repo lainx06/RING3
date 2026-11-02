@@ -57,3 +57,39 @@ $ uv run python tools/cellctl.py noise /dev/ttyACM0
 20:43:28   [FAN 60 trial 2] STATE seq=219 t=10966 ms fan=0% servo=90 dist=279 mm estop=0 flags=ESTOP_L ack=52
 20:43:29   [final reset] STATE seq=251 t=12566 ms fan=0% servo=90 dist=250 mm estop=0 flags=- ack=61
 20:43:30 NOISE SUMMARY: latch set without a press in: FAN 60 trial 1, FAN 60 trial 2
+
+===== 21:23 ET: ring3cell at commit 222d26d (D-49, D-50) flashed by the user; hardware per D-49 =====
+$ uv run python tools/cellctl.py noise /dev/ttyACM0
+21:23:09 opened /dev/ttyACM0 raw 115200 8N1; the Uno resets on open, waiting for the first STATE of the new boot
+21:23:11 first STATE of the new boot after 1643 ms (8 pre-reset frames discarded): STATE seq=0 t=16 ms fan=0% servo=90 dist=NO_ECHO estop=0 flags=- ack=0
+21:23:11   boot flags: WDT_RESET=False LINK_LOST=False
+21:23:11   undecodable bytes runs before sync (frames cut by the reset): 2
+21:23:11   [boot idle] STATE seq=1 t=66 ms fan=0% servo=90 dist=244 mm estop=0 flags=- ack=1
+21:23:15   [servo 120] STATE seq=69 t=3466 ms fan=0% servo=120 dist=273 mm estop=0 flags=- ack=16
+21:23:16   [servo 90] STATE seq=89 t=4466 ms fan=0% servo=90 dist=273 mm estop=0 flags=- ack=21
+21:23:17   [FAN 60 trial 1] STATE seq=121 t=6066 ms fan=60% servo=90 dist=273 mm estop=0 flags=- ack=30
+21:23:19   [FAN 0 trial 1] STATE seq=160 t=8016 ms fan=0% servo=90 dist=273 mm estop=0 flags=- ack=38
+21:23:21   [FAN 60 trial 2] STATE seq=192 t=9616 ms fan=60% servo=90 dist=265 mm estop=0 flags=- ack=47
+21:23:23   [FAN 0 trial 2] STATE seq=231 t=11566 ms fan=0% servo=90 dist=264 mm estop=0 flags=- ack=56
+21:23:25 NOISE SUMMARY: latch set without a press in: none
+
+$ uv run python tools/cellctl.py a5 /dev/ttyACM0 --only clamp,link_loss,discard_link
+21:23:25 opened /dev/ttyACM0 raw 115200 8N1; the Uno resets on open, waiting for the first STATE of the new boot
+21:23:27 first STATE of the new boot after 1642 ms (0 pre-reset frames discarded): STATE seq=0 t=16 ms fan=0% servo=90 dist=NO_ECHO estop=0 flags=- ack=0
+21:23:27   boot flags: WDT_RESET=False LINK_LOST=False
+21:23:27   undecodable bytes runs before sync (frames cut by the reset): 0
+21:23:28 [clamp] FAN 100 -> 80 + CLAMP; SERVO 170 -> 165 + CLAMP
+21:23:28   FAN 100: STATE seq=34 t=1716 ms fan=80% servo=90 dist=273 mm estop=0 flags=CLAMP ack=8
+21:23:29   SERVO 170: STATE seq=39 t=1966 ms fan=0% servo=165 dist=243 mm estop=0 flags=CLAMP ack=11
+21:23:30   -> OK: fan reported 80 clamp=True; servo reported 165 clamp=True
+21:23:30 [link_loss] fan 60 + servo 120, then silence -> fan 0, servo 90, LINK_LOST after 1 s
+21:23:31   LINK_LOST: STATE seq=94 t=4716 ms fan=0% servo=90 dist=244 mm estop=0 flags=LINK_LOST ack=22  (1093 ms after the last frame, host clock)
+21:23:32   -> OK: parked after 1093 ms, fan=0 servo=90, PING clears LINK_LOST=True, fan not auto-restarted=True
+21:23:32 [discard_link] fan 60, silence -> LINK_LOST; first frame back is FAN 60 -> dropped, fan stays 0
+21:23:33   LINK_LOST: STATE seq=130 t=6516 ms fan=0% servo=90 dist=264 mm estop=0 flags=LINK_LOST ack=28
+21:23:33   link back via FAN 60: STATE seq=131 t=6566 ms fan=0% servo=90 dist=273 mm estop=0 flags=- ack=29
+21:23:33   -> OK: LINK_LOST=True, link restored by the FAN=True, fan 0 for 1 s=True, a new FAN starts it=True
+21:23:34 A5 SUMMARY
+21:23:34   clamp        OK   fan reported 80 clamp=True; servo reported 165 clamp=True
+21:23:34   link_loss    OK   parked after 1093 ms, fan=0 servo=90, PING clears LINK_LOST=True, fan not auto-restarted=True
+21:23:34   discard_link OK   LINK_LOST=True, link restored by the FAN=True, fan 0 for 1 s=True, a new FAN starts it=True
