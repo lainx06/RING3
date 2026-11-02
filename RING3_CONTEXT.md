@@ -141,7 +141,7 @@ Everything shown is real data. No fake activity. Verdict words are readable in 2
   `[UNVERIFIED]`, taken from the official pricing page into `config/models.toml` before the first paid call.
 - **Budget:** project ledger cap $30 (user-set, `config/budget.toml`), per-run `--budget-usd` required.
 
-## 5. Schedule (Nov 1 to 4; revised after external reviews D-26 to D-32, and the kickoff review D-37, D-38)
+## 5. Schedule (Nov 1 to 4; revised after external reviews D-26 to D-32, the kickoff review D-37, D-38, and D-51)
 All times ET.
 | When | Card | Must work by the end |
 |---|---|---|
@@ -150,12 +150,12 @@ All times ET.
 | Nov 1 morning (user, while T-01 runs) | — | `SETUP.md` step 8 (usbipd + Uno into WSL, arduino-cli in Ubuntu). |
 | Nov 1 (2nd terminal, after T-01's first commit) | T-06 | Wiring guide + Uno firmware (frames, clamps, local presence cutoff, E-stop ISR, watchdogs, LCD/buzzer/RGB, 50 ms telemetry); **user wires (E-stop, sensor, servo, fan first; power per D-31) and flashes in the afternoon** (D-42). |
 | Nov 1 afternoon (2nd terminal) | T-02 (Fable 5.1) | **Pulled forward (D-44):** executor lifecycle + tick quotas, hardened `uaccess`, object store, pure-C `decide()` incl. the device safety rules, capabilities, taint, console confirmation, host build + kernel-vs-host decision match, permissive build. **Checkpoint 9 PM Nov 1.** |
-| Nov 1 evening | T-01B | Link smoke test: QEMU `-serial /dev/ttyACM0` + trivial echo sketch (D-31), after T-06's hardware checks |
-| Nov 2 | — | T-02 leftovers if any; then T-03a / T-03b move up (lead re-plans the evening of Nov 1). |
-| Nov 2 (2nd terminal) | T-03a | Bridge host-only Python (framing with the shared link vectors, strict JSON, ledger, event log + verify) (D-38b). Any T-06 leftovers first. |
-| Nov 3 morning | T-03b | COM2 kernel link, Muse Spark adapter, strict JSON → 16-byte ACTION end to end, event tape, `agentsh` |
-| Nov 3 midday | T-04 | COM3 device driver, cell syscalls, tick-driven lease + `AUTO_HALT`, E-stop latch, end-to-end: a prompt spins the fan and is refused at 100 %. **Checkpoint 2 PM** (D-38c). |
-| Nov 3 afternoon | T-07 | Only if the 2 PM checkpoint passed: printable RING3 gauge with ArUco markers (D-42), camera witness (markers + auto-calibration + SAM 3.1) and its observation back to Muse Spark. |
+| Nov 1 evening | — | **T-02 done 20:11 ET** (all A1–A9). T-06 hardware checks on the real cell (E-stop, discard, clamp, link loss pass). Evening skeptic: 12 findings → D-50. |
+| Nov 2 morning | T-02F (Fable 5.1) ∥ T-03a (Opus 5.5) | T-02F: kernel fixes from the skeptic (D-50). T-03a in parallel: link ABI (commit first), framing, strict JSON, ledger, event log, adapter behind a fake transport, context pack. |
+| Nov 2 late morning | T-01B (Opus 5.5) | Link smoke with the real `ring3cell` firmware as COM3 (no reflashing, D-51). User wires LCD/buzzer/RGB when the parts arrive; T-06 finishes (part 2). |
+| Nov 2 afternoon | T-03b (Fable 5.1) | COM2 link, `agentsh`, bridge run loop, event tape on COM2, fake-model invariant tests, **first live Muse Spark run** (user approves). |
+| Nov 2 evening → Nov 3 morning | T-04 (Fable 5.1) | COM3 driver, cell syscalls, simulated-device invariant tests, hardware run, **live Muse Spark run on the real cell**. **Checkpoint Nov 3, 2 PM** (D-38c). |
+| Nov 3 (after T-04) | T-07 | Only if the 2 PM checkpoint passed: printable RING3 gauge with ArUco markers (D-42), camera witness (markers + auto-calibration + SAM 3.1) and its observation back to Muse Spark. |
 | Nov 3 evening | — | Codex Gate A. **Record insurance footage** of what works (D-38d). |
 | Nov 4 morning | T-05a | Evals (permissive vs RING3), replay from tape, results tables. Gate B. |
 | Nov 4 12-4 PM | T-05 | **Video (4-hour block)**, README, Gemini claims review; **submit by 6 PM ET** |

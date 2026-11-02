@@ -94,8 +94,8 @@ A card is done only when every acceptance item passes and its evidence exists.
 ## 8. Builder model plan (D-10, revised by D-42)
 | Work | Model | Effort |
 |---|---|---|
-| T-01 boot + isolation slice, T-02 policy/uaccess/confirmation, T-04 device driver + safety policy | **Fable 5.1** | high |
-| T-01B, T-03a, T-03b, T-05a, T-06, T-07, T-05 docs | Opus 5.5 | high |
+| T-01, T-02, T-02F, T-03b (kernel link + agentsh), T-04 (device driver): kernel trust-boundary cards | **Fable 5.1** | high |
+| T-01B, T-03a, T-05a, T-06, T-07, T-05 docs | Opus 5.5 | high |
 | A bug blocking a card > 45 min (that bug only) | **Fable 5.1** | high |
 | Daily skeptic | **Fable 5.1** | high |
 | Final skeptic before Gate B | **Fable 5.1** | high |
