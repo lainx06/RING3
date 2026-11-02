@@ -40,6 +40,7 @@ def test_host_policy_tests():
         "R8_",
         "F3_",
         "F7_",
+        "F8_",
     ):
         assert re.search(rf"^ok .*{name}", p.stdout, re.M), f"{name} missing:\n{p.stdout}"
 

@@ -22,7 +22,7 @@ struct uprog {
 #define QUOTA_REQUEST_TICKS  6000u    /* 60 s per request */
 #define CONFIRM_TIMEOUT_TICKS 3000u   /* 30 s for a human answer */
 
-enum exec_result { EXEC_EXIT = 0, EXEC_FAULT = 1, EXEC_LIMIT = 2 };
+enum exec_result { EXEC_EXIT = 0, EXEC_FAULT = 1, EXEC_LIMIT = 2, EXEC_REFUSED = 3 /* EXEC_START denied: nothing ran */ };
 
 struct exec_outcome {
     enum exec_result kind;

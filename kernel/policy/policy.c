@@ -360,6 +360,11 @@ void decide(const struct pol_state *s, const struct pol_event *ev, struct pol_st
             set(d, DEC_DENY_RULE, R_PENDING, -EPERM, ACT_NONE);
             return;
         }
+        /* F8 (D-50): quotas are positive tick counts; zero or negative is refused, there is no "unlimited". */
+        if (ev->a[0] <= 0 || ev->a[1] <= 0 || ev->a[2] <= 0) {
+            set(d, DEC_DENY_RULE, R_ARG, -EINVAL, ACT_NONE);
+            return;
+        }
         n->in_request = 1;
         n->prog = ev->sub;
         n->tainted = 0;
@@ -449,20 +454,20 @@ void decide(const struct pol_state *s, const struct pol_event *ev, struct pol_st
         return;
 
     case EV_TICK:
-        if (s->pending && s->confirm_limit && TICKS_SINCE(tick, s->pend_since) >= s->confirm_limit) {
+        if (s->pending && TICKS_SINCE(tick, s->pend_since) >= s->confirm_limit) {
             d->target = (uint32_t)s->pend_a[0];
             resolve_pending(s, tick, n);
             set(d, DEC_CONFIRM_NO, R_TIMEOUT, -ECANCELED, ACT_NONE);
             return;
         }
         if (s->in_request && !s->killing) {
-            if (s->req_limit && TICKS_SINCE(tick, s->req_start) >= s->req_limit) {
+            if (TICKS_SINCE(tick, s->req_start) >= s->req_limit) {
                 n->killing = 1;
                 set(d, DEC_LIMIT, R_REQUEST_QUOTA, 0, ACT_KILL);
                 d->target = TICKS_SINCE(tick, s->req_start);
                 return;
             }
-            if (!s->pending && s->act_limit && TICKS_SINCE(tick, s->act_start) >= s->act_limit) {
+            if (!s->pending && TICKS_SINCE(tick, s->act_start) >= s->act_limit) {
                 n->killing = 1;
                 set(d, DEC_LIMIT, R_ACTION_QUOTA, 0, ACT_KILL);
                 d->target = TICKS_SINCE(tick, s->act_start);

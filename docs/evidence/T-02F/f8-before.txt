@@ -1,0 +1,23 @@
+# F8 before the fix (Nov 1 policy.c + the new refusal handling and test): taction=0 meant unlimited, so
+# 'run hello' ran instead of being refused. Excerpt of the pytest log; the host-test FAIL lines are in
+# f3-f7-f8-before.txt.
+
+AssertionError: timeout waiting for '^RUN REFUSED name=hello reason=arg_range$'; output so far:
+RING3 0.1.0 build 655ad4c
+policy: default sha256=33d849c3a4feebdf69eae7baa241ef6cda8e0d10cbb56ddf9e118c33121fd670
+memory: 65023 KiB usable
+init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, 3728 frames free
+TIMER t0=0
+TIMER t1=25
+test image: quotas action=0 request=400 confirm=150 ticks
+ring3> run hello
+TAPE k=1 s=2 f=0 t=26 nr=1 a0=0 a1=400 a2=150 a3=0
+AUDIT seq=1 tick=26 sys=exec_start target=2 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=1 name=hello prog=2 caps=0x1 uptime=26
+SYSCALL pid=1 nr=1 cpl=3
+hello from ring 3
+TAPE k=3 s=0 f=1 t=26 nr=1 a0=1073744022 a1=18 a2=0 a3=0
+AUDIT seq=2 tick=26 sys=cons_write target=1073744022 decision=ALLOW reason=none result=18 tainted=0
+hello: g_counter=42 g_bss[2]=43 g_bss[0]=0
+
+1 failed in 11.67s

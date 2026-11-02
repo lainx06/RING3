@@ -945,6 +945,34 @@ static void t_F7(void)
     ok();
 }
 
+static void t_F8(void)
+{
+    begin("F8_quota_arguments (EXEC_START with a zero or negative quota is refused: no '0 means unlimited')");
+    const int32_t bad[] = { 0, -1, -500, (int32_t)0x80000000 };
+    struct pol_state init, s;
+    policy_state_init(&init);
+    for (int field = 0; field < 3; field++) {
+        for (unsigned i = 0; i < sizeof bad / sizeof bad[0]; i++) {
+            int32_t q[3] = { 500, 6000, 3000 };
+            q[field] = bad[i];
+            s = init;
+            struct pol_decision d = step(&s, ev_start(T, PROG_TEST_FULL, CAP_ALL, q[0], q[1], q[2]));
+            CHECK(d.code == DEC_DENY_RULE && d.reason == R_ARG && d.result == -EINVAL && d.action == ACT_NONE);
+            CHECK(!s.in_request && s.caps == 0);
+            struct pol_state cmp = s;
+            cmp.seq = init.seq;
+            CHECK(memcmp(&cmp, &init, sizeof cmp) == 0);                 /* a deny changes no state */
+        }
+    }
+    /* the smallest valid quotas work and fire on the first tick */
+    s = init;
+    struct pol_decision d = step(&s, ev_start(T, PROG_TEST_FULL, CAP_ALL, 1, 1, 1));
+    CHECK(d.code == DEC_ALLOW && s.in_request && s.act_limit == 1 && s.req_limit == 1 && s.confirm_limit == 1);
+    d = step(&s, ev_tick(T + 1));
+    CHECK(d.code == DEC_LIMIT && d.reason == R_REQUEST_QUOTA);
+    ok();
+}
+
 /* ---- replay: TAPE lines in, AUDIT lines out, same format as kernel/core/audit.c ---- */
 static int replay(void)
 {
@@ -1000,6 +1028,7 @@ int main(int argc, char **argv)
     t_R8();
     t_F3();
     t_F7();
+    t_F8();
     t_names();
     printf("policy_test: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

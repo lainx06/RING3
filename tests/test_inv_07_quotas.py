@@ -3,7 +3,7 @@ LIMIT on the request quota; a prompt pauses the action quota but not the request
 
 import re
 
-from tests.qemu import EXIT_PASS, Session, record_evidence
+from tests.qemu import EXIT_PASS, Session, audit_lines, record_evidence
 
 
 def test_action_and_request_quotas():
@@ -49,3 +49,29 @@ def test_quota_kill_while_kernel_drains_audit():
         run = s.close()
     record_evidence("quota-kill-in-ring0.txt", run, "T-02F")
     assert run.exit_code == EXIT_PASS
+
+
+def test_zero_quota_is_refused():
+    """F8 (D-50): EXEC_START with a zero quota is DENY_RULE; there is no '0 means unlimited'. Nothing runs,
+    the kernel stays up, and the next boot option set behaves as before."""
+    for opt in (
+        "taction=0 trequest=400 tconfirm=150",
+        "taction=100 trequest=0 tconfirm=150",
+        "taction=100 trequest=400 tconfirm=0",
+    ):
+        with Session(append=opt) as s:
+            s.expect(r"^policy: .*$")
+            s.prompt()
+            s.send("run hello")
+            start = s.pos
+            s.expect(r"^RUN REFUSED name=hello reason=arg_range$", 10)
+            s.prompt()
+            t = s.output[start : s.pos]
+            assert "RUN pid=" not in t and "hello from ring 3" not in t, t
+            a = [x for x in audit_lines(t) if x["sys"] == "exec_start"]
+            assert a and a[-1]["decision"] == "DENY_RULE" and a[-1]["reason"] == "arg_range", t
+            s.send("status")
+            assert "in_request=0" in s.expect(r"^status: .*$").group(0)
+            run = s.close()
+        assert run.exit_code == EXIT_PASS
+    record_evidence("zero-quota-refused.txt", run, "T-02F")

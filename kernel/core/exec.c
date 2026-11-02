@@ -135,8 +135,16 @@ struct exec_outcome exec_request(const struct uprog *p)
     struct pol_event ev = { EV_EXEC_START, p->prog, 0, 0, ticks_now(), policy_caps_for_prog(p->prog),
                             { (int32_t)q_action, (int32_t)q_request, (int32_t)q_confirm, 0 } };
     feed(&ev, &d);
-    if (d.code != DEC_ALLOW)
-        panic("exec: EXEC_START refused (%s) with no request running", policy_reason_name(d.reason));
+    if (d.code != DEC_ALLOW) {
+        /* F8 (D-50): a zero or negative quota is refused by decide(); nothing runs and no state changed. A
+         * refusal while a request is running would be a kernel bug (one executor at a time). */
+        if (audit_state()->in_request)
+            panic("exec: EXEC_START refused (%s) with a request running", policy_reason_name(d.reason));
+        next_pid--;
+        printk("RUN REFUSED name=%s reason=%s\n", p->name, policy_reason_name(d.reason));
+        struct exec_outcome refused = { EXEC_REFUSED, 0, 0, 0, 0 };
+        return refused;
+    }
     printk("RUN pid=%d name=%s prog=%u caps=0x%x uptime=%u\n", pid, p->name, p->prog,
            audit_state()->caps, ticks_now());
     struct exec_outcome o = exec_run(p, pid);
@@ -242,7 +250,9 @@ int exec_request_by_name(const char *name)
         if (strncmp(name, progs[i].name, 32) == 0) {
             static int first = 1;
             uint32_t before = pmm_free_frames();
-            exec_request(&progs[i]);
+            struct exec_outcome o = exec_request(&progs[i]);
+            if (o.kind == EXEC_REFUSED)
+                return 1;                        /* nothing was mapped */
             /* The first request allocates the (kept) user page tables; after that every request must give
              * back exactly the frames it took. */
             if (!first && pmm_free_frames() != before)
