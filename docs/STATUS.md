@@ -11,6 +11,10 @@ milestone.
 - **T-02 complete** (2026-11-01 20:11 ET): executor lifecycle, hardened syscalls, pure-C policy with device rules,
   taint, confirmation, host build + decision match, permissive build. 15 pytest tests (~20 s), 16 ktests,
   593 host policy checks. Next: T-03a / T-03b (lead re-plans the evening of Nov 1).
+- **T-02F complete** (2026-11-02): D-50 kernel findings F1, F3, F4, F5, F7, F8 fixed, each with a test that
+  fails on the Nov 1 code. 20 pytest tests (~31 s), 17 ktests, 674 host checks (633 permissive); any
+  `dropped > 0` or `PANIC` fails every QEMU run. `docs/evidence/T-02F/README.md`. T-03b / T-04 can build on
+  `kernel/`.
 - Second terminal Nov 1: **T-06** (Opus 5.5 / high) once T-01 has made its first commit (D-42).
 - User, while T-01 runs: `SETUP.md` step 8 (usbipd + Uno + arduino-cli in Ubuntu), then wiring per
   `hardware/wiring.md` in the afternoon.
@@ -52,6 +56,7 @@ milestone.
 |---|---|---|---|---|
 | T-01 | 2026-11-01 13:06 ET | Fable 5.1 / high | 2026-11-01 13:30 ET; K1–K4 pass 13:22 ET; A1–A8 pass | `docs/evidence/T-01/README.md` |
 | T-02 | 2026-11-01 19:36 ET | Fable 5.1 / high | 2026-11-01 20:11 ET; A1–A9 pass; M3 before the 11:59 PM time-box | `docs/evidence/T-02/README.md` |
+| T-02F | 2026-11-02 | Fable 5.1 / high | 2026-11-02; A1–A5 pass (A3: halt / fan(0) under pending and killing covered on the host build; the kernel cannot reach those states with a syscall, see the README); doc merge D-46..D-52 committed first | `docs/evidence/T-02F/README.md` |
 | T-06 | 2026-11-01 16:58 ET | Opus 5.5 / high | **21:46 ET: A1 A2 A3 A6 A7 pass; A5 pass except the alarm outputs; A4 part 1 pass. Pending Nov 2 (parts arrive): LCD, buzzer, RGB wiring → `bringup` part 2 (A4) + link-loss alarm (A5.8).** Firmware `222d26d` flashed. Lead decisions D-46..D-50 applied; 10 test-program changes logged, none loosened an expectation | `docs/evidence/T-06/README.md` |
 
 ## Last evidence

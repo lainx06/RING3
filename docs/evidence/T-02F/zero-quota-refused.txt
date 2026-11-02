@@ -1,0 +1,19 @@
+$ qemu-system-i386 -kernel build/kernel-test.elf -m 64 -display none -serial stdio -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -append 'taction=100 trequest=400 tconfirm=0'
+# exit code 33, 0.4 s
+
+RING3 0.1.0 build f850ead
+policy: default sha256=f70fb85bccf007953fccdbd0aa9cb3df311d1fe7a372b1dfe93f1428affed7b3
+memory: 65023 KiB usable
+init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, 3728 frames free
+TIMER t0=0
+TIMER t1=25
+test image: quotas action=100 request=400 confirm=0 ticks
+ring3> run hello
+TAPE k=1 s=2 f=0 t=26 nr=1 a0=100 a1=400 a2=0 a3=0
+AUDIT seq=1 tick=26 sys=exec_start target=2 decision=DENY_RULE reason=arg_range result=-22 tainted=0
+RUN REFUSED name=hello reason=arg_range
+ring3> status
+status: fan=0 servo=90 estop_latched=0 tele_valid=0 distance=0 in_request=0 tainted=0 pending=0 seq=1 dropped=0 uptime=27
+ring3> exit
+audit: dropped=0
+KERNEL ALIVE uptime=28

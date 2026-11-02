@@ -161,6 +161,8 @@ class Session:
         while True:
             text = self.output
             m = rx.search(text, self.pos)
+            if m and pattern.endswith("$") and m.end() == len(text) and not text.endswith("\n"):
+                m = None  # a line-anchored pattern matched a partially arrived line: wait for the rest
             if m:
                 self.pos = m.end()
                 return m

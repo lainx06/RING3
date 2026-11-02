@@ -1,0 +1,27 @@
+$ qemu-system-i386 -kernel build/kernel-test.elf -m 64 -display none -serial stdio -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -append 'taction=100 trequest=400 tconfirm=150'
+# exit code 33, 1.4 s
+
+RING3 0.1.0 build f850ead
+policy: default sha256=f70fb85bccf007953fccdbd0aa9cb3df311d1fe7a372b1dfe93f1428affed7b3
+memory: 65023 KiB usable
+init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, 3728 frames free
+TIMER t0=0
+TIMER t1=25
+test image: quotas action=100 request=400 confirm=150 ticks
+ring3> run spin
+TAPE k=1 s=2 f=0 t=26 nr=1 a0=100 a1=400 a2=150 a3=0
+AUDIT seq=1 tick=26 sys=exec_start target=2 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=1 name=spin prog=2 caps=0x1 uptime=26
+SYSCALL pid=1 nr=1 cpl=3
+spin: looping forever
+TAPE k=3 s=0 f=1 t=26 nr=1 a0=1073743836 a1=22 a2=0 a3=0
+AUDIT seq=2 tick=26 sys=cons_write target=1073743836 decision=ALLOW reason=none result=22 tainted=0
+LIMIT pid=1 ticks=100
+TAPE k=6 s=0 f=0 t=126 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=3 tick=126 sys=tick target=100 decision=LIMIT reason=action_quota result=0 tainted=0
+TAPE k=2 s=2 f=0 t=126 nr=0 a0=100 a1=0 a2=0 a3=0
+AUDIT seq=4 tick=126 sys=exec_end target=100 decision=LIMIT reason=exec_end result=0 tainted=0
+END pid=1 LIMIT ticks=100 uptime=126
+ring3> exit
+audit: dropped=0
+KERNEL ALIVE uptime=128

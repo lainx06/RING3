@@ -1,0 +1,19 @@
+# T-02F A2: scoped suite (two-terminal rule, D-52): uv run pytest --ignore=tests/bridge, two consecutive runs after the
+# harness fix, plus ruff. The harness fails any run on PANIC or dropped > 0 (tests/qemu.py Run.check).
+
+## run 1
+....................                                                     [100%]
+20 passed in 31.12s
+wall 29.72 s
+
+## run 2
+....................                                                     [100%]
+20 passed in 30.92s
+wall 29.50 s
+
+## ruff
+All checks passed!
+13 files already formatted
+
+## dropped= values in every transcript of run 2
+     14 dropped=0

@@ -1,0 +1,28 @@
+# T-02F A2: make test-kernel (KTEST=1 image, 17 ktests; the two PANIC lines are the deliberate double-free traps)
+
+## make test-kernel
+  echo "qemu exit code $rc"; [ $rc -eq 33 ]
+KTEST begin
+KTEST crc16_check_value PASS
+KTEST cobs_zero_bytes PASS
+KTEST cobs_runs_253_254_255 PASS
+KTEST cobs_max_frame PASS
+KTEST cobs_rejects_malformed PASS
+KTEST pmm_alloc_free PASS
+PANIC: pmm_free: double free of 0x00175000
+KTEST pmm_double_free_detected PASS
+KTEST mmap_parsing PASS
+KTEST kmalloc_reuse_after_free PASS
+PANIC: kfree: double free of 0x00126fa0
+KTEST kmalloc_double_free_detected PASS
+KTEST uaccess_bounds PASS
+KTEST uaccess_pde_bits PASS
+KTEST uaccess_copy_string PASS
+KTEST objstore_audit_log_keeps_newest PASS
+KTEST string_helpers PASS
+KTEST printk_formats PASS
+KTEST serial_line_start PASS
+KTEST SUMMARY pass=17 fail=0
+qemu exit code 33
+exit 0
+

@@ -65,3 +65,21 @@ were fixed in M1, each with a test.
 - Spurious-IRQ check and the serial THRE wait bound (skeptic nits 9, 13) left for T-03b/T-04.
 - INV-11 banned-word scan of kernel strings is T-04/T-05's test; the policy's name tables are checked by
   `policy_test` (`names`).
+
+## T-02F (Nov 2): kernel fixes from the Nov 1 skeptic review (D-50, D-52)
+Full detail, acceptance table and transcripts: `docs/evidence/T-02F/README.md`. Each fix landed with a test
+that fails on the Nov 1 code (recorded in `docs/evidence/T-02F/f*-before.txt`).
+| F | Finding | Fix | Test |
+|---|---|---|---|
+| F1 | LIMIT tick in ring 0 (audit drain) only flagged the kill; the program resumed and could not be ended | `syscall_dispatch()` abandons a flagged kill before the `iret`; no blind `sti()` in syscall handling | `audspin` + `test_quota_kill_while_kernel_drains_audit` |
+| F3 | halt / fan(0) behind the pending / killing gates; decreases skipped E-stop / interlock and prompted when tainted | `decide()`: in-request → halt / fan(0) (no cap, no prompt, pending preserved) → killing → pending → rest; non-zero decreases keep every gate but ramp and the taint prompt | host `F3_energy_reducing` |
+| F4 | an answer in the timeout's wake-up returned 0 for a call that never ran | stray answer → `-ECANCELED`; no non-negative result for a non-executed decision; `confirmrace` knob | `test_answer_in_the_timeout_wakeup` |
+| F5 | `line_start` never true; unbounded drain with `sti()` inside syscalls; a full ring dropped | CR LF fix; bounded polled drains (4 per syscall, 2 per tick from ring 3); synchronous drain instead of drop; `dropped > 0` fails every run | ktest `serial_line_start`, `test_audit_drains_at_line_start`, `test_irq_side_records_drained_per_tick` |
+| F7 | telemetry `AUTO_HALT` audited target 0 (aliasing in `lease()`) | duty copied to a local first | host `F7_autohalt_target` |
+| F8 | quota 0 meant unlimited | `EXEC_START` with a quota ≤ 0 → `DENY_RULE`; `RUN REFUSED` instead of a panic | host `F8_quota_arguments`, `test_zero_quota_is_refused` |
+
+Two T-02 policy notes above are superseded: "a tainted decrease to a non-zero duty still needs confirmation"
+(now never prompts, D-50) and "fan decreases skip the interlock and E-stop rules" (now only `fan(0)` and
+`cell_halt` do; a non-zero decrease keeps them, D-52). The T-02 transcripts in this folder are from the T-02
+commit; the suite rewrites them on every run.
+

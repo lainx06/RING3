@@ -1,0 +1,1 @@
+qemu-system-i386 -kernel build/kernel-test.elf -m 64 -display none -serial stdio -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -append 'taction=300 trequest=400 tconfirm=150'

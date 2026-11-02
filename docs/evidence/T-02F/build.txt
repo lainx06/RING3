@@ -1,0 +1,15 @@
+# T-02F A2: clean rebuild of every image and the host policy tests. clang/ld.lld command echoes removed
+# (177 compiler/linker invocations, none printed a 'warning:' or 'error:' line; -Werror would have stopped make).
+
+## make clean; make; make TEST=1; make KTEST=1; make TEST=1 POLICY=permissive; make host-policy  (clang -Wall -Wextra -Werror; any warning is an error)
+$ make 
+exit 0
+$ make TEST=1
+exit 0
+$ make KTEST=1
+exit 0
+$ make TEST=1 POLICY=permissive
+exit 0
+$ make host-policy
+exit 0
+
