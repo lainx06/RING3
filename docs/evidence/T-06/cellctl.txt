@@ -122,3 +122,17 @@ $ uv run python tools/cellctl.py a5 /dev/ttyACM0 --only discard_estop   (run by 
 21:26:17   -> OK: fan 0 while latched=True, reset clears=True, fan 0 for 1 s after the reset=True, a new FAN starts it=True
 21:26:18 A5 SUMMARY
 21:26:18   discard_estop OK   fan 0 while latched=True, reset clears=True, fan 0 for 1 s after the reset=True, a new FAN starts it=True
+
+$ uv run python tools/cellctl.py a5 /dev/ttyACM0 --only presence   (run by the user in their terminal, 21:27 ET)
+21:28:24 opened /dev/ttyACM0 raw 115200 8N1; the Uno resets on open, waiting for the first STATE of the new boot
+21:28:25 first STATE of the new boot after 1644 ms (15 pre-reset frames discarded): STATE seq=0 t=16 ms fan=0% servo=90 dist=NO_ECHO estop=0 flags=- ack=0
+21:28:25   boot flags: WDT_RESET=False LINK_LOST=False
+21:28:25   undecodable bytes runs before sync (frames cut by the reset): 3
+21:28:27 [presence] fan 60, hand < 100 mm -> fan 0 + PRESENCE latched
+21:28:27   >>> Put your hand about 5 cm in front of the sensor now (30 s). Keep fingers off the fan.
+21:28:29   first STATE with hand: STATE seq=75 t=3766 ms fan=0% servo=90 dist=96 mm estop=0 flags=PRESENCE ack=16
+21:28:29   then: STATE seq=81 t=4066 ms fan=0% servo=90 dist=23 mm estop=0 flags=PRESENCE ack=18
+21:28:29   >>> Take your hand away.
+21:28:31   -> OK: cut=True, still latched after hand removed=True, FAN 0 with clear reading clears=True
+21:28:32 A5 SUMMARY
+21:28:32   presence     OK   cut=True, still latched after hand removed=True, FAN 0 with clear reading clears=True
