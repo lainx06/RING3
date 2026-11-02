@@ -132,7 +132,9 @@ static void dispatch(struct trap_frame *f)
         idx = -1;
     }
     if (dec.action != ACT_EXEC) {
-        f->eax = (uint32_t)dec.result;
+        /* A call that is not executed never reports a non-negative result (F4, D-52): DEC_NONE from a stray
+         * answer or any silent decision reads as a cancelled call. */
+        f->eax = (uint32_t)(dec.result < 0 ? dec.result : -ECANCELED);
         audit_flush(0);
         return;
     }

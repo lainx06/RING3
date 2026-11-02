@@ -6,4 +6,9 @@
  * the policy's timeout (a tick event), feeds the answer back through decide(), and returns the final decision
  * in `d` (CONFIRM_YES -> execute, otherwise `d->result` is the error). May abandon the program (LIMIT). */
 void confirm_run(const struct pol_event *call, struct pol_decision *d);
+#ifdef RING3_TEST
+/* F4 test knob: while on, a ready console line is held until the timeout tick has cleared `pending`, which
+ * reproduces an answer arriving in the same wake-up as the timeout (D-52). */
+void confirm_set_race(int on);
+#endif
 #endif

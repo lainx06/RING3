@@ -80,3 +80,41 @@ def test_taint_demo():
         run = s.close()
     record_evidence("taint.txt", run)
     assert run.exit_code == EXIT_PASS
+
+
+def test_answer_in_the_timeout_wakeup():
+    """F4 (D-52): a console line that arrives in the same wake-up as the timeout tick is consumed as a stray
+    answer: the call returns -ECANCELED, the audit shows CONFIRM_NO/timeout from the tick, and the line can
+    not answer the next prompt. The test image's `confirmrace on` holds a ready line until the timeout tick
+    has cleared the pending prompt."""
+    with Session() as s:
+        s.expect(r"^policy: .*$")
+        s.prompt()
+        s.send("confirmrace on")
+        s.expect(r"^confirm race on$")
+        s.prompt()
+        s.send("run confirmw")
+        start = s.pos
+        s.expect(r"CONFIRM: confirmw wants obj_write\(maint_notes, 6 bytes\)\. Allow\? \[y/N\] ")
+        s.send("y")
+        s.expect(r"^END pid=\d+ \S+ ticks=\d+ uptime=\d+$", 15)
+        t = s.output[start : s.pos]
+        assert "confirmw: result=-125" in t, t
+        a = [x for x in audit_lines(t) if x["sys"] in ("obj_write", "confirm", "tick")]
+        assert [x["decision"] for x in a] == ["CONFIRM_PENDING", "CONFIRM_NO"], t
+        assert a[1]["reason"] == "timeout" and a[1]["sys"] == "tick", t
+        # the stray line must not answer the next prompt (R10)
+        s.prompt()
+        s.send("confirmrace off")
+        s.expect(r"^confirm race off$")
+        s.prompt()
+        s.send("run confirmw")
+        start = s.pos
+        s.expect(r"CONFIRM: .*Allow\? \[y/N\] ")
+        s.expect(r"^END pid=\d+ \S+ ticks=\d+ uptime=\d+$", 15)
+        t = s.output[start : s.pos]
+        assert "confirmw: result=-125" in t and "CONFIRM_YES" not in t, t
+        assert [x["reason"] for x in audit_lines(t) if x["decision"] == "CONFIRM_NO"] == ["timeout"], t
+        run = s.close()
+    record_evidence("confirm-race.txt", run, "T-02F")
+    assert run.exit_code == EXIT_PASS

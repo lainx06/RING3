@@ -1,0 +1,36 @@
+# F4 before the fix (Nov 1 confirm path + the test knob 'confirmrace on'): the answer line is consumed after
+# the timeout tick cleared pending; decide() returns DEC_NONE (stray) and the kernel handed result=0 to a call
+# that was never executed. Excerpt of the pytest log.
+
+AssertionError: run confirmw
+
+TAPE k=1 s=5 f=0 t=29 nr=3 a0=100 a1=400 a2=150 a3=0
+AUDIT seq=1 tick=29 sys=exec_start target=5 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=1 name=confirmw prog=5 caps=0x3 uptime=29
+SYSCALL pid=1 nr=1 cpl=3
+confirmw: writing maint_notes (prompt expected)
+
+TAPE k=3 s=0 f=1 t=29 nr=1 a0=1073743909 a1=48 a2=0 a3=0
+AUDIT seq=2 tick=29 sys=cons_write target=1073743909 decision=ALLOW reason=none result=48 tainted=0
+TAPE k=3 s=0 f=1 t=29 nr=4 a0=1 a1=1073743898 a2=6 a3=0
+AUDIT seq=3 tick=29 sys=obj_write target=1 decision=CONFIRM_PENDING reason=obj_confirm result=0 tainted=0
+CONFIRM: confirmw wants obj_write(maint_notes, 6 bytes). Allow? [y/N] y
+confirmw: result=0
+EXIT pid=1 code=1
+
+TAPE k=6 s=0 f=0 t=179 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=4 tick=179 sys=tick target=1 decision=CONFIRM_NO reason=timeout result=-125 tainted=0
+TAPE k=3 s=0 f=1 t=179 nr=1 a0=1073743958 a1=17 a2=0 a3=0
+AUDIT seq=5 tick=179 sys=cons_write target=1073743958 decision=ALLOW reason=none result=17 tainted=0
+TAPE k=3 s=0 f=1 t=179 nr=1 a0=2147479488 a1=1 a2=0 a3=0
+AUDIT seq=6 tick=179 sys=cons_write target=2147479488 decision=ALLOW reason=none result=1 tainted=0
+TAPE k=3 s=0 f=1 t=179 nr=1 a0=1073743905 a1=1 a2=0 a3=0
+AUDIT seq=7 tick=179 sys=cons_write target=1073743905 decision=ALLOW reason=none result=1 tainted=0
+TAPE k=2 s=0 f=0 t=179 nr=0 a0=1 a1=0 a2=0 a3=0
+AUDIT seq=8 tick=179 sys=exec_end target=1 decision=ALLOW reason=exec_end result=1 tainted=0
+END pid=1 EXIT ticks=150 uptime=179
+assert 'confirmw: result=-125' in 'run confirmw\n\nTAPE k=1 s=5 f=0 t=29 nr=3 a0=100 a1=400 a2=150 a3=0\nAUDIT seq=1 tick=29 sys=exec_start target=5 dec... tick=179 sys=exec_end target=1 decision=ALLOW reason=exec_end result=1 tainted=0\nEND pid=1 EXIT ticks=150 uptime=179'
+
+tests/test_inv_05_confirm.py:102: AssertionError
+
+1 failed in 2.48s

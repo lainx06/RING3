@@ -2,6 +2,7 @@
  * The confirmation prompt (confirm.c) shares the line buffer: while a prompt is open, lines go to it. */
 #include "console.h"
 #include "audit.h"
+#include "confirm.h"
 #include "exec.h"
 #include "io.h"
 #include "kernel.h"
@@ -149,7 +150,7 @@ static void dispatch(const char *l)
     if (word(l, "help", &rest)) {
         printk("commands: help status audit objects 'estop reset' exit"
 #ifdef RING3_TEST
-               " 'run <prog>' 'tele <mm> <estop> [bad]' 'tape on|off' panic"
+               " 'run <prog>' 'tele <mm> <estop> [bad]' 'tape on|off' 'confirmrace on|off' panic"
 #endif
                "\n");
         feed_console(CONSOLE_OTHER);
@@ -191,6 +192,11 @@ static void dispatch(const char *l)
         int off = word(rest, "off", &rest);
         audit_set_tape(!off);
         printk("tape %s\n", off ? "off" : "on");
+    } else if (word(l, "confirmrace", &rest)) {
+        feed_console(CONSOLE_OTHER);
+        int on = word(rest, "on", &rest);
+        confirm_set_race(on);
+        printk("confirm race %s\n", on ? "on" : "off");
     } else if (word(l, "panic", &rest)) {
         feed_console(CONSOLE_OTHER);
         printk("deliberate CPL-0 fault (test): write to unmapped 0xFFFFF000\n");

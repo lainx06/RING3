@@ -37,6 +37,11 @@ static void idle_ticks(uint32_t n)
     }
 }
 
+#ifdef RING3_TEST
+static int race;
+void confirm_set_race(int on) { race = on; }
+#endif
+
 void confirm_run(const struct pol_event *call, struct pol_decision *d)
 {
     /* R10: type-ahead can't answer a prompt. Drain the FIFO and the line buffer, give QEMU a moment to push
@@ -56,13 +61,31 @@ void confirm_run(const struct pol_event *call, struct pol_decision *d)
             exec_abandon_limit();                     /* request quota ran out while waiting (R2) */
         console_poll();
         if (console_line_ready()) {
+#ifdef RING3_TEST
+            while (race && audit_state()->pending && !exec_kill_pending()) {
+                sti();                                /* test knob: let the timeout tick run first */
+                hlt();
+            }
+#endif
+            /* A ready line is always consumed and always goes to decide() (D-52): it can never stay in the
+             * buffer to answer a later prompt (R10). */
             console_take_line(line, sizeof line);
             int yes = strncmp(line, "y", 2) == 0 || strncmp(line, "yes", 4) == 0;
             struct pol_event ev = { EV_CONFIRM, yes ? ANSWER_YES : ANSWER_NO, 0, 0, ticks_now(), 0,
                                     { 0, 0, 0, 0 } };
-            cli();
+            uint32_t fl = irq_save();
             audit_feed(&ev, d);
-            sti();
+            irq_restore(fl);
+            if (d->code == DEC_NONE) {
+                /* The timeout tick had already cleared `pending` in this same wake-up: the line was a stray
+                 * answer (reason no_pending, no effect) and the call timed out (F4, D-52). The tick
+                 * audited the CONFIRM_NO. */
+                d->code = DEC_CONFIRM_NO;
+                d->reason = R_TIMEOUT;
+                d->action = ACT_NONE;
+                d->result = -ECANCELED;
+                d->audit = 0;
+            }
             return;
         }
         if (!audit_state()->pending) {                /* the tick path timed the prompt out */
