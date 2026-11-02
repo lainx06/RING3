@@ -10,6 +10,7 @@ dev = ["pytest>=8.3", "ruff>=0.6"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["bridge"]
 addopts = "-ra"
 
 [tool.ruff]
@@ -18,3 +19,6 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["ring3bridge"]
