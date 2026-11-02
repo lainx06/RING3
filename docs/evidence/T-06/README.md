@@ -36,12 +36,46 @@ Details: `hardware/protocol.md`.
 | D-50 F10 | `frame_parse` checks the second `cobs_decode` return (defensive; same input as the measuring pass, so not reachable by a test) | `test_frame` boundary cases: scratch_cap and scratch_cap + 1, max_body and max_body + 1, host 1024 / 1025 |
 | D-46 | Boot LCD `HALTED` / `no kernel link`; no "safe" in display or serial strings | `compile.txt` grep |
 
-## D-49 requirement as restated by the lead (2026-11-01, after the open item was raised)
+## D-49 glitch item: raised, then resolved by the lead (2026-11-01)
+Raised: the ISR runs a few µs (≈ 3–15 µs incl. waiting behind the timer/serial interrupts) after the edge, so a
+spike still LOW then latches; "a sub-millisecond glitch doesn't latch" held only below that entry delay.
+Lead's restated requirement (quoted):
 > Spikes shorter than the ISR start-up delay never latch; anything still LOW when the ISR runs latches (the safe
 > direction); the 100 nF filter and the noise test (must show `none`) cover realistic noise. Don't add delay to
 > the latch.
 
 The design is kept unchanged. `test_rules` checks both halves: glitches shorter than the ISR entry delay
 (3/6/15 µs models) never latch, and a 500 µs glitch still LOW when the ISR runs latches (formerly printed as an
-`info` line; now a check, per the lead). The realistic-noise half is `tools/cellctl.py noise` → `none`
-(`cellctl.txt`).
+`info` line; now a check, per the lead, `dbc6471`). The realistic-noise half is `tools/cellctl.py noise` → `none`
+(`cellctl.txt`, 21:23 ET).
+
+## Test-program fixes
+Each change to a test program, with the cause, the change, and whether the expected outcome moved. None of these
+changed an expectation from the card, `docs/INVARIANTS.md` or a lead decision.
+
+| # | Commit | Test program | What was wrong with the test | Change | Expected outcome |
+|---|---|---|---|---|---|
+| 1 | `fb3532e` (before any run) | `tools/cellctl.py` `cobs_encode` | First draft had a tangled trailing-block rule; caught by `cellctl.py selftest` against `firmware/test/link_vectors.txt` before the tool ever touched the board | Rewrote as the canonical encoder (no empty block after a final 0xFF block), the same rule as `frame.cpp` | Unchanged: must reproduce every vector byte for byte (25/25) |
+| 2 | `455002a` | `tools/cellctl.py` `open_cell` | It took the first decodable `STATE` after open as the sync point, but that was a frame sent **before** the open-reset (seq 2315, t = 115 s), and it started PINGs right away, so bytes reached the bootloader. The card (step 6) says: wait for the first valid `STATE` after the open-reset, then send | Discard `STATE` with `t_ms ≥ 3000` (pre-reset leftovers); no PING until the first fresh-boot `STATE`; error out if none within 6 s | Unchanged: no check threshold, vector or flag expectation touched; it now follows the card's open sequence exactly |
+| 3 | `455002a` | `tools/cellctl.py` `open_cell` | The `undecodable` count in the `rate` result included frames cut in half by the reset before sync, so it read as a link error | Log the pre-sync count separately, then zero it | Unchanged: `rate` still passes only at 18–22 Hz; `undecodable` is informational and not part of the pass rule |
+| 4 | `8c51f57` | `tools/cellctl.py` `link_loss` | Not a defect: lead request. At FAN 40 the fan sits below its 50 % minimum spinning duty (D-47), so the cut wasn't visible and 40 isn't a duty the demo would use | `link_loss` now commands `LINK_LOSS_FAN = 60` (and waits for `fan == 60`) before the silence | Unchanged: after ~1 s of silence `STATE` must show `LINK_LOST`, fan 0, servo 90, within 900–1300 ms, and PING must clear the flag without the fan restarting |
+| 5 | `3c8233d` | `tools/cellctl.py` `link_loss` | Measured the silence from *after* its `wait_for(fan == 60)` loop, but PINGs kept going during that loop, so the real last frame was earlier and the measured gap came out short (886 ms on the 20:41 run) | `Cell.send` records `last_tx`; `link_loss` measures from the last frame actually written | Unchanged: `LINK_LOST` + fan 0 + servo 90 must arrive 900–1300 ms after the last frame sent |
+| 6 | `222d26d` | `tools/cellctl.py` all fan checks | Not a defect: same reason as #4 (D-47 minimum spinning duty 50 %); a fan at 40 % never turns, so a cut wasn't visible | One constant `FAN_DUTY = 60` for every check (was 40 in `bad_crc`, `estop`, `presence`, `echo_unplug`, `estop_flood`; `LINK_LOSS_FAN` renamed) | Unchanged: every check still expects the same `STATE` values relative to the commanded duty (fan == duty while running, 0 after the cut) |
+| 7 | `222d26d` | `firmware/test/test_rules.cpp` (new test, first run) | The "loop backstop alone" window assumed every poll during the 1 ms contact bounce reads HIGH; polls that land in a LOW half of the bounce rightly start the 20 ms hold, so the latch came at 30.0 ms, before my lower bound of 31 ms | Window = from 20 ms after the press starts to 20 ms after solid LOW + one poll + 1 ms (`millis()` granularity) | Unchanged rule: the loop latches after ≥ 20 ms of continuous LOW (`CELL_ESTOP_HOLD_MS`); `cell_rules.h` not modified |
+| 8 | `c181aa2` | `tools/cellctl.py` `clamp`, `discard_link`, `discard_presence` | Waited for a `STATE` with `ack_seq == seq` of the frame under test, but PINGs keep flowing every 250 ms: when a PING went out right after the FAN, the next `STATE` acknowledged the PING and the exact match never fired (`discard_presence` 21:29: "clearing FAN cleared the fault=False", while the next step "a new FAN starts it=True" shows the fault had been cleared, since a still-latched fault would have dropped that FAN too) | `acked(st, seq)`: the frame or a later one was accepted (16-bit wrap) | Unchanged: same flag/duty conditions on the same `STATE`; `clamp` and `discard_link` re-run OK 21:30 |
+| 9 | `c181aa2` | `tools/cellctl.py` `bad_crc` | Weak, the other way round: "ack_seq != seq" was also true if the bad frame had been accepted and a PING followed | PINGs paused for < 0.5 s around the bad frame; pass needs `ack_seq` unchanged across it | Stricter, not looser: still BAD_FRAME + fan 0, plus ack_seq must not move; re-run OK 21:30 (ack stayed 21, bad frame seq 22) |
+
+Diffs: fixes 2 and 3 `git show 455002a -- tools/cellctl.py`; change 4 `git show 8c51f57 -- tools/cellctl.py`; fix 5 `git show 3c8233d -- tools/cellctl.py`; 6 and 7 `git show 222d26d -- tools/cellctl.py firmware/test/test_rules.cpp`; 8 and 9 `git show c181aa2 -- tools/cellctl.py`.
+
+## Finding, resolved by D-49: running fan set the E-stop latch (20:41 ET, stopped and reported per the card)
+With the button released (`STATE.estop = 0`), `ESTOP_LATCHED` gets set while the fan runs: 5 of 5 fan runs
+(FAN 100 at start; FAN 60 after 250, 350, 450, 1350 ms), 0 trips while idle or during servo moves.
+`ESTOP_RESET` clears it each time. `tools/cellctl.py noise /dev/ttyACM0` reproduces it (`cellctl.txt`).
+Fail-closed direction (the fan stops), but it blocks every A5 check that runs the fan. Reading: brushed-motor noise
+coupling into D2 (INT0, falling edge, internal pull-up only). Root cause (lead, D-49): the E-stop's ground was on
+the MOTOR − rail. Fixed in hardware (see Hardware changes); firmware defence in depth added (Firmware changes).
+
+## Evidence-file repair
+`dbc6471` accidentally deleted this README's test-program fixes table (#1–#7) and the resolved-finding section
+while replacing the open-item section (a script cut everything after the heading). Restored from `d786714` with
+the intended changes kept; nothing in the table was altered.
