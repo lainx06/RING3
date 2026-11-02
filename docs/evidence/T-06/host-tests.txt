@@ -1,0 +1,157 @@
+T-06 host tests (A2): make -C firmware test, 2026-11-01 21:19 EST, clang++ 18.1.3, ASan + UBSan, -Werror
+Paths under the home directory are shown as ~.
+
+make: Entering directory '~/dev/RING3/firmware'
+clang++ -std=c++17 -Wall -Wextra -Werror -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -o ../build/firmware/test_frame ring3cell/frame.cpp test/test_frame.cpp
+clang++ -std=c++17 -Wall -Wextra -Werror -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -o ../build/firmware/test_rules test/test_rules.cpp
+~/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/avr-g++ -mmcu=atmega328p -DF_CPU=16000000L -std=gnu++11 -Os -Wall -Wextra -Werror -c -o /dev/null ring3cell/frame.cpp
+frame.cpp: no AVR warnings
+pins.h identical in bringup/ and ring3cell/
+../build/firmware/test_frame
+ok    crc: check value 0x29B1 for "123456789"
+ok    crc: empty input = init 0xFFFF
+ok    crc: incremental update matches one-shot
+ok    cobs: empty -> 01
+ok    cobs: single 00 -> 01 01
+ok    cobs: 16 zeros
+ok    cobs: data with zeros
+ok    cobs: run of 253 non-zero -> 254 B
+ok    cobs: run of 254 non-zero -> 255 B (no trailing block)
+ok    cobs: run of 255 non-zero -> 257 B
+ok    cobs: 254 non-zero then 00 -> FF..01 01
+ok    cobs: device max frame (24 B) round-trip
+ok    cobs: host max frame (1031 B) round-trip
+ok    cobs: host max frame without zeros hits the worst-case overhead
+ok    cobs: device max encodes to 25 B
+ok    cobs: encode refuses a short buffer
+ok    cobs: encode refuses a zero-size buffer
+ok    cobs: decode rejects embedded 00
+ok    cobs: decode rejects code byte 00
+ok    cobs: decode rejects truncated block
+ok    cobs: count-only decode rejects truncated block
+ok    cobs: decode rejects output overflow
+ok    cobs: decode fits exactly
+ok    cobs: count-only decode returns the length
+ok    accept: PING
+ok    accept: FAN 40
+ok    accept: FAN 255 (clamped later, not rejected)
+ok    accept: SERVO 170, seq 0xBEEF
+ok    accept: LCD line 1, 16 chars (max body)
+ok    accept: LCD line 0, empty text
+ok    accept: ALARM 0/1/2
+ok    accept: ALARM 0/1/2
+ok    accept: ALARM 0/1/2
+ok    accept: ESTOP_RESET
+ok    accept: STATE toward the kernel, fields round-trip
+ok    size: STATE is 21 B on the wire
+ok    size: max LCD frame is 26 B on the wire
+ok    reject: bad CRC
+ok    reject: body corrupted (CRC catches it)
+ok    reject: truncated encoding (last byte lost)
+ok    reject: decoded 6 B (< header + CRC)
+ok    reject: empty frame between delimiters
+ok    reject: 00 inside the encoding
+ok    reject: len field 2, body 1
+ok    reject: len field 1, body 2
+ok    reject: LCD body 18 B on the device (> 17)
+ok    reject: LCD body 18 B with host limit -> body_len
+ok    reject: body 1024 B passes the host size check
+ok    reject: body 1025 B (> host limit 1024)
+ok    reject: decoded payload larger than the device scratch buffer
+ok    reject: len field 0xFFFF
+ok    reject: unknown type (00/07/42/80/FF)
+ok    reject: unknown type (00/07/42/80/FF)
+ok    reject: unknown type (00/07/42/80/FF)
+ok    reject: unknown type (00/07/42/80/FF)
+ok    reject: unknown type (00/07/42/80/FF)
+ok    reject: STATE sent to the device
+ok    reject: FAN sent to the kernel
+ok    reject: PING with 1-byte body
+ok    reject: FAN with empty body
+ok    reject: FAN with 2-byte body
+ok    reject: SERVO with empty body
+ok    reject: SERVO with 2-byte body
+ok    reject: LCD with empty body
+ok    reject: ALARM with empty body
+ok    reject: ALARM with 2-byte body
+ok    reject: ESTOP_RESET with 1-byte body
+ok    reject: STATE with 11-byte body
+ok    reject: LCD line 2
+ok    reject: LCD text with 0x0A
+ok    reject: LCD text with 0x7F
+ok    reject: LCD text with 0x00
+ok    reject: ALARM pattern 3
+ok    reject: STATE with a reserved flag bit
+ok    reject: STATE with estop = 2
+ok    build: refuses a short output buffer
+ok    build: refuses a short scratch buffer
+ok    boundary: decoded 24 B, scratch_cap 24 -> ok
+ok    boundary: decoded 24 B = scratch_cap 23 + 1 -> oversize
+ok    boundary: body 17 B, max_body 17 -> ok
+ok    boundary: body 17 B = max_body 16 + 1 -> oversize
+ok    boundary: body 1024 B = host max_body passes size checks
+ok    boundary: frame_build refuses body 1025 B with a 1031 B scratch (host max + 1)
+ok    clamp: servo 0 -> 15 (flag)
+ok    clamp: servo 14 -> 15 (flag)
+ok    clamp: servo 15 -> 15
+ok    clamp: servo 90 -> 90
+ok    clamp: servo 165 -> 165
+ok    clamp: servo 166 -> 165 (flag)
+ok    clamp: servo 170 -> 165 (flag)
+ok    clamp: servo 255 -> 165 (flag)
+ok    clamp: fan 0 -> 0
+ok    clamp: fan 80 -> 80
+ok    clamp: fan 81 -> 80 (flag)
+ok    clamp: fan 100 -> 80 (flag)
+ok    clamp: fan 255 -> 80 (flag)
+ok    vector: crc 123456789
+ok    vector: cobs empty round-trips
+ok    vector: cobs zero round-trips
+ok    vector: cobs two_zeros round-trips
+ok    vector: cobs mixed round-trips
+ok    vector: cobs run253 round-trips
+ok    vector: cobs run254 round-trips
+ok    vector: cobs run255 round-trips
+ok    vector: frame ping -> ok
+ok    vector: frame fan_40 -> ok
+ok    vector: frame fan_100_clamps_to_80 -> ok
+ok    vector: frame servo_120 -> ok
+ok    vector: frame servo_170_clamps_to_165 -> ok
+ok    vector: frame lcd_line0 -> ok
+ok    vector: frame lcd_line1_max -> ok
+ok    vector: frame alarm_beep -> ok
+ok    vector: frame estop_reset -> ok
+ok    vector: frame state_running -> ok
+ok    vector: frame state_estop_noecho -> ok
+ok    vector: frame fan_40_bad_crc -> crc
+ok    vector: frame fan_len_mismatch -> len
+ok    vector: frame unknown_type -> type
+ok    vector: frame fan_body_2 -> body_len
+ok    vector: frame alarm_pattern_3 -> field
+ok    vector: frame lcd_body_18 -> oversize
+121/121 checks passed, 0 failed
+../build/firmware/test_rules
+ok    estop: real press (bounce 1 ms, held 150 ms) latches via ISR within the bounce
+ok    estop: real press latches via the loop backstop alone (ISR disabled), >= 20 ms of LOW
+ok    estop: 30 ms tap latches via the loop backstop alone
+ok    estop: single glitch shorter than the ISR entry delay (1..delay-1 us) does not latch
+ok    estop: burst of 40 x 1 us spikes over 4 ms does not latch
+ok    estop: loop backstop ignores LOW of 0.5, 5 and 19 ms
+info  estop: a 500 us glitch LATCHES via the ISR (D-49 latches on 'still LOW when the ISR runs'; open item in docs/evidence/T-06/README.md)
+ok    fan_rx: no latch, clear reading -> apply
+ok    fan_rx: FAN 0, no latch -> apply
+ok    fan_rx: FAN 0 without a clear reading -> apply
+ok    fan_rx: FAN 60 not clear -> refuse
+ok    fan_rx: E-stop latched -> discard
+ok    fan_rx: E-stop pressed, not yet latched -> discard
+ok    fan_rx: first frame after link loss -> discard
+ok    fan_rx: presence fault, not clear -> discard
+ok    fan_rx: presence fault, clear -> clear fault, discard setpoint
+ok    fan_rx: FAN 0 clears presence fault
+ok    fan_rx: E-stop + presence + link lost -> discard
+ok    fan_rx: link lost + presence, clear -> discard (link restore never clears presence and starts)
+18/18 rule checks passed, 0 failed
+../build/firmware/test_frame --vectors | diff -u test/link_vectors.txt - && echo "link_vectors.txt matches"
+link_vectors.txt matches
+make: Leaving directory '~/dev/RING3/firmware'
+exit=0

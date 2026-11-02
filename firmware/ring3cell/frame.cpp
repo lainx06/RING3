@@ -195,7 +195,11 @@ frame_err frame_parse(const uint8_t *enc, size_t enc_len, uint8_t *scratch, size
   if (n > scratch_cap) {
     return FE_OVERSIZE;
   }
-  cobs_decode(enc, enc_len, scratch, scratch_cap);
+  // Same input, same result as the measuring pass above; checked anyway (D-50 F10), so a mismatch can never
+  // leave a partly written scratch buffer looking valid.
+  if (cobs_decode(enc, enc_len, scratch, scratch_cap) != n) {
+    return FE_COBS;
+  }
   if (n < CELL_MIN_DECODED) {
     return FE_SHORT;
   }

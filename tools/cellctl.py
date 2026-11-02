@@ -38,7 +38,7 @@ FLAG_NAMES = [
     (F_PRESENCE_FAULT, "PRESENCE"),
     (F_LINK_LOST, "LINK_LOST"),
 ]
-LINK_LOSS_FAN = 60  # above the 50 % minimum spinning duty (D-47), so the stop is visible
+FAN_DUTY = 60  # test duty: above the 50 % minimum spinning duty (D-47), so a cut is visible
 BOOT_WINDOW_MS = 3000  # a STATE with t_ms below this comes from the boot that our open caused
 MAX_WIRE = 64  # generous host-side cap; the device's own frames are at most 26 bytes on the wire
 
@@ -288,10 +288,10 @@ class Checks:
         )
 
     def bad_crc(self) -> None:
-        self.log("[bad_crc] FAN 40 with a corrupted CRC: rejected, BAD_FRAME, fan unchanged")
+        self.log("[bad_crc] FAN 60 with a corrupted CRC: rejected, BAD_FRAME, fan unchanged")
         self.fan_off_reset()
         before = self.c.latest()
-        seq = self.c.send(T_FAN, bytes([40]), corrupt_crc=True)
+        seq = self.c.send(T_FAN, bytes([FAN_DUTY]), corrupt_crc=True)
         st = self.c.wait_for(lambda s: s.has(F_BAD_FRAME), 1.0)
         after = self.c.latest(0.3)
         self.log(f"  flagged: {st}")
@@ -312,13 +312,13 @@ class Checks:
 
     def estop(self) -> None:
         self.log(
-            "[estop] fan 40, press E-stop -> fan 0 in the next STATE; latched until ESTOP_RESET + released"
+            "[estop] fan 60, press E-stop -> fan 0 in the next STATE; latched until ESTOP_RESET + released"
         )
         if not self.clear_reading():
             self.record("estop", False, "no clear presence reading")
             return
-        self.c.send(T_FAN, bytes([40]))
-        run = self.c.wait_for(lambda s: s.fan == 40, 1.0)
+        self.c.send(T_FAN, bytes([FAN_DUTY]))
+        run = self.c.wait_for(lambda s: s.fan == FAN_DUTY, 1.0)
         self.prompt("Press and HOLD the E-stop now (30 s).")
         first = self.c.wait_for(lambda s: s.estop == 1 or s.has(F_ESTOP_LATCHED), 30.0)
         self.log(f"  first STATE after press: {first}")
@@ -330,12 +330,12 @@ class Checks:
         self.prompt("Release the E-stop now.")
         rel = self.c.wait_for(lambda s: s.estop == 0, 30.0)
         self.c.run(0.3)
-        self.c.send(T_FAN, bytes([40]))  # latched: fan must stay 0
+        self.c.send(T_FAN, bytes([FAN_DUTY]))  # latched: fan must stay 0
         latched = self.c.latest(0.4)
         latched_ok = (
             rel is not None and latched is not None and latched.fan == 0 and latched.has(F_ESTOP_LATCHED)
         )
-        self.log(f"  released, FAN 40 sent: {latched}")
+        self.log(f"  released, FAN 60 sent: {latched}")
         self.c.send(T_ESTOP_RESET)
         cleared = self.c.wait_for(lambda s: not s.has(F_ESTOP_LATCHED), 1.0)
         self.log(f"  ESTOP_RESET released: {cleared}")
@@ -350,12 +350,12 @@ class Checks:
         )
 
     def presence(self) -> None:
-        self.log("[presence] fan 40, hand < 100 mm -> fan 0 + PRESENCE latched")
+        self.log("[presence] fan 60, hand < 100 mm -> fan 0 + PRESENCE latched")
         if not self.clear_reading():
             self.record("presence", False, "no clear presence reading")
             return
-        self.c.send(T_FAN, bytes([40]))
-        run = self.c.wait_for(lambda s: s.fan == 40, 1.0)
+        self.c.send(T_FAN, bytes([FAN_DUTY]))
+        run = self.c.wait_for(lambda s: s.fan == FAN_DUTY, 1.0)
         self.prompt("Put your hand about 5 cm in front of the sensor now (30 s). Keep fingers off the fan.")
         st = self.c.wait_for(lambda s: s.has(F_PRESENCE_FAULT) or (s.dist != NO_ECHO and s.dist < 100), 30.0)
         self.c.run(0.1)
@@ -377,12 +377,12 @@ class Checks:
         )
 
     def echo_unplug(self) -> None:
-        self.log("[echo_unplug] fan 40, ECHO wire pulled from D3 -> fan 0 within ~150 ms + PRESENCE latched")
+        self.log("[echo_unplug] fan 60, ECHO wire pulled from D3 -> fan 0 within ~150 ms + PRESENCE latched")
         if not self.clear_reading():
             self.record("echo_unplug", False, "no clear presence reading")
             return
-        self.c.send(T_FAN, bytes([40]))
-        run = self.c.wait_for(lambda s: s.fan == 40, 1.0)
+        self.c.send(T_FAN, bytes([FAN_DUTY]))
+        run = self.c.wait_for(lambda s: s.fan == FAN_DUTY, 1.0)
         self.prompt("Pull the ECHO wire out of Uno D3 now (30 s). Keep fingers off the fan.")
         first = self.c.wait_for(lambda s: s.dist == NO_ECHO, 30.0)
         cut = self.c.wait_for(lambda s: s.fan == 0, 1.0) if first and first.fan != 0 else first
@@ -403,7 +403,7 @@ class Checks:
         )
 
     def estop_flood(self) -> None:
-        self.log("[estop_flood] FAN 40 sent every ~5 ms; press E-stop during it -> fan stays 0")
+        self.log("[estop_flood] FAN 60 sent every ~5 ms; press E-stop during it -> fan stays 0")
         if not self.clear_reading():
             self.record("estop_flood", False, "no clear presence reading")
             return
@@ -413,7 +413,7 @@ class Checks:
         bad_after: list[State] = []
         sent = 0
         while time.monotonic() < end:
-            self.c.send(T_FAN, bytes([40]))
+            self.c.send(T_FAN, bytes([FAN_DUTY]))
             sent += 1
             for st in self.c.poll():
                 if pressed_at is None and (st.estop or st.has(F_ESTOP_LATCHED)):
@@ -439,8 +439,8 @@ class Checks:
             return
         self.c.send(T_SERVO, bytes([120]))
         self.c.run(0.4)
-        self.c.send(T_FAN, bytes([LINK_LOSS_FAN]))
-        run = self.c.wait_for(lambda s: s.fan == LINK_LOSS_FAN, 1.0)
+        self.c.send(T_FAN, bytes([FAN_DUTY]))
+        run = self.c.wait_for(lambda s: s.fan == FAN_DUTY, 1.0)
         self.c.pinging = False
         last_sent = (
             self.c.last_tx
@@ -466,8 +466,121 @@ class Checks:
             f", PING clears LINK_LOST={back is not None}, fan not auto-restarted={no_restart}",
         )
 
+    # ---- D-50 F2: a FAN setpoint during a latch is dropped; clearing the latch leaves the fan at 0 ----
+    def _fan_stays_zero(self, secs: float) -> bool:
+        got = self.c.run(secs)
+        return bool(got) and all(s.fan == 0 for s in got)
 
-ALL_CHECKS = ["rate", "clamp", "bad_crc", "estop", "presence", "echo_unplug", "estop_flood", "link_loss"]
+    def _new_fan_starts(self) -> bool:
+        self.c.send(T_FAN, bytes([FAN_DUTY]))
+        ok = self.c.wait_for(lambda s: s.fan == FAN_DUTY, 1.0) is not None
+        self.fan_off_reset()
+        return ok
+
+    def discard_link(self) -> None:
+        self.log(
+            "[discard_link] fan 60, silence -> LINK_LOST; first frame back is FAN 60 -> dropped, fan stays 0"
+        )
+        if not self.clear_reading():
+            self.record("discard_link", False, "no clear presence reading")
+            return
+        self.c.send(T_FAN, bytes([FAN_DUTY]))
+        run = self.c.wait_for(lambda s: s.fan == FAN_DUTY, 1.0)
+        self.c.pinging = False
+        lost = self.c.wait_for(lambda s: s.has(F_LINK_LOST), 3.0)
+        self.log(f"  LINK_LOST: {lost}")
+        seq = self.c.send(T_FAN, bytes([FAN_DUTY]))  # restores the link; must not start the fan
+        self.c.last_ping = time.monotonic()
+        self.c.pinging = True
+        back = self.c.wait_for(lambda s: s.ack_seq == seq and not s.has(F_LINK_LOST), 1.0)
+        self.log(f"  link back via FAN 60: {back}")
+        stays = self._fan_stays_zero(1.0)
+        starts = self._new_fan_starts()
+        self.record(
+            "discard_link",
+            run is not None and lost is not None and back is not None and stays and starts,
+            f"LINK_LOST={lost is not None}, link restored by the FAN={back is not None}, fan 0 for 1 s="
+            f"{stays}, a new FAN starts it={starts}",
+        )
+
+    def discard_estop(self) -> None:
+        self.log(
+            "[discard_estop] E-stop latched -> FAN 60 dropped; ESTOP_RESET -> fan stays 0 until a new FAN"
+        )
+        if not self.clear_reading():
+            self.record("discard_estop", False, "no clear presence reading")
+            return
+        self.prompt("Press the E-stop once and release it (30 s).")
+        latched = self.c.wait_for(lambda s: s.has(F_ESTOP_LATCHED), 30.0)
+        released = self.c.wait_for(lambda s: s.estop == 0, 30.0) if latched else None
+        self.log(f"  latched and released: {released}")
+        self.c.send(T_FAN, bytes([FAN_DUTY]))
+        during = self._fan_stays_zero(0.5)
+        self.c.run(0.2)
+        self.c.send(T_ESTOP_RESET)
+        cleared = self.c.wait_for(lambda s: not s.has(F_ESTOP_LATCHED), 1.0)
+        self.log(f"  after ESTOP_RESET: {cleared}")
+        after = self._fan_stays_zero(1.0)
+        starts = self._new_fan_starts()
+        self.record(
+            "discard_estop",
+            released is not None and during and cleared is not None and after and starts,
+            f"fan 0 while latched={during}, reset clears={cleared is not None}, fan 0 for 1 s after the "
+            f"reset={after}, a new FAN starts it={starts}",
+        )
+
+    def discard_presence(self) -> None:
+        self.log(
+            "[discard_presence] presence fault -> FAN 60 dropped; clearing FAN dropped; only a new FAN starts"
+        )
+        if not self.clear_reading():
+            self.record("discard_presence", False, "no clear presence reading")
+            return
+        self.c.send(T_FAN, bytes([FAN_DUTY]))
+        run = self.c.wait_for(lambda s: s.fan == FAN_DUTY, 1.0)
+        self.prompt("Put your hand about 5 cm in front of the sensor and keep it there until told (30 s).")
+        fault = self.c.wait_for(lambda s: s.has(F_PRESENCE_FAULT), 30.0)
+        self.log(f"  fault: {fault}")
+        self.c.send(T_FAN, bytes([FAN_DUTY]))  # hand still there: dropped, fault stays
+        during = self._fan_stays_zero(0.5)
+        still = self.c.latest(0.2)
+        held = still is not None and still.has(F_PRESENCE_FAULT)
+        self.prompt("Take your hand away now.")
+        clear = self.clear_reading(30.0)
+        self.c.run(0.3)
+        seq = self.c.send(T_FAN, bytes([FAN_DUTY]))  # clears the fault; the setpoint is dropped
+        cleared = self.c.wait_for(lambda s: s.ack_seq == seq and not s.has(F_PRESENCE_FAULT), 1.0)
+        self.log(f"  clearing FAN 60: {cleared}")
+        after = self._fan_stays_zero(1.0)
+        starts = self._new_fan_starts()
+        self.record(
+            "discard_presence",
+            run is not None
+            and fault is not None
+            and during
+            and held
+            and clear
+            and cleared is not None
+            and after
+            and starts,
+            f"fan 0 + fault held while the hand was there={during and held}, clearing FAN cleared the fault="
+            f"{cleared is not None}, fan stayed 0 for 1 s={after}, a new FAN starts it={starts}",
+        )
+
+
+ALL_CHECKS = [
+    "rate",
+    "clamp",
+    "bad_crc",
+    "link_loss",
+    "discard_link",  # no hands needed
+    "estop",
+    "discard_estop",
+    "presence",
+    "discard_presence",
+    "echo_unplug",
+    "estop_flood",  # hands-on
+]
 
 
 def open_cell(port: str, log) -> tuple[Cell, State]:
@@ -573,8 +686,8 @@ def cmd_noise(args, log) -> int:
         for trial in (1, 2):
             cell.send(T_ESTOP_RESET)
             watch(f"reset before fan trial {trial}", 0.6)
-            cell.send(T_FAN, bytes([LINK_LOSS_FAN]))
-            watch(f"FAN {LINK_LOSS_FAN} trial {trial}", 2.0)
+            cell.send(T_FAN, bytes([FAN_DUTY]))
+            watch(f"FAN {FAN_DUTY} trial {trial}", 2.0)
             cell.send(T_FAN, bytes([0]))
             watch(f"FAN 0 trial {trial}", 1.0)
         cell.send(T_ESTOP_RESET)

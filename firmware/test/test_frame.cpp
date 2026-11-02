@@ -360,6 +360,36 @@ static void test_reject() {
   check(frame_build(CELL_T_LCD, 1, lcd, 17, scratch, 23, enc, sizeof enc) == 0, "build: refuses a short scratch buffer");
 }
 
+// D-50 F10: exact size boundaries. A limit itself is accepted; limit + 1 is FE_OVERSIZE.
+static void test_boundaries() {
+  uint8_t body[CELL_LCD_MAX_LEN];
+  body[0] = 1;
+  memset(body + 1, 'A', sizeof body - 1);
+  uint8_t enc[64];
+  size_t e = build(CELL_T_LCD, 9, body, sizeof body, enc, sizeof enc);  // decoded = 24 = CELL_MAX_DECODED
+  frame_view v;
+
+  uint8_t scratch[CELL_MAX_DECODED + 1];
+  check_err(frame_parse(enc, e, scratch, CELL_MAX_DECODED, CELL_MAX_BODY, DIR_TO_DEVICE, &v), FE_OK,
+            "boundary: decoded 24 B, scratch_cap 24 -> ok");
+  check_err(frame_parse(enc, e, scratch, CELL_MAX_DECODED - 1, CELL_MAX_BODY, DIR_TO_DEVICE, &v), FE_OVERSIZE,
+            "boundary: decoded 24 B = scratch_cap 23 + 1 -> oversize");
+  check_err(frame_parse(enc, e, scratch, sizeof scratch, CELL_MAX_BODY, DIR_TO_DEVICE, &v), FE_OK,
+            "boundary: body 17 B, max_body 17 -> ok");
+  check_err(frame_parse(enc, e, scratch, sizeof scratch, CELL_MAX_BODY - 1, DIR_TO_DEVICE, &v), FE_OVERSIZE,
+            "boundary: body 17 B = max_body 16 + 1 -> oversize");
+
+  // Host limit: a 1024-byte body passes the size checks (then fails the LCD body check), 1025 is oversize.
+  static uint8_t big[HOST_MAX_BODY + 1];
+  memset(big, 'A', sizeof big);
+  big[0] = 0;
+  static uint8_t henc[HOST_MAX_ENCODED + 16];
+  size_t he = build(CELL_T_LCD, 10, big, HOST_MAX_BODY, henc, sizeof henc);
+  check_err(parse_host(henc, he, DIR_TO_DEVICE), FE_BODY_LEN, "boundary: body 1024 B = host max_body passes size checks");
+  he = build(CELL_T_LCD, 11, big, HOST_MAX_BODY + 1, henc, sizeof henc);
+  check(he == 0, "boundary: frame_build refuses body 1025 B with a 1031 B scratch (host max + 1)");
+}
+
 static void test_clamps() {
   struct {
     uint8_t in, out;
@@ -558,6 +588,7 @@ int main(int argc, char **argv) {
   test_cobs();
   test_accept_all_types();
   test_reject();
+  test_boundaries();
   test_clamps();
   vectors();
   printf("%d/%d checks passed, %d failed\n", g_pass, g_pass + g_fail, g_fail);

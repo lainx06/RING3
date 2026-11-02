@@ -5,11 +5,14 @@
 // Rules this file keeps (docs/tasks/T-06.md, ARCHITECTURE §3a, D-43):
 // - Boots into the safe state: fan off, servo 90, LCD "HALTED" / "no kernel link" (D-46).
 // - Own clamps (servo 15-165, fan <= 80 %), reported with the CLAMP flag; bad frames rejected and flagged.
-// - E-stop on INT0: the ISR latches and cuts the fan with digitalWrite (which also stops the Timer0 PWM); every
+// - E-stop on INT0: the ISR latches (only if D2 still reads LOW, D-49) and cuts the fan with digitalWrite (which
+//   also stops the Timer0 PWM); D2 held LOW >= 20 ms latches from the loop too (D-49); every
 //   fan write happens with interrupts off and only while unlatched; every loop pass re-forces the fan off while
 //   latched or pressed. Only ESTOP_RESET with the button released for 50 ms clears the latch.
 // - Presence cutoff: < 100 mm, or 3 no-echo readings in a row, while the fan runs -> fan off in the same pass,
 //   latched until the next accepted FAN with a valid clear reading. Echo timed on INT1 with micros().
+// - FAN setpoints (D-50 F2): one that arrives while any latch is set is dropped, and clearing a latch (ESTOP_RESET,
+//   presence clear, link restored) leaves the fan at 0 until a NEW FAN arrives.
 // - Hardware watchdog (reset cause captured in .init3), link watchdog (1 s -> safe state + alarm).
 // - Non-blocking loop: no delay, no pulse timing calls, no tone, no LCD clear/home outside setup(). LCD lines
 //   are rewritten only when they change, as 16 padded characters after setCursor, one line per loop pass.
@@ -20,6 +23,7 @@
 #include <avr/pgmspace.h>
 #include <avr/wdt.h>
 
+#include "cell_rules.h"
 #include "frame.h"
 #include "pins.h"
 #include "protocol.h"
@@ -50,11 +54,15 @@ static LiquidCrystal lcd(PIN_LCD_RS, PIN_LCD_E, PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_
 static volatile uint8_t estop_latched;  // set only by the ISR, cleared only by ESTOP_RESET
 static volatile uint8_t fan_applied;    // duty actually on the pin, %
 static bool estop_seen;                 // loop's copy, to act once on a new latch
-static bool estop_pressed;              // debounced, for STATE.estop
-static bool estop_raw_last = false;
-static uint32_t estop_raw_since;        // millis() of the last raw change
+static bool estop_pressed;              // held LOW >= CELL_ESTOP_HOLD_MS, for STATE.estop
+static estop_hold ehold;                // loop-side continuous-LOW tracker (cell_rules.h, D-49)
 
+// D-49: latch only if D2 still reads LOW when the ISR runs, so a noise spike that is already gone doesn't latch.
+// A press holds D2 LOW for milliseconds, so it always latches here; the loop backstop below covers a missed edge.
 static void estop_isr() {
+  if (!estop_isr_latches((PIND & _BV(PD2)) == 0)) {  // D2 = PD2
+    return;
+  }
   digitalWrite(PIN_FAN_EN, LOW);  // also disconnects the PWM output from the pin
   fan_applied = 0;
   estop_latched = 1;
@@ -352,12 +360,14 @@ static void presence_service(uint32_t now) {
 // ---- E-stop service (loop side) ----
 static void estop_service(uint32_t now) {
   bool raw = estop_raw_pressed();
-  if (raw != estop_raw_last) {
-    estop_raw_last = raw;
-    estop_raw_since = now;
-  }
-  if (raw != estop_pressed && now - estop_raw_since >= 20) {
-    estop_pressed = raw;
+  estop_pressed = estop_hold_update(&ehold, raw, now);
+  // D-49 loop backstop: D2 held LOW for >= 20 ms latches even if INT0 never latched.
+  if (estop_pressed && !estop_latched) {
+    noInterrupts();
+    digitalWrite(PIN_FAN_EN, LOW);
+    fan_applied = 0;
+    estop_latched = 1;
+    interrupts();
   }
   // Belt and braces: every pass, the fan is off while latched or pressed, whatever happened before.
   if (estop_latched || raw) {
@@ -375,7 +385,7 @@ static void estop_service(uint32_t now) {
 }
 
 static bool estop_released_long_enough(uint32_t now) {
-  return !estop_raw_last && !estop_raw_pressed() && now - estop_raw_since >= CELL_ESTOP_RELEASE_MS;
+  return !ehold.low && !estop_raw_pressed() && now - ehold.since_ms >= CELL_ESTOP_RELEASE_MS;
 }
 
 // ---- Link: receive ----
@@ -390,6 +400,7 @@ static void handle_frame(const frame_view &f, uint32_t now) {
     line_fill_F(lcd_want[1], F("kernel linked"));
   }
   link_ever = true;
+  bool link_was_lost = link_lost;  // this frame restores the link; a FAN in it is still discarded (D-50 F2)
   link_lost = false;
   ack_seq = f.seq;
   switch (f.type) {
@@ -399,15 +410,31 @@ static void handle_frame(const frame_view &f, uint32_t now) {
       bool c;
       uint8_t d = clamp_fan(f.body[0], &c);
       clamp_flag = c;
-      if (reading_clear(now)) {
-        presence_fault = false;
-      } else if (d > 0) {
-        presence_fault = true;  // refuse to start without a valid clear reading
-        presence_by_no_echo = distance_mm == CELL_DIST_NO_ECHO;
+      // D-50 F2: a setpoint that arrives while any latch is set is dropped, and clearing a latch never starts
+      // the fan: only a NEW FAN after every latch is clear can (cell_rules.h fan_rx_decide).
+      switch (fan_rx_decide(estop_latched, estop_raw_pressed(), presence_fault, link_was_lost, reading_clear(now),
+                            d)) {
+        case FAN_RX_APPLY:
+          fan_cmd = d;
+          set_last_command(F("FAN "), d, c);
+          break;
+        case FAN_RX_CLEAR_PRESENCE:
+          presence_fault = false;
+          fan_cmd = 0;
+          line_fill_F(lcd_want[1], F("presence cleared"));
+          break;
+        case FAN_RX_REFUSE_NOT_CLEAR:
+          presence_fault = true;  // refuse to start without a valid clear reading
+          presence_by_no_echo = distance_mm == CELL_DIST_NO_ECHO;
+          fan_cmd = 0;
+          set_last_command(F("REFUSED FAN "), d, false);
+          break;
+        default:  // FAN_RX_DISCARD
+          fan_cmd = 0;
+          set_last_command(F("IGNORED FAN "), d, false);
+          break;
       }
-      fan_cmd = d;
       fan_update();
-      set_last_command(F("FAN "), d, c);
       break;
     }
     case CELL_T_SERVO: {
@@ -450,6 +477,7 @@ static void handle_frame(const frame_view &f, uint32_t now) {
         estop_latched = 0;
         interrupts();
         estop_seen = false;
+        fan_cmd = 0;  // D-50 F2: the reset never restarts the fan
         alarm_pattern = CELL_ALARM_OFF;
         line_fill_F(lcd_want[1], F("> ESTOP_RESET"));
       }
@@ -548,10 +576,10 @@ void setup() {
   wdt_reset_seen = (cause & _BV(WDRF)) != 0;
 
   // A button already held at power-up counts as a press.
-  estop_raw_last = estop_raw_pressed();
-  estop_raw_since = millis();
-  estop_pressed = estop_raw_last;
-  if (estop_raw_last) {
+  bool held_at_boot = estop_raw_pressed();
+  estop_hold_init(&ehold, held_at_boot, millis());
+  estop_pressed = held_at_boot;
+  if (held_at_boot) {
     estop_latched = 1;
   }
   attachInterrupt(digitalPinToInterrupt(PIN_ESTOP), estop_isr, FALLING);

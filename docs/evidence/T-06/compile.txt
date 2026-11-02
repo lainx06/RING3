@@ -1,0 +1,38 @@
+T-06 compile evidence (A3, A6). Generated 2026-11-01 21:18 EST at commit 1b31592 + working tree (this commit).
+Home directory paths are shown as ~.
+
+== toolchain
+arduino-cli  Version: 1.5.1 Commit: 01f3d4f2b Date: 2026-06-05T10:22:17Z
+ID          Installed Latest Name
+arduino:avr 1.8.8     1.8.8  Arduino AVR Boards
+avr-gcc: 7.3.0-atmel3.6.1-arduino7
+
+== libraries (standard Arduino libraries, used as libraries; D-09 allows; versions from `arduino-cli lib list`)
+Name          Installed Available    Location Description
+LiquidCrystal 1.0.7     -            user     -
+Servo         1.3.0     -            user     -
+
+== arduino-cli compile --clean --fqbn arduino:avr:uno --warnings all firmware/bringup
+warnings in our files (firmware/bringup/*): 0
+warnings in the arduino:avr core / libraries (not our code): 1 distinct
+  ~/.arduino15/packages/arduino/hardware/avr/1.8.8/cores/arduino/new.cpp: unused parameter 'tag' [-Wunused-parameter]
+Sketch uses 10508 bytes (32%) of program storage space. Maximum is 32256 bytes.
+Global variables use 324 bytes (15%) of dynamic memory, leaving 1724 bytes for local variables. Maximum is 2048 bytes.
+
+== arduino-cli compile --clean --fqbn arduino:avr:uno --warnings all firmware/ring3cell
+warnings in our files (firmware/ring3cell/*): 0
+warnings in the arduino:avr core / libraries (not our code): 1 distinct
+  ~/.arduino15/packages/arduino/hardware/avr/1.8.8/cores/arduino/new.cpp: unused parameter 'tag' [-Wunused-parameter]
+Sketch uses 8704 bytes (26%) of program storage space. Maximum is 32256 bytes.
+Global variables use 462 bytes (22%) of dynamic memory, leaving 1586 bytes for local variables. Maximum is 2048 bytes.
+
+== RAM (A3: < 75 %): see 'Global variables' lines above.
+
+== A6 grep (code lines, comments excluded): delay( pulseIn( tone( lcd.clear( lcd.home( in firmware/ring3cell/
+firmware/ring3cell/ring3cell.ino:592:  lcd.clear();
+  -> line 592 is inside void setup() { (allowed)
+== wdt_enable and the .init3 hook
+39:void early_reset_hook(void) __attribute__((naked, used, section(".init3")));
+609:  wdt_enable(WDTO_250MS);
+== D-46: 'safe' in any string literal (firmware + cellctl)
+  none

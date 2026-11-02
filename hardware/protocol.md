@@ -11,7 +11,8 @@ source of truth; if they disagree, the header wins and this page is a bug. Test 
   gives it to the guest as COM3.
 - **Opening the port resets the Uno** (DTR). The firmware then boots into the **safe state** (fan off, servo
   parked at 90°, LCD `HALTED` / `no kernel link`, D-46) and starts sending `STATE`. The bootloader (optiboot 4.4 in
-  `arduino:avr` 1.8.8) first waits about 1 s for an upload (its watchdog timeout) `[UNVERIFIED: measure]`, so a
+  `arduino:avr` 1.8.8) first waits for an upload (its 1 s watchdog timeout); measured on this board: port open → first `STATE` of the
+  new boot ≈ 1.62 s (T-06 evidence). So a
   host must wait for the first valid `STATE` frame before it sends anything.
 
 ## Frame format (same as COM2, ARCHITECTURE §4)
@@ -48,7 +49,7 @@ limit (the COM2 limit) to exercise COBS runs of 253/254/255 bytes; `frame_parse`
 | Type | Name | Body (`len`) | Device action |
 |---|---|---|---|
 | `0x01` | `PING` | none (0) | Keeps the link watchdog fed; nothing else. |
-| `0x02` | `FAN` | `duty u8` % (1) | Sets the fan PWM. Any value accepted; **clamped to 0–80 %** (`CELL_FAN_MAX`), `CLAMP` flag set if changed. Refused (fan stays 0) while the E-stop is latched or the button is pressed. With a valid clear reading (≥ 100 mm, not `0xFFFF`), clears a latched presence fault (the fan starts only if `duty > 0`). |
+| `0x02` | `FAN` | `duty u8` % (1) | Sets the fan PWM. Any value accepted; **clamped to 0–80 %** (`CELL_FAN_MAX`), `CLAMP` flag set if changed. **D-50 F2: a `FAN` that arrives while any latch is set (E-stop latched or button pressed, presence fault, `LINK_LOST`) is dropped: `fan_cmd` stays 0.** With a presence fault latched and a valid clear reading (≥ 100 mm, not `0xFFFF`), the `FAN` clears the fault and its setpoint is still dropped. Clearing any latch (`ESTOP_RESET`, presence clear, the link coming back) leaves the fan at 0; only a **new** `FAN` afterwards starts it. A `FAN` with duty > 0 and no latch but no valid clear reading is refused and latches the presence fault. Rules: `cell_rules.h` `fan_rx_decide`. |
 | `0x03` | `SERVO` | `deg u8` (1) | Moves the servo. Any value accepted; **clamped to 15–165°**, `CLAMP` flag set if changed. **Held (not moved)** while the E-stop is latched or pressed, or without a valid clear reading (second layer of the interlock); `servo_cmd` then keeps the old angle. |
 | `0x04` | `LCD` | `line u8` (0 or 1), then 0–16 bytes of text, printable ASCII `0x20`–`0x7E` (1–17) | Writes that LCD line, space-padded to 16. Other line numbers or bytes: rejected (`field`). |
 | `0x05` | `ALARM` | `pattern u8` (1): 0 = off, 1 = one short beep (denial), 2 = repeating (fault) | Buzzer + RGB. Other values: rejected (`field`). |
@@ -69,7 +70,7 @@ limit (the COM2 limit) to exercise COBS runs of 253/254/255 bytes; `frame_parse`
 `STATE.flags`:
 | Bit | Name | Set when | Cleared when |
 |---|---|---|---|
-| 0 | `WDT_RESET` | this boot followed a hardware-watchdog reset | next boot without one (sticky) |
+| 0 | `WDT_RESET` | this boot followed a hardware-watchdog reset **as far as the firmware can tell; on this board it can't (see below, D-50 F6)** | next boot without one (sticky) |
 | 1 | `CLAMP` | the last accepted `FAN` or `SERVO` value was clamped | the next accepted `FAN`/`SERVO` isn't clamped |
 | 2 | `BAD_FRAME` | ≥ 1 frame rejected since the previous `STATE` | after that `STATE` is sent |
 | 3 | `ESTOP_LATCHED` | E-stop pressed (INT0) | `ESTOP_RESET` with the button released ≥ 50 ms |
@@ -101,8 +102,11 @@ accepted frames feed the link watchdog; a rejected frame never changes device st
 - **Link watchdog:** 1 s (`CELL_LINK_TIMEOUT_MS`) without an accepted kernel frame → safe state + `LINK_LOST`; if
   a link had been up, 3 beeps and red blinking. Before the first kernel frame after boot the light is blue and the
   buzzer stays quiet (the flag is still set after 1 s). The kernel sends `PING` every 250 ms while healthy.
-- **E-stop** (D2, INT0, normally-open button, pressed = LOW): the interrupt cuts the fan (`digitalWrite`, which
-  also stops the PWM) and sets the latch; every loop pass forces the fan off again while latched or pressed. While
+- **E-stop** (D2, INT0, normally-open button, pressed = LOW): on a falling edge the interrupt reads D2 and, **only
+  if it still reads LOW** (D-49), cuts the fan (`digitalWrite`, which also stops the PWM) and sets the latch. As a
+  backstop, D2 read LOW on every loop pass for ≥ 20 ms (`CELL_ESTOP_HOLD_MS`) latches too. Every loop pass forces
+  the fan off again while latched or pressed. A noise spike shorter than the interrupt's entry delay (a few µs)
+  doesn't latch; a longer one does (see the T-06 evidence, open item). `STATE.estop` = D2 held LOW ≥ 20 ms. While
   latched or pressed, `fan_duty` reads 0, `FAN` commands don't start the fan and `SERVO` is held. A button held at
   power-up latches too. On a new latch: one long beep, LCD `E-STOP LATCHED` / `reset at console`.
 - **Presence cutoff:** distance < 100 mm (`CELL_PRESENCE_MM`), or no echo on 3 readings in a row
@@ -116,7 +120,16 @@ accepted frames feed the link watchdog; a rejected frame never changes device st
 - **LCD:** line 1 shows a local condition (E-stop, presence, lost link, waiting) if there is one, else the
   kernel's `LCD` line 0 text, else `LINK F<duty> S<deg>`. Line 2 shows the last command (`> FAN 80 clamp`) or the
   kernel's `LCD` line 1 text, whichever came last. Lines are rewritten only when they change.
-- **Hardware watchdog:** a firmware hang resets the Uno; the next boot reports `WDT_RESET`.
+- **Hardware watchdog:** a firmware hang resets the Uno within 250 ms (`wdt_enable(WDTO_250MS)`, reset in every
+  loop pass), and the Uno boots into the safe state. That reset is what the watchdog guarantees.
+- **`WDT_RESET` can't be observed on this board (D-50 F6).** The flag is kept, but nothing may rely on it or
+  claim it. The firmware reads the reset cause in an `.init3` hook from `MCUSR`, or from `r2` when a bootloader
+  passes it there. The Uno's optiboot 4.4 (the `arduino:avr` 1.8.8 core's bootloader) clears `MCUSR` before the
+  sketch runs and does **not** pass it in `r2`; it also leaves the bootloader on a port-open reset through its own
+  watchdog timeout. So the flag reads 0 after our own watchdog reset, and a bootloader that did pass the cause
+  would report a watchdog reset after every port open. Observed: `WDT_RESET=False` on every boot in T-06. The
+  kernel (T-04) must detect a firmware restart from `STATE` itself (`t_ms` and `seq` restarting from 0), not from
+  this flag.
 
 ## Examples (from `link_vectors.txt`)
 ```

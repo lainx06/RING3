@@ -36,7 +36,7 @@ Wire in this order (D-41f): **power rails → E-stop → presence sensor → ser
 only two external interrupts and both are used; Timer0 drives the fan PWM (and `millis()`); Timer1 belongs to the
 Servo library; Timer2 is unused, because `tone()` is not used.
 
-**Hard-wired, no Uno pin:** L293D IN1 (pin 2) → LOGIC 5 V and IN2 (pin 7) → GND, so the fan turns one way only;
+**Hard-wired, no Uno pin:** L293D IN1 (pin 2) → LOGIC 5 V and IN2 (pin 7) → MOTOR − (GND), so the fan turns one way only;
 L293D EN3,4 (pin 9) → GND, so the second channel is off; LCD RW (pin 5) → GND, so the LCD is write-only.
 
 ## Before you start (read once)
@@ -94,20 +94,29 @@ still shows the Uno. Switching the module on must not reset the Uno: the `bringu
 ever see the module's LED glowing **dimly** while it is switched off, that is the L293D leak (D-48): switch the
 module on or pull the Uno 5V jumper, and keep to the power order.
 
-## 2. E-stop button (D2, INT0)
+## 2. E-stop button (D2, INT0) (D-49)
 
-Parts: 1 push button (4 legs), 2 jumper wires. No resistor: the Uno's internal pull-up is used.
+Parts: 1 push button (4 legs), one 100 nF ceramic capacitor (marked `104`), 3 jumper wires. No pull-up resistor:
+the Uno's internal pull-up is used.
+
+**Ground rule (D-49): the E-stop's ground goes to LOGIC −, never to MOTOR −.** Motor current flows in the MOTOR −
+rail; a button grounded there sees that current bounce its ground, and the firmware latched the E-stop by itself
+while the fan ran (5 of 5 runs, 2026-11-01). Keep the button's two wires away from the motor wires.
 
 1. Push the button in so that it **straddles the centre gap** of the breadboard (two legs above the gap, two below).
 2. Use two legs that are **diagonally opposite** (for example top-left and bottom-right). Diagonal legs are always
    on opposite sides of the switch, whichever way the button is turned.
    - top-left leg's row → Uno **D2**
-   - bottom-right leg's row → LOGIC **−** (GND)
-3. Put it where your hand can reach it without crossing the fan.
+   - bottom-right leg's row → LOGIC **−** (GND) — the **row-j side** (far) rail, not the MOTOR rail
+3. **Noise filter (D-49):** a 100 nF ceramic capacitor from the D2 node (the row of the leg wired to D2) to LOGIC −.
+   With the internal pull-up it filters short spikes; a press discharges it at once, so a press isn't delayed.
+   (Reference build: capacitor h22 (D2 node) → h24, jumper j24 → LOGIC −.)
+4. Put it where your hand can reach it without crossing the fan.
 
 **Check (`e`):** untouched shows `D2=HIGH (released)`; three presses show `PRESSED (D2=LOW)` then `released` each
 time, with `INT0 falling edges: 3` or more; ends `-> OK`. If it says D2 is LOW without a press, move one wire to the
-diagonal leg.
+diagonal leg. After the fan is wired, `tools/cellctl.py noise /dev/ttyACM0` (with `ring3cell`) must end
+`NOISE SUMMARY: latch set without a press in: none`.
 
 ## 3. Presence sensor (HC-SR04: TRIG D4, ECHO D3 = INT1)
 
@@ -148,7 +157,8 @@ probably on the LOGIC rail, or the grounds aren't joined.
 
 ## 5. Fan (DC motor + blade through the L293D, EN on D5)
 
-Parts: L293D chip (16 pins), DC motor with the fan blade, one 10 kΩ resistor (pull-down, D-48), about 10 jumper wires. The L293D has diodes built in for the
+Parts: L293D chip (16 pins), DC motor with the fan blade, one 10 kΩ resistor (pull-down, D-48), one 100 nF
+ceramic capacitor (`104`, motor noise, D-49), about 10 jumper wires. The L293D has diodes built in for the
 motor, so no extra diode is needed.
 
 1. Find the **notch** (a half-moon) at one end of the chip. Push the chip in so it **straddles the centre gap**,
@@ -165,19 +175,24 @@ motor, so no extra diode is needed.
    | 1 | EN1,2 (speed) | Uno **D5**, and a **10 kΩ resistor from pin 1 to LOGIC −** (pull-down, D-48) |
    | 2 | IN1 | LOGIC **+** (hard-wired HIGH) |
    | 3 | OUT1 | motor wire A |
-   | 4 | GND | LOGIC **−** |
-   | 5 | GND | LOGIC **−** |
+   | 4 | GND | **MOTOR −** (motor current returns here, not through the logic ground; D-49) |
+   | 5 | GND | **MOTOR −** |
    | 6 | OUT2 | motor wire B |
-   | 7 | IN2 | LOGIC **−** (hard-wired LOW) |
+   | 7 | IN2 | **MOTOR −** (hard-wired LOW) |
    | 8 | VCC2 (motor power) | **MOTOR +** |
-   | 9 | EN3,4 | LOGIC **−** (second channel off) |
+   | 9 | EN3,4 | GND, MOTOR − or LOGIC − (second channel off) |
    | 10, 11, 14, 15 | channel 2 | nothing |
-   | 12, 13 | GND | LOGIC **−** (optional; they're the same ground as 4/5 and help with heat) |
+   | 12, 13 | GND | MOTOR **−** (optional; the same ground as 4/5, and they help with heat) |
    | 16 | VCC1 (logic power) | LOGIC **+** |
 2. Motor: its two wires go to pin 3 and pin 6 (either way round). Press the fan blade onto the shaft. Put the motor
-   where the blade can spin freely, away from the sensor beam and from your hand on the E-stop.
-3. Double-check pins 8 and 16: **8 = MOTOR +**, **16 = LOGIC +**. They are on opposite corners of the chip.
-4. **Pull-down on pin 1 (D-48).** While the Uno resets (after an upload, a port open or the reset button) every pin
+   where the blade can spin freely, **out of the sensor beam** (D-49: a motor in the beam read as a 15 cm object)
+   and away from your hand on the E-stop. Reference build: on its side at the desk edge, blade over the edge,
+   weighted so it can't roll.
+3. **Motor noise (D-49):** a 100 nF ceramic capacitor across the two motor leads, as close to the motor as the
+   breadboard allows (reference build: c42–c45). **Twist the two motor leads** together and keep them away from
+   the E-stop wires.
+4. Double-check pins 8 and 16: **8 = MOTOR +**, **16 = LOGIC +**. They are on opposite corners of the chip.
+5. **Pull-down on pin 1 (D-48).** While the Uno resets (after an upload, a port open or the reset button) every pin
    is an input for about a second, so EN floats and the fan can blip on its own. A 10 kΩ resistor from L293D pin 1
    to LOGIC − holds EN low until the firmware drives it. (Reference build: pin 1 at b40, resistor b40 → GND.)
 
