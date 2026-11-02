@@ -4,7 +4,7 @@ audited decision in order."""
 
 import subprocess
 
-from tests.qemu import EXIT_PASS, HOST_POLICY_TEST, REPO, Session, audit_lines, record_evidence
+from tests.qemu import EXIT_PASS, HOST_POLICY_TEST, REPO, Session, audit_lines, evidence_dir, record_evidence
 
 
 def _scripted_run() -> str:
@@ -65,7 +65,7 @@ def test_kernel_and_host_decisions_match():
         check=True,
     )
     host = audit_lines(p.stdout)
-    (REPO / "docs" / "evidence" / "T-02" / "replay-host.txt").write_text(p.stdout)
+    (evidence_dir("T-02") / "replay-host.txt").write_text(p.stdout)
     assert len(host) == len(kernel), f"kernel {len(kernel)} audits, host {len(host)}"
     for i, (k, h) in enumerate(zip(kernel, host, strict=True)):
         for field in ("seq", "tick", "sys", "target", "decision", "reason", "tainted"):

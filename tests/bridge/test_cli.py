@@ -53,7 +53,28 @@ def test_frames_selftest(capsys):
     assert "FRAMES OK" in capsys.readouterr().out
 
 
-@pytest.mark.parametrize("cmd,card", [("run", "T-03b"), ("replay", "T-05a"), ("fuzz-link", "T-05a")])
-def test_stubs_name_their_card(cmd, card, capsys):
-    assert cli.main([cmd, "--anything"]) == 2
-    assert card in capsys.readouterr().err
+def test_run_requires_a_budget(capsys):
+    """INV-09: `ring3 run` has no default budget; argparse refuses without --budget-usd (no network)."""
+    with pytest.raises(SystemExit) as e:
+        cli.main(["run"])
+    assert e.value.code == 2
+    assert "--budget-usd" in capsys.readouterr().err
+
+
+def test_run_dry_run_prints_the_reservation(capsys):
+    """The dry run sizes the first reservation from the shipped config and pack: no network, no key."""
+    assert cli.main(["run", "--budget-usd", "0.50", "--dry-run"]) == 0
+    out = capsys.readouterr().out
+    assert "estimate, not billing" in out and "--budget-usd 0.50 = $0.500000" in out
+    assert "input tokens reserved" in out and "muse-spark-1.3" in out
+
+
+def test_replay_on_the_sample_run(tmp_path, capsys):
+    """`ring3 replay` renders the tape and runs the host policy build when it exists; the sample run's single
+    synthetic event is not a real tape, so the result is reported, not asserted as a match."""
+    run = tmp_path / "r-replay"
+    write_sample_run(run)
+    rc = cli.main(["replay", str(run)])
+    out = capsys.readouterr().out
+    assert rc in (0, 1) and ("REPLAY" in out or "MISMATCH" in out)
+    assert "tape events by kind:" in out

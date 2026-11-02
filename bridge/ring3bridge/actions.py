@@ -62,6 +62,8 @@ class ActionSerializer:
             return Outgoing(((abi.LINK_T_FINAL, abi.encode_final(abi.LINK_FINAL_REFUSE, reply.reason)),))
         if not isinstance(reply, Call):
             raise TypeError("not a validated reply")
+        if reply.op == "witness":
+            raise ValueError("witness is answered in the bridge (T-07), never sent as an ACTION (D-58)")
         op = abi.OPS[reply.op]
         a = reply.args
         p1 = 0

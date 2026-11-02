@@ -26,6 +26,7 @@ KERNEL_KTEST = REPO / "build" / "kernel-ktest.elf"
 HOST_POLICY_TEST = REPO / "build" / "host" / "policy_test"
 HOST_POLICY_TEST_PERMISSIVE = REPO / "build" / "host" / "policy_test_permissive"
 EVIDENCE = REPO / "docs" / "evidence" / "T-02"
+TEST_LOGS = REPO / "build" / "test-logs"
 
 EXIT_PASS = 33
 EXIT_FAIL = 35
@@ -68,7 +69,20 @@ class Run:
         return "" if i < 0 else self.output[i:]
 
 
-def qemu_command(kernel: Path, append: str = "", memory_mb: int = 64) -> list[str]:
+def free_port() -> int:
+    """A free TCP port on the loopback for QEMU's COM2 listener."""
+    import socket
+
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+def qemu_command(
+    kernel: Path, append: str = "", memory_mb: int = 64, com2_port: int | None = None
+) -> list[str]:
+    """`com2_port`: expose COM2 as `tcp:127.0.0.1:<port>,server=on,wait=off` (the bridge link, T-03b);
+    None leaves QEMU without a second serial port (the kernel reports `link: COM2 absent`)."""
     cmd = [
         QEMU,
         "-kernel",
@@ -79,6 +93,10 @@ def qemu_command(kernel: Path, append: str = "", memory_mb: int = 64) -> list[st
         "none",
         "-serial",
         "stdio",
+    ]
+    if com2_port is not None:
+        cmd += ["-serial", f"tcp:127.0.0.1:{com2_port},server=on,wait=off"]
+    cmd += [
         "-monitor",
         "none",
         "-device",
@@ -124,8 +142,11 @@ class Session:
     Use as a context manager; `close()` sends `exit` (unless already finished), waits, and fails on PANIC.
     """
 
-    def __init__(self, kernel: Path = KERNEL_TEST, append: str = FAST_QUOTAS, timeout: float = 30.0):
-        self.cmd = qemu_command(kernel, append)
+    def __init__(
+        self, kernel: Path = KERNEL_TEST, append: str = FAST_QUOTAS, timeout: float = 30.0, com2: bool = False
+    ):
+        self.com2_port: int | None = free_port() if com2 else None
+        self.cmd = qemu_command(kernel, append, com2_port=self.com2_port)
         self.timeout = timeout
         self.t0 = time.monotonic()
         self.proc = subprocess.Popen(
@@ -217,10 +238,18 @@ class Session:
             self.proc.wait()
 
 
-def record_evidence(name: str, run: Run, card: str = "T-02") -> None:
-    """Write a COM1 transcript (and the exact QEMU command) under docs/evidence/<card>/."""
-    folder = EVIDENCE.parent / card
+def evidence_dir(card: str = "T-02") -> Path:
+    """D-54: test transcripts go to build/test-logs/<card>/ unless RING3_EVIDENCE=1 asks for the committed
+    docs/evidence/<card>/ files, so a normal test run leaves the working tree clean."""
+    base = EVIDENCE.parent if os.environ.get("RING3_EVIDENCE") == "1" else TEST_LOGS
+    folder = base / card
     folder.mkdir(parents=True, exist_ok=True)
+    return folder
+
+
+def record_evidence(name: str, run: Run, card: str = "T-02") -> None:
+    """Write a COM1 transcript (and the exact QEMU command) under the card's evidence folder."""
+    folder = evidence_dir(card)
     cmd = " ".join(shlex.quote(c) for c in run.cmd)
     (folder / name).write_text(
         f"$ {cmd}\n# exit code {run.exit_code}, {run.seconds:.1f} s\n\n{run.output}", encoding="utf-8"

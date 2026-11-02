@@ -22,8 +22,8 @@ struct uprog {
 #define USER_ARG_MAX     512u
 
 /* Production quotas (prov.), fixed in code. Test images may shorten them through boot options. */
-#define QUOTA_ACTION_TICKS   500u     /* 5 s per action */
-#define QUOTA_REQUEST_TICKS  6000u    /* 60 s per request */
+#define QUOTA_ACTION_TICKS   500u     /* 5 s of ring-3 time per action (D-58: waits excluded) */
+#define QUOTA_REQUEST_TICKS  12000u   /* 120 s wall clock per request (D-58, prov.) */
 #define CONFIRM_TIMEOUT_TICKS 3000u   /* 30 s for a human answer */
 
 enum exec_result { EXEC_EXIT = 0, EXEC_FAULT = 1, EXEC_LIMIT = 2, EXEC_REFUSED = 3 /* EXEC_START denied: nothing ran */ };

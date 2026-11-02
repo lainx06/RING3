@@ -325,7 +325,7 @@ static void eval_call(const struct pol_state *s, uint32_t tick, uint32_t nr, con
     if (nr == SYS_OBJ_READ && !obj->trusted)
         n->tainted = 1;
     if (nr == SYS_AGENT_RECV)
-        n->waiting = 1;                            /* a kernel wait for the bridge pauses the action quota (R2) */
+        n->waiting = 1;                            /* D-58: the wait for the bridge pauses the action quota */
     if (nr == SYS_CELL_FAN) {
         if (a[0] != s->fan_duty) {
             n->fan_change_tick = tick;
@@ -506,9 +506,11 @@ void decide(const struct pol_state *s, const struct pol_event *ev, struct pol_st
         return;
 
     case EV_ACTION_BOUNDARY:
+        /* agent_recv returned (or a test program marked a boundary): the executor runs again and the action
+         * quota restarts (R2). With `waiting` pausing the quota meanwhile, it counts ring-3 ticks only (D-58). */
         if (!s->in_request)
             return;
-        n->waiting = 0;                               /* agent_recv returned: the executor runs again */
+        n->waiting = 0;
         if (!s->killing && !s->pending)
             n->act_start = tick;                      /* silent; the state change puts it on the tape */
         return;
@@ -528,7 +530,7 @@ void decide(const struct pol_state *s, const struct pol_event *ev, struct pol_st
             return;
         }
         if (!s->pending)
-            n->act_start = tick;                      /* the action quota restarts (silent, on the tape) */
+            n->act_start = tick;                      /* a new action: the quota restarts (silent, on the tape) */
         return;
 
     case EV_LINK_DROP:

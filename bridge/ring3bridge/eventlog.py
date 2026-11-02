@@ -19,7 +19,9 @@ from pathlib import Path
 
 ZERO_H = "0" * 64
 
-#: ARCHITECTURE §6 record names, plus ``event`` for decoded EVENT frames (D-52).
+#: ARCHITECTURE §6 record names, plus ``event`` for decoded EVENT frames (D-52) and, from T-03b, ``frame``
+#: (every link frame in either direction, body as hex), ``frame_error`` (a K->B frame the bridge dropped),
+#: ``final_sent`` / ``stop_sent`` (the bridge's own end-of-request frames).
 RECORD_TYPES = frozenset(
     {
         "run_start",
@@ -29,6 +31,10 @@ RECORD_TYPES = frozenset(
         "model_reply",
         "reply_rejected",
         "action_sent",
+        "final_sent",
+        "stop_sent",
+        "frame",
+        "frame_error",
         "audit",
         "event",
         "observation",

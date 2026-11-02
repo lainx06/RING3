@@ -16,7 +16,7 @@
 #include "link_abi.h"
 
 #define ACTION_CAP 8u                    /* ACTIONS_PER_REQUEST in kernel/policy/policy.h */
-#define RECV_TIMEOUT_TICKS 3000u         /* 30 s without a bridge frame -> STOPPED */
+#define RECV_TIMEOUT_TICKS 9000u         /* 90 s without a bridge frame -> STOPPED (request quota 120 s) */
 #define OUT_MAX LINK_OBS_OUT_MAX
 
 struct action {
@@ -317,7 +317,7 @@ int main(void)
     for (;;) {
         r = u_agent_recv(frame, sizeof frame, RECV_TIMEOUT_TICKS);
         if (r == -ETIMEDOUT) {
-            report("STOPPED", "no frame from the bridge within 30 s", 0, 0);
+            report("STOPPED", "no frame from the bridge within 90 s", 0, 0);
             return 2;
         }
         if (r < LINK_HDR_LEN) {

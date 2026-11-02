@@ -83,7 +83,9 @@ const struct pol_object_rule *policy_object(uint32_t id);   /* 0 when id >= OBJ_
 #define STALE_TICKS          (500u * POLICY_HZ / 1000u)       /* 500 ms */
 #define LCD_TEXT_MAX         16u
 
-/* ---- agent bounds (INV-07, D-53): ACTION frames per request; the 9th ends the executor with LIMIT ---- */
+/* ---- agent bounds (INV-07, D-53, D-58): ACTION frames per request (the 9th ends the executor with LIMIT);
+ * the per-action tick quota counts ring-3 ticks only (paused in agent_recv and in a confirmation), the
+ * per-request quota is wall clock. */
 #define ACTIONS_PER_REQUEST  8u
 
 /* ---- events ---- */
@@ -128,7 +130,7 @@ struct pol_state {
     uint8_t in_request, prog, tainted, fan_confirmed;
     uint8_t killing;                   /* LIMIT decided, EXEC_END not yet seen */
     uint8_t actions;                   /* ACTION frames accepted this request (D-53 cap) */
-    uint8_t waiting;                   /* the executor is inside agent_recv: the action quota is paused */
+    uint8_t waiting;                   /* the executor is inside agent_recv: the action quota is paused (D-58) */
     uint8_t pad0;
     uint32_t caps;
     uint32_t req_start, req_limit;     /* ticks (R2: start ticks, not counters) */

@@ -4,13 +4,12 @@
 import re
 import subprocess
 
-from tests.qemu import EVIDENCE, HOST_POLICY_TEST, HOST_POLICY_TEST_PERMISSIVE, REPO
+from tests.qemu import HOST_POLICY_TEST, HOST_POLICY_TEST_PERMISSIVE, REPO, evidence_dir
 
 
 def test_host_policy_tests():
     p = subprocess.run([str(HOST_POLICY_TEST)], cwd=REPO, capture_output=True, text=True, timeout=30)
-    EVIDENCE.mkdir(parents=True, exist_ok=True)
-    (EVIDENCE / "policy-host.txt").write_text(
+    (evidence_dir("T-02") / "policy-host.txt").write_text(
         f"$ build/host/policy_test\n# exit code {p.returncode}\n\n{p.stdout}"
     )
     assert p.returncode == 0, p.stdout + p.stderr
@@ -42,7 +41,7 @@ def test_host_policy_tests():
         "F7_",
         "F8_",
         "D53_action_cap",
-        "D53_waiting",
+        "D53_D58_waiting",
         "D53_link_drop",
     ):
         assert re.search(rf"^ok .*{name}", p.stdout, re.M), f"{name} missing:\n{p.stdout}"

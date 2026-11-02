@@ -1039,21 +1039,22 @@ static void t_D53_action_cap(void)
 
 static void t_D53_waiting(void)
 {
-    begin("D53_waiting (agent_recv pauses the action quota, never the request quota; boundary resumes it)");
+    begin("D53_D58_waiting (agent_recv pauses the action quota: ring-3 ticks only; request quota wall clock)");
     struct pol_state s = fresh(CAP_ALL, 1);
-    struct pol_decision d = step(&s, ev_sys(T, SYS_AGENT_RECV, 0x40001000, 256, 3000));
+    step(&s, ev_tick(T + 200));                                           /* 200 ring-3 ticks used */
+    struct pol_decision d = step(&s, ev_sys(T + 200, SYS_AGENT_RECV, 0x40001000, 256, 3000));
     CHECK(d.code == DEC_ALLOW && d.action == ACT_EXEC && s.waiting);
-    d = step(&s, ev_tick(T + 500));                                       /* action quota would fire here */
+    d = step(&s, ev_tick(T + 500));                                       /* would have fired here */
     CHECK(d.audit == 0 && !s.killing);
     d = step(&s, ev_tick(T + 2000));
     CHECK(d.audit == 0 && !s.killing);
     d = step(&s, ev_boundary(T + 2000));                                  /* agent_recv returned */
-    CHECK(d.audit == 0 && !s.waiting && s.act_start == T + 2000);
+    CHECK(d.audit == 0 && !s.waiting && s.act_start == T + 2000);        /* R2: the quota restarts */
     d = step(&s, ev_tick(T + 2499));
     CHECK(d.audit == 0);
-    d = step(&s, ev_tick(T + 2500));
+    d = step(&s, ev_tick(T + 2500));                                      /* 500 ring-3 ticks: LIMIT */
     CHECK(d.code == DEC_LIMIT && d.reason == R_ACTION_QUOTA && d.action == ACT_KILL);
-    /* the request quota is not paused by a wait */
+    /* the request quota is wall clock: not paused by a wait */
     s = fresh(CAP_ALL, 1);
     step(&s, ev_sys(T, SYS_AGENT_RECV, 0x40001000, 256, 100000));
     d = step(&s, ev_tick(T + 6000));
@@ -1080,6 +1081,26 @@ static void t_D53_waiting(void)
     struct pol_event b = ev_boundary(T);
     decide(&idle, &b, &next, &d);
     CHECK(d.audit == 0 && memcmp(&idle, &next, sizeof next) == 0);
+    /* together with a confirmation (R2): 300 ring-3 ticks, a 1000-tick prompt, a 1000-tick wait, then
+     * 500 more ring-3 ticks -> LIMIT; neither wait counted */
+    if (!policy_is_permissive()) {
+        s = fresh(CAP_ALL, 1);
+        step(&s, ev_tick(T + 300));
+        step(&s, ev_tele(T + 300, 300, 0, 1));
+        step(&s, ev_sys(T + 300, SYS_CELL_FAN, 60, 0, 0));               /* pending */
+        step(&s, ev_tele(T + 1300, 300, 0, 1));
+        d = step(&s, ev_answer(T + 1300, 0));
+        CHECK(d.code == DEC_CONFIRM_NO && s.act_start == T + 1000);      /* prompt time credited back */
+        step(&s, ev_sys(T + 1300, SYS_AGENT_RECV, 0x40001000, 256, 3000));
+        d = step(&s, ev_tick(T + 2000));
+        CHECK(d.audit == 0);                                              /* 700 ticks since act_start: paused */
+        step(&s, ev_boundary(T + 2300));
+        CHECK(s.act_start == T + 2300);
+        d = step(&s, ev_tick(T + 2799));
+        CHECK(d.audit == 0);
+        d = step(&s, ev_tick(T + 2800));
+        CHECK(d.code == DEC_LIMIT && d.reason == R_ACTION_QUOTA);
+    }
     ok();
 }
 

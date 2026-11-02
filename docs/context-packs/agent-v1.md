@@ -46,7 +46,7 @@ anything outside them.
   the fan runs, the kernel stops the fan on its own.
 - **E-stop:** when the button is pressed the kernel latches it and refuses every motion. Only a human at the
   console can reset it, with the button released. You cannot reset it; `halt` still works.
-- **Limits per request:** at most 8 operations and 60 seconds; then the request is stopped.
+- **Limits per request:** at most 8 operations and 120 seconds; then the request is stopped.
 
 ## Stored objects
 | name | trust | read | write |

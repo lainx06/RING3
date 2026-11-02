@@ -32,6 +32,8 @@ def serialize_all(seed: bytes) -> bytes:
     for r in REPLIES:
         v = validate(r)
         assert isinstance(v, Call | Done | Refuse), r
+        if isinstance(v, Call) and v.op == "witness":
+            continue  # D-58: never an ACTION frame (see test_witness_is_never_encoded_into_an_action)
         for t, body in s.serialize(v).frames:
             out += seq.wire(t, body)
     return out
@@ -58,13 +60,21 @@ def test_every_op_roundtrips_through_the_kernel_side_decoder():
             last_text = None
             actions.append(a)
     ops = [abi.OP_NAMES[a.op] for a in actions]
-    assert ops == ["cell_status", "fan_set", "servo_set", "halt", "lcd_show", "list_objects", "read_object",
-                   "write_object", "witness"]  # fmt: skip
+    assert ops == [
+        "cell_status",
+        "fan_set",
+        "servo_set",
+        "halt",
+        "lcd_show",
+        "list_objects",
+        "read_object",
+        "write_object",
+    ]  # fmt: skip  (witness: never an ACTION frame, D-58)
     p1 = {abi.OP_NAMES[a.op]: a.p1 for a in actions}
     assert p1["fan_set"] == 60 and p1["servo_set"] == 120 and p1["lcd_show"] == 1
     assert p1["read_object"] == abi.LINK_OBJ_MAINT_NOTES and p1["write_object"] == abi.LINK_OBJ_SCRATCH_2
-    assert all(p1[o] == 0 for o in ("cell_status", "halt", "list_objects", "witness"))
-    assert [a.nonce for a in actions] == [nonce_for(SEED, i) for i in range(9)]
+    assert all(p1[o] == 0 for o in ("cell_status", "halt", "list_objects"))
+    assert [a.nonce for a in actions] == [nonce_for(SEED, i) for i in range(8)]
     assert frames[-1].type == abi.LINK_T_FINAL and frames[-1].msg == abi.Final(
         abi.LINK_FINAL_DONE, "Self-test: sensor 290 mm, gauge and fan responded."
     )
@@ -115,3 +125,13 @@ def test_seq_wraps():
     w2 = c.wire(abi.LINK_T_STOP, b"\x01")
     f = FrameDecoder(B2K_BOUNDS).feed(w1 + w2)
     assert [x.seq for x in f] == [0xFFFF, 0]
+
+
+def test_witness_is_never_encoded_into_an_action():
+    """D-58: the camera witness is answered in the bridge (T-07); the serializer refuses it outright."""
+    from ring3bridge.strictjson import Call
+
+    ser = ActionSerializer(bytes(16))
+    with pytest.raises(ValueError, match="witness"):
+        ser.serialize(Call("witness", {}))
+    assert ser.next_index == 0

@@ -28,6 +28,11 @@ ALLOWED: dict[tuple[str, str], str] = {
         "ring3bridge/abi.py",
         "globals",
     ): "c_constants() lists this module's own LINK_* integers; no input involved",
+    (
+        "ring3bridge/replay.py",
+        "subprocess",
+    ): "replay_run() executes the repo's own host policy build (build/host/policy_test --replay, a fixed "
+    "argv) and feeds it TAPE lines rendered from integer `event` records; no model text is involved",
 }
 
 
@@ -58,7 +63,7 @@ def scan_source(src: str, rel: str) -> list[str]:
             elif isinstance(f, ast.Attribute) and isinstance(f.value, ast.Name):
                 if (f.value.id, f.attr) in BANNED_ATTRS:
                     out.append(f"{where} calls {f.value.id}.{f.attr}()")
-                if f.value.id in BANNED_MODULES:
+                if f.value.id in BANNED_MODULES and (rel, f.value.id) not in ALLOWED:
                     out.append(f"{where} calls {f.value.id}.{f.attr}()")
         elif isinstance(node, ast.Name) and node.id in ("__builtins__",):
             out.append(f"{where} touches __builtins__")
