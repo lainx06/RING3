@@ -173,3 +173,20 @@ $ uv run python tools/cellctl.py a5 /dev/ttyACM0 --only clamp,bad_crc,discard_li
 21:30:54   clamp        OK   fan reported 80 clamp=True; servo reported 165 clamp=True
 21:30:54   bad_crc      OK   BAD_FRAME seen=True, fan stayed 0, ack_seq stayed 21 (bad frame was seq 22)=True
 21:30:54   discard_link OK   LINK_LOST=True, link restored by the FAN=True, fan 0 for 1 s=True, a new FAN starts it=True
+
+$ uv run python tools/cellctl.py a5 /dev/ttyACM0 --only clamp,discard_link   (after test fix #10: dropped FANs proven accepted by exact ack with PINGs paused, 21:39 ET)
+21:39:27 opened /dev/ttyACM0 raw 115200 8N1; the Uno resets on open, waiting for the first STATE of the new boot
+21:39:28 first STATE of the new boot after 1645 ms (14 pre-reset frames discarded): STATE seq=0 t=16 ms fan=0% servo=90 dist=NO_ECHO estop=0 flags=- ack=0
+21:39:28   boot flags: WDT_RESET=False LINK_LOST=False
+21:39:28   undecodable bytes runs before sync (frames cut by the reset): 3
+21:39:30 [clamp] FAN 100 -> 80 + CLAMP; SERVO 170 -> 165 + CLAMP
+21:39:30   FAN 100: STATE seq=33 t=1666 ms fan=80% servo=90 dist=255 mm estop=0 flags=CLAMP ack=8
+21:39:31   SERVO 170: STATE seq=39 t=1966 ms fan=0% servo=165 dist=251 mm estop=0 flags=CLAMP ack=11
+21:39:32   -> OK: fan reported 80 clamp=True; servo reported 165 clamp=True
+21:39:32 [discard_link] fan 60, silence -> LINK_LOST; first frame back is FAN 60 -> dropped, fan stays 0
+21:39:33   LINK_LOST: STATE seq=86 t=4316 ms fan=0% servo=90 dist=262 mm estop=0 flags=LINK_LOST ack=20
+21:39:33   link back via FAN 60 (accepted, exact ack): STATE seq=87 t=4366 ms fan=0% servo=90 dist=253 mm estop=0 flags=- ack=21
+21:39:33   -> OK: LINK_LOST=True, link restored by the FAN=True, fan 0 for 1 s=True, a new FAN starts it=True
+21:39:34 A5 SUMMARY
+21:39:34   clamp        OK   fan reported 80 clamp=True; servo reported 165 clamp=True
+21:39:34   discard_link OK   LINK_LOST=True, link restored by the FAN=True, fan 0 for 1 s=True, a new FAN starts it=True

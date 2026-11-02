@@ -188,6 +188,17 @@ class Cell:
         self.last_tx = time.monotonic()
         return self.seq
 
+    def send_proven(self, ftype: int, body: bytes = b"", timeout: float = 0.5) -> State | None:
+        """Send with PINGs paused; return the first STATE whose ack_seq is exactly this frame's seq.
+        Nothing else was sent, so that STATE proves the board accepted this frame (a rejected frame never
+        moves ack_seq), and it is the board's state right after handling it."""
+        was = self.pinging
+        self.pinging = False
+        seq = self.send(ftype, body)
+        st = self.wait_for(lambda s: s.ack_seq == seq, timeout)
+        self.pinging = was
+        return st
+
     def poll(self) -> list[State]:
         """Read what's there (<= 100 ms), keep the link fed with PING every 250 ms, return new STATEs."""
         now = time.monotonic()
@@ -351,8 +362,8 @@ class Checks:
         self.prompt("Release the E-stop now.")
         rel = self.c.wait_for(lambda s: s.estop == 0, 30.0)
         self.c.run(0.3)
-        self.c.send(T_FAN, bytes([FAN_DUTY]))  # latched: fan must stay 0
-        latched = self.c.latest(0.4)
+        acc = self.c.send_proven(T_FAN, bytes([FAN_DUTY]))  # accepted while latched: fan must stay 0
+        latched = self.c.latest(0.4) if acc is not None else None
         latched_ok = (
             rel is not None and latched is not None and latched.fan == 0 and latched.has(F_ESTOP_LATCHED)
         )
@@ -510,11 +521,13 @@ class Checks:
         self.c.pinging = False
         lost = self.c.wait_for(lambda s: s.has(F_LINK_LOST), 3.0)
         self.log(f"  LINK_LOST: {lost}")
-        seq = self.c.send(T_FAN, bytes([FAN_DUTY]))  # restores the link; must not start the fan
+        acc = self.c.send_proven(
+            T_FAN, bytes([FAN_DUTY])
+        )  # accepted, restores the link, must not start the fan
+        back = acc if acc is not None and not acc.has(F_LINK_LOST) and acc.fan == 0 else None
         self.c.last_ping = time.monotonic()
         self.c.pinging = True
-        back = self.c.wait_for(lambda s: acked(s, seq) and not s.has(F_LINK_LOST), 1.0)
-        self.log(f"  link back via FAN 60: {back}")
+        self.log(f"  link back via FAN 60 (accepted, exact ack): {acc}")
         stays = self._fan_stays_zero(1.0)
         starts = self._new_fan_starts()
         self.record(
@@ -535,8 +548,9 @@ class Checks:
         latched = self.c.wait_for(lambda s: s.has(F_ESTOP_LATCHED), 30.0)
         released = self.c.wait_for(lambda s: s.estop == 0, 30.0) if latched else None
         self.log(f"  latched and released: {released}")
-        self.c.send(T_FAN, bytes([FAN_DUTY]))
-        during = self._fan_stays_zero(0.5)
+        acc = self.c.send_proven(T_FAN, bytes([FAN_DUTY]))  # accepted while latched: must be dropped
+        self.log(f"  FAN 60 while latched (accepted, exact ack): {acc}")
+        during = acc is not None and acc.fan == 0 and acc.has(F_ESTOP_LATCHED) and self._fan_stays_zero(0.5)
         self.c.run(0.2)
         self.c.send(T_ESTOP_RESET)
         cleared = self.c.wait_for(lambda s: not s.has(F_ESTOP_LATCHED), 1.0)
@@ -562,16 +576,17 @@ class Checks:
         self.prompt("Put your hand about 5 cm in front of the sensor and keep it there until told (30 s).")
         fault = self.c.wait_for(lambda s: s.has(F_PRESENCE_FAULT), 30.0)
         self.log(f"  fault: {fault}")
-        self.c.send(T_FAN, bytes([FAN_DUTY]))  # hand still there: dropped, fault stays
-        during = self._fan_stays_zero(0.5)
+        acc = self.c.send_proven(T_FAN, bytes([FAN_DUTY]))  # hand still there: accepted, dropped, fault stays
+        self.log(f"  FAN 60 with the hand there (accepted, exact ack): {acc}")
+        during = acc is not None and acc.fan == 0 and acc.has(F_PRESENCE_FAULT) and self._fan_stays_zero(0.5)
         still = self.c.latest(0.2)
         held = still is not None and still.has(F_PRESENCE_FAULT)
         self.prompt("Take your hand away now.")
         clear = self.clear_reading(30.0)
         self.c.run(0.3)
-        seq = self.c.send(T_FAN, bytes([FAN_DUTY]))  # clears the fault; the setpoint is dropped
-        cleared = self.c.wait_for(lambda s: acked(s, seq) and not s.has(F_PRESENCE_FAULT), 1.0)
-        self.log(f"  clearing FAN 60: {cleared}")
+        acc2 = self.c.send_proven(T_FAN, bytes([FAN_DUTY]))  # accepted: clears the fault, setpoint dropped
+        cleared = acc2 if acc2 is not None and not acc2.has(F_PRESENCE_FAULT) and acc2.fan == 0 else None
+        self.log(f"  clearing FAN 60 (accepted, exact ack): {acc2}")
         after = self._fan_stays_zero(1.0)
         starts = self._new_fan_starts()
         self.record(
