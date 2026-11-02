@@ -1,0 +1,3 @@
+# RING3 project spend cap (D-12, user-set). Integer µUSD. Every model request also needs --budget-usd per run.
+# Costs in RING3 are estimates from config/models.toml prices, not billing.
+project_cap_uusd = 30000000  # $30

@@ -1,0 +1,21 @@
+# RING3 model configuration. Read by bridge/ring3bridge/config.py. Never put a key here (MODEL_API_KEY, env only).
+#
+# Model ID and endpoint: ARCHITECTURE §6 / D-06 (seen in Meta's authenticated catalog on 2026-10-31).
+# Request/response field names: [UNVERIFIED] against Meta's public API docs (T-03a had no network access to Meta).
+#
+# PRICE: [UNVERIFIED]. Not taken from Meta's official pricing page, so it is left unset and the ledger refuses
+# to reserve (fails closed, INV-09). To enable paid calls, the user copies the two prices from Meta's official
+# pricing page and fills in price_source (URL) and price_checked (date). The loader refuses a price without both.
+# Unofficial hint only, NOT used (secondary aggregators eesel.ai and docs.litellm.ai, seen 2026-11-02):
+# $1.25 per 1M input tokens, $4.25 per 1M output tokens for muse-spark-1.3.
+# Units: integer µUSD per 1,000,000 tokens (e.g. $1.25 / 1M tokens -> 1250000).
+
+[model]
+id = "muse-spark-1.3"
+endpoint = "https://api.meta.ai/v1/responses"
+max_output_tokens = 512
+timeout_s = 60
+# price_input_uusd_per_mtok = 0
+# price_output_uusd_per_mtok = 0
+# price_source = "https://<official Meta pricing page>"
+# price_checked = "YYYY-MM-DD"
