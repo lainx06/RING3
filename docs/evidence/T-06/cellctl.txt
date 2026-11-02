@@ -93,3 +93,19 @@ $ uv run python tools/cellctl.py a5 /dev/ttyACM0 --only clamp,link_loss,discard_
 21:23:34   clamp        OK   fan reported 80 clamp=True; servo reported 165 clamp=True
 21:23:34   link_loss    OK   parked after 1093 ms, fan=0 servo=90, PING clears LINK_LOST=True, fan not auto-restarted=True
 21:23:34   discard_link OK   LINK_LOST=True, link restored by the FAN=True, fan 0 for 1 s=True, a new FAN starts it=True
+
+$ uv run python tools/cellctl.py a5 /dev/ttyACM0 --only estop   (run by the user in their terminal, 21:23 ET)
+21:24:28 opened /dev/ttyACM0 raw 115200 8N1; the Uno resets on open, waiting for the first STATE of the new boot
+21:24:30 first STATE of the new boot after 1641 ms (10 pre-reset frames discarded): STATE seq=0 t=16 ms fan=0% servo=90 dist=NO_ECHO estop=0 flags=- ack=0
+21:24:30   boot flags: WDT_RESET=False LINK_LOST=False
+21:24:30   undecodable bytes runs before sync (frames cut by the reset): 2
+21:24:31 [estop] fan 60, press E-stop -> fan 0 in the next STATE; latched until ESTOP_RESET + released
+21:24:31   >>> Press and HOLD the E-stop now (30 s).
+21:24:37   first STATE after press: STATE seq=159 t=7966 ms fan=0% servo=90 dist=274 mm estop=0 flags=ESTOP_L ack=33
+21:24:37   ESTOP_RESET while held: STATE seq=165 t=8266 ms fan=0% servo=90 dist=264 mm estop=1 flags=ESTOP_L ack=35
+21:24:37   >>> Release the E-stop now.
+21:24:39   released, FAN 60 sent: STATE seq=202 t=10116 ms fan=0% servo=90 dist=273 mm estop=0 flags=ESTOP_L ack=44
+21:24:39   ESTOP_RESET released: STATE seq=203 t=10166 ms fan=0% servo=90 dist=273 mm estop=0 flags=- ack=45
+21:24:40   -> OK: cut on press=True, reset refused while held=True, latch holds after release=True, reset clears=True, fan not auto-restarted=True
+21:24:40 A5 SUMMARY
+21:24:40   estop        OK   cut on press=True, reset refused while held=True, latch holds after release=True, reset clears=True, fan not auto-restarted=True
