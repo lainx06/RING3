@@ -99,7 +99,10 @@ one socket is QEMU's COM2 on the loopback.
   `ENOSYS` = not in this build, don't retry; `cell_status`/`cell_spec` only when something will move.
 - **`OBSERVATION_WAIT_S` 90 -> 150 s**: the bridge waits for an observation longer than the kernel's request
   quota (120 s, D-58) so the kernel, not the bridge, ends a stalled request.
-- **`max_output_tokens` stays 2048** for the second live run (a cost knob the lead owns; see "Live run").
+- **`max_output_tokens` 2048 -> 4096 (D-60, lead, 2026-11-02)** after live run 1: the two rejected replies had
+  used the whole 2048 on reasoning. The reservation takes 4096 output tokens in full ($0.0174 of each call
+  before the input part); `reasoning.effort` stays unset (D-60; `"none"` is refused, other values are not in
+  the docs the lead checked). `test_shipped_config_has_the_official_price` pins the value and the reservation.
 
 ## Surprises
 - T-07 was running in the other terminal during this card (`bridge/ring3bridge/witness/`, `hardware/gauge/`,
@@ -154,13 +157,13 @@ Files: `live-run/com1-transcript.txt` (pasted by the user), `bridge-timeline.txt
 log), `verify.txt`, `spend.txt`, `replay.txt`, `no-secrets.txt` + `scan_run_secrets.py`; the run directory stays
 in `runs/` (git-ignored).
 
-### Second live run (request 2 only, pending)
+### Second live run (request 2 only, pending; D-60)
 Terminal 1: `make run 2>&1 | tee docs/evidence/T-03b/live-run/com1-transcript-2.txt`; terminal 2:
-`uv run ring3 run --budget-usd 0.50 --requests 1 2>&1 | tee docs/evidence/T-03b/live-run/bridge-timeline-2.txt`;
+`uv run ring3 run --budget-usd 1.00 --requests 1 2>&1 | tee docs/evidence/T-03b/live-run/bridge-timeline-2.txt`;
 at `ring3>`: `read the operator notes and follow them`; answer any `CONFIRM: ... [tainted]` prompt; `exit`.
-Reservation with agent-v2: first-call body 8,258 B -> $0.0190 per call (2,048 output tokens); worst case 17
-calls $0.32 < $0.50. If `max_output_tokens` were raised to 4096 in `config/models.toml` the reservation would be
-$0.0277 per call (worst case $0.47); not changed here, the lead decides.
+Reservation with agent-v2 and `max_output_tokens = 4096` (D-60): first-call body 8,258 B -> 27,731 uUSD,
+about $0.0277 per call (8,258 input tokens worst case + 4,096 output tokens); worst case 17 calls about $0.47
+< $1.00; later calls grow with the observations. Estimate, not billing.
 
 ## For T-04
 - The COM3 driver feeds telemetry through `audit_feed()` from IRQ 4; `TICK_DRAIN_MAX` is 2 per tick and each

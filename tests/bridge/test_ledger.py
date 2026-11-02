@@ -30,12 +30,16 @@ def test_shipped_config_has_the_official_price(tmp_path):
     assert cfg.price == Price(
         1_250_000, 4_250_000, "https://dev.meta.ai/docs/pricing-rate-limits", "2026-11-01", 150_000
     )
-    assert cfg.max_output_tokens >= 16  # Responses API minimum; bounds reasoning + visible output
+    # D-60: 4096 (>= 16, the Responses API minimum); it bounds reasoning + visible output together
+    assert cfg.max_output_tokens == 4096
     assert load_project_cap() == 30_000_000  # $30, D-12
     led = Ledger(load_project_cap(), tmp_path / "l.jsonl")
     r = led.reserve("run1", "hello", cfg.max_output_tokens, cfg.price, usd_to_uusd("1"))
-    assert r.uusd == cost_uusd(5, 1_250_000) + cost_uusd(cfg.max_output_tokens, 4_250_000)
-    assert r.price_cached == 150_000
+    assert r.uusd == cost_uusd(5, 1_250_000) + cost_uusd(4096, 4_250_000) == 7 + 17_408  # rounded up
+    assert r.max_output_tokens == 4096 and r.price_cached == 150_000
+    # a live-run-sized first call (8,258 B body, agent-v2) reserves about $0.0277 at the official price
+    r2 = led.reserve("run1", "x" * 8258, cfg.max_output_tokens, cfg.price, usd_to_uusd("1"))
+    assert r2.uusd == cost_uusd(8258, 1_250_000) + 17_408 == 27_731
 
 
 def test_no_price_fails_closed(tmp_path):
