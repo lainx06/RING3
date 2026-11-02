@@ -1,6 +1,7 @@
 /* RING3 policy engine (see policy.h). Pure: no globals, no clock, no kernel headers. Rule order for a syscall
- * (R5, R3, D-45): argument ranges -> uaccess -> capability -> object rule -> static device limits -> E-stop
- * latch -> stale telemetry -> presence -> confirmation -> allow. A deny changes no state. */
+ * (R5, R3, D-45, D-52): inside a request -> energy-reducing calls (cell_halt, cell_fan(0): nothing else is
+ * checked) -> killing -> pending -> argument ranges -> uaccess -> capability -> object rule -> E-stop latch ->
+ * static device limits -> stale telemetry -> presence -> confirmation -> allow. A deny changes no state. */
 #include "policy.h"
 #include POLICY_VARIANT_HEADER
 
@@ -150,7 +151,24 @@ static void eval_call(const struct pol_state *s, uint32_t tick, uint32_t nr, con
                       int answered, struct pol_state *n, struct pol_decision *d)
 {
     d->target = (uint32_t)a[0];
-    if (!s->in_request || s->killing) {
+    if (!s->in_request) {
+        set(d, DEC_DENY_RULE, R_NO_REQUEST, -EPERM, ACT_NONE);
+        return;
+    }
+    /* Energy-reducing calls come first (INV-16, D-50, D-52): cell_halt and cell_fan(0) need no capability and
+     * no telemetry, ignore taint and the E-stop latch, never prompt, and are allowed even while a LIMIT is
+     * being carried out or a confirmation is pending (the prompt stays as it is). Only the commanded duty
+     * changes. */
+    if (nr == SYS_CELL_HALT || (nr == SYS_CELL_FAN && a[0] == 0)) {
+        n->fan_duty = 0;
+        if (s->fan_duty != 0) {
+            n->fan_change_tick = tick;
+            n->fan_changed = 1;
+        }
+        set(d, DEC_ALLOW, nr == SYS_CELL_HALT ? R_HALT : R_NONE, 0, ACT_EXEC);
+        return;
+    }
+    if (s->killing) {
         set(d, DEC_DENY_RULE, R_NO_REQUEST, -EPERM, ACT_NONE);
         return;
     }
@@ -200,16 +218,6 @@ static void eval_call(const struct pol_state *s, uint32_t tick, uint32_t nr, con
         set(d, DEC_DENY_FAULT, R_UACCESS, -EFAULT, ACT_NONE);
         return;
     }
-    /* Reducing energy is always allowed (INV-16, D-29): no capability, no taint, no E-stop check. */
-    if (nr == SYS_CELL_HALT) {
-        n->fan_duty = 0;
-        if (s->fan_duty != 0) {
-            n->fan_change_tick = tick;
-            n->fan_changed = 1;
-        }
-        set(d, DEC_ALLOW, R_HALT, 0, ACT_EXEC);
-        return;
-    }
     if (nr == SYS_EXIT || nr == SYS_UPTIME) {
         set(d, DEC_ALLOW, R_NONE, 0, ACT_EXEC);
         d->audit = 0;                              /* no authority involved; EXEC_END covers exit */
@@ -237,11 +245,14 @@ static void eval_call(const struct pol_state *s, uint32_t tick, uint32_t nr, con
         if (rule == RULE_CONFIRM)
             need_confirm = R_OBJ_CONFIRM;
     }
-    /* Device rules (ARCHITECTURE §3a, D-47). A fan decrease (incl. 0) adds no energy: no step, rate,
-     * interlock or E-stop rule applies to it (INV-16). An increase or a servo move is `motion`. */
-    int fan_on = nr == SYS_CELL_FAN && a[0] > 0;
-    int fan_up = nr == SYS_CELL_FAN && a[0] > (int)s->fan_duty;
-    int motion = fan_up || nr == SYS_CELL_SERVO;
+    /* Device rules (ARCHITECTURE §3a, D-47, D-52). Every non-zero fan command and every servo move is
+     * `motion`: the E-stop latch and the interlock (stale, presence, no echo) apply to all of them. Only a
+     * fan increase or a servo move adds energy: the ramp rules (step, rate) and the taint prompt apply to
+     * those alone; a decrease to a non-zero duty never prompts (D-50, INV-16). fan(0) was handled above. */
+    int fan_on = nr == SYS_CELL_FAN;
+    int fan_up = fan_on && a[0] > (int)s->fan_duty;
+    int motion = fan_on || nr == SYS_CELL_SERVO;
+    int adds_energy = fan_up || nr == SYS_CELL_SERVO;
     if (motion && s->estop_latched) {                                   /* the latch outranks every limit */
         set(d, DEC_DENY_ESTOP, R_ESTOP, -ESAFETY, ACT_NONE);
         return;
@@ -287,10 +298,11 @@ static void eval_call(const struct pol_state *s, uint32_t tick, uint32_t nr, con
             return;
         }
     }
-    if (fan_on && !s->fan_confirmed && !need_confirm)
+    if (fan_up && !s->fan_confirmed && !need_confirm)
         need_confirm = R_FIRST_FAN;
-    /* Taint (D-27, INV-15): every write and every motion needs a human answer while tainted. */
-    if (s->tainted && (nr == SYS_OBJ_WRITE || fan_on || nr == SYS_CELL_SERVO))
+    /* Taint (D-27, INV-15, D-50): every write and every energy-adding motion needs a human answer while
+     * tainted; a fan decrease does not. */
+    if (s->tainted && (nr == SYS_OBJ_WRITE || adds_energy))
         need_confirm = R_TAINT;
     uint8_t allow_reason = R_NONE;
     if (need_confirm && !answered) {

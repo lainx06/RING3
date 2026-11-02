@@ -134,7 +134,8 @@ static void t_syscall_caps(void)
         { SYS_AGENT_RECV, CAP_AGENT_LINK },
     };
     for (unsigned i = 0; i < sizeof rows / sizeof rows[0]; i++) {
-        int32_t a0 = rows[i].nr == SYS_CELL_FAN || rows[i].nr == SYS_CELL_LCD ? 0
+        /* cell_fan is probed with a non-zero duty: fan(0) is energy-reducing and needs no capability (D-52) */
+        int32_t a0 = rows[i].nr == SYS_CELL_FAN ? 60 : rows[i].nr == SYS_CELL_LCD ? 0
                      : rows[i].nr == SYS_CELL_SERVO ? 90 : 0x40001000;
         int32_t a1 = rows[i].nr == SYS_OBJ_READ || rows[i].nr == SYS_OBJ_WRITE ? 0x40001000 : 8;
         if (rows[i].nr == SYS_OBJ_READ || rows[i].nr == SYS_OBJ_WRITE)
@@ -333,9 +334,10 @@ static void t_fan_rules(void)
     CHECK(d.code == DEC_DENY_LIMIT && d.reason == R_FAN_RANGE);
     d = fan(&s, T + 100, 80);
     CHECK(d.code == DEC_ALLOW && s.fan_duty == 80 && s.fan_change_tick == T + 100);
-    s.distance_mm = 50;                   /* a hand, before the lease has run: a decrease still goes through */
+    s.distance_mm = 50;                   /* a hand, before the lease has run (D-52: a non-zero decrease keeps the
+                                             presence gate; only fan(0) and halt are unconditional) */
     d = fan(&s, T + 100, 50);
-    CHECK(d.code == DEC_ALLOW && s.fan_duty == 50);                      /* decrease: always, same tick */
+    CHECK(d.code == DEC_DENY_INTERLOCK && d.reason == R_PRESENCE && s.fan_duty == 80);
     s.distance_mm = 300;
     d = fan(&s, T + 100, 0);
     CHECK(d.code == DEC_ALLOW && s.fan_duty == 0);
@@ -786,6 +788,145 @@ static void t_names(void)
     ok();
 }
 
+/* ---- T-02F (D-50, D-52) ---- */
+static void t_F3(void)
+{
+    begin("F3_energy_reducing (D-50/D-52: halt and fan(0) need nothing and preserve a pending prompt; a non-zero "
+          "decrease keeps every gate but the ramp rule and the taint prompt)");
+    struct pol_state s, before;
+    struct pol_decision d;
+    const int32_t P = 0x40001000;
+    if (!policy_is_permissive()) {
+        /* with a pending confirmation: allowed, duty 0, the prompt untouched and still answerable */
+        for (int call = 0; call < 2; call++) {
+            s = fresh(CAP_ALL, 1);
+            fan(&s, T, 60);
+            step(&s, ev_tele(T + 200, 300, 0, 1));
+            d = step(&s, ev_sys(T + 200, SYS_OBJ_WRITE, OBJ_MAINT_NOTES, P, 4));
+            CHECK(d.code == DEC_CONFIRM_PENDING && s.pending && s.fan_duty == 60);
+            before = s;
+            d = step(&s, call ? ev_sys(T + 201, SYS_CELL_FAN, 0, 0, 0) : ev_sys(T + 201, SYS_CELL_HALT, 0, 0, 0));
+            CHECK(d.code == DEC_ALLOW && d.action == ACT_EXEC && d.audit && s.fan_duty == 0);
+            CHECK(s.pending && s.pend_nr == SYS_OBJ_WRITE && s.pend_since == before.pend_since);
+            struct pol_state cmp = s;                 /* nothing but the fan fields and seq changed */
+            cmp.fan_duty = before.fan_duty;
+            cmp.fan_change_tick = before.fan_change_tick;
+            cmp.fan_changed = before.fan_changed;
+            cmp.seq = before.seq;
+            CHECK(memcmp(&cmp, &before, sizeof cmp) == 0);
+            d = step(&s, ev_answer(T + 202, 1));
+            CHECK(d.code == DEC_CONFIRM_YES && !s.pending);
+            /* a non-zero decrease while pending keeps the gate */
+            s = before;
+            d = step(&s, ev_sys(T + 201, SYS_CELL_FAN, 50, 0, 0));
+            CHECK(d.code == DEC_DENY_RULE && d.reason == R_PENDING && s.fan_duty == 60);
+        }
+    }
+    /* after LIMIT (killing): halt and fan(0) still go through, a decrease and everything else do not */
+    s = fresh(CAP_ALL, 1);
+    fan(&s, T, 60);
+    d = step(&s, ev_tick(T + 500));
+    CHECK(d.code == DEC_LIMIT && s.killing && s.fan_duty == 60);
+    d = step(&s, ev_sys(T + 500, SYS_CELL_HALT, 0, 0, 0));
+    CHECK(d.code == DEC_ALLOW && d.reason == R_HALT && d.action == ACT_EXEC && s.fan_duty == 0);
+    s.fan_duty = 60;
+    d = step(&s, ev_sys(T + 500, SYS_CELL_FAN, 0, 0, 0));
+    CHECK(d.code == DEC_ALLOW && d.action == ACT_EXEC && s.fan_duty == 0);
+    s.fan_duty = 60;
+    d = step(&s, ev_sys(T + 500, SYS_CELL_FAN, 50, 0, 0));
+    CHECK(d.code == DEC_DENY_RULE && d.reason == R_NO_REQUEST && s.fan_duty == 60);
+    d = step(&s, ev_sys(T + 500, SYS_UPTIME, 0, 0, 0));
+    CHECK(d.code == DEC_DENY_RULE && d.reason == R_NO_REQUEST);
+    /* outside a request: nothing, not even halt (the first check) */
+    policy_state_init(&s);
+    s.fan_duty = 60;
+    d = step(&s, ev_sys(T, SYS_CELL_HALT, 0, 0, 0));
+    CHECK(d.code == DEC_DENY_RULE && d.reason == R_NO_REQUEST && s.fan_duty == 60);
+    /* under E-stop (latched) */
+    s = fresh(CAP_ALL, 1);
+    fan(&s, T, 60);
+    d = step(&s, ev_tele(T + 1, 300, 1, 1));
+    CHECK(d.code == DEC_AUTO_HALT && s.estop_latched && s.fan_duty == 0);
+    s.fan_duty = 60;
+    d = step(&s, ev_sys(T + 1, SYS_CELL_HALT, 0, 0, 0));
+    CHECK(d.code == DEC_ALLOW && s.fan_duty == 0);
+    s.fan_duty = 60;
+    d = step(&s, ev_sys(T + 1, SYS_CELL_FAN, 0, 0, 0));
+    CHECK(d.code == DEC_ALLOW && s.fan_duty == 0);
+    s.fan_duty = 60;
+    d = step(&s, ev_sys(T + 1, SYS_CELL_FAN, 50, 0, 0));
+    CHECK(d.code == DEC_DENY_ESTOP && d.reason == R_ESTOP && s.fan_duty == 60);
+    /* tainted: no prompt for halt / fan(0) */
+    s = fresh(CAP_ALL, 1);
+    fan(&s, T, 60);
+    step(&s, ev_sys(T, SYS_OBJ_READ, OBJ_MAINT_NOTES, P, 8));
+    CHECK(s.tainted);
+    d = step(&s, ev_sys(T + 1, SYS_CELL_HALT, 0, 0, 0));
+    CHECK(d.code == DEC_ALLOW && d.action == ACT_EXEC && s.fan_duty == 0);
+    s.fan_duty = 60;
+    d = step(&s, ev_sys(T + 1, SYS_CELL_FAN, 0, 0, 0));
+    CHECK(d.code == DEC_ALLOW && d.action == ACT_EXEC && s.fan_duty == 0 && s.tainted);
+    /* without CAP_DEV_MOVE (and with no capability at all, no telemetry) */
+    s = fresh(CAP_ALL & ~CAP_DEV_MOVE, 1);
+    s.fan_duty = 60;
+    d = step(&s, ev_sys(T, SYS_CELL_HALT, 0, 0, 0));
+    CHECK(d.code == DEC_ALLOW && s.fan_duty == 0);
+    s.fan_duty = 60;
+    d = step(&s, ev_sys(T, SYS_CELL_FAN, 0, 0, 0));
+    CHECK(d.code == DEC_ALLOW && s.fan_duty == 0);
+    s.fan_duty = 60;
+    d = step(&s, ev_sys(T, SYS_CELL_FAN, 50, 0, 0));
+    CHECK(d.code == (policy_is_permissive() ? DEC_ALLOW : DEC_DENY_CAP));
+    s = fresh(0, 0);
+    s.fan_duty = 60;
+    d = step(&s, ev_sys(T, SYS_CELL_FAN, 0, 0, 0));
+    CHECK(d.code == DEC_ALLOW && s.fan_duty == 0 && s.fan_change_tick == T && s.fan_changed);
+    d = step(&s, ev_sys(T, SYS_CELL_FAN, 0, 0, 0));
+    CHECK(d.code == DEC_ALLOW && s.fan_change_tick == T);                 /* already 0: no new change */
+    /* a tainted 80 -> 60 decrease: allowed without a prompt, in the same tick as the last change */
+    s = fresh(CAP_ALL, 1);
+    fan(&s, T, 60);
+    step(&s, ev_tele(T + 100, 300, 0, 1));
+    d = fan(&s, T + 100, 80);
+    CHECK(d.code == DEC_ALLOW && s.fan_duty == 80);
+    step(&s, ev_sys(T + 100, SYS_OBJ_READ, OBJ_MAINT_NOTES, P, 8));
+    CHECK(s.tainted);
+    d = step(&s, ev_sys(T + 100, SYS_CELL_FAN, 60, 0, 0));
+    CHECK(d.code == DEC_ALLOW && d.action == ACT_EXEC && d.reason == R_NONE && s.fan_duty == 60 && !s.pending);
+    step(&s, ev_tele(T + 300, 300, 0, 1));
+    d = step(&s, ev_sys(T + 300, SYS_CELL_FAN, 70, 0, 0));                 /* an increase still prompts */
+    CHECK(d.code == (policy_is_permissive() ? DEC_ALLOW : DEC_CONFIRM_PENDING) &&
+          (policy_is_permissive() || d.reason == R_TAINT));
+    if (!policy_is_permissive())
+        step(&s, ev_answer(T + 301, 0));
+    /* a decrease to 60 with a hand present, with stale data; to 40 */
+    s = fresh(CAP_ALL, 1);
+    fan(&s, T, 60);
+    step(&s, ev_tele(T + 100, 300, 0, 1));
+    fan(&s, T + 100, 80);
+    s.distance_mm = 50;
+    d = step(&s, ev_sys(T + 100, SYS_CELL_FAN, 60, 0, 0));
+    CHECK(d.code == DEC_DENY_INTERLOCK && d.reason == R_PRESENCE && d.result == -ESAFETY && s.fan_duty == 80);
+    s.distance_mm = 0xFFFF;
+    d = step(&s, ev_sys(T + 100, SYS_CELL_FAN, 60, 0, 0));
+    CHECK(d.code == DEC_DENY_INTERLOCK && d.reason == R_NO_ECHO && s.fan_duty == 80);
+    s.distance_mm = 300;
+    d = step(&s, ev_sys(T + 200, SYS_CELL_FAN, 60, 0, 0));                 /* telemetry 1 s old */
+    CHECK(d.code == DEC_DENY_STALE && d.reason == R_STALE && s.fan_duty == 80);
+    step(&s, ev_tele(T + 200, 300, 0, 1));
+    d = step(&s, ev_sys(T + 200, SYS_CELL_FAN, 40, 0, 0));
+    CHECK(d.code == DEC_DENY_ARG && d.reason == R_ARG && d.result == -EINVAL && s.fan_duty == 80);
+    d = step(&s, ev_sys(T + 200, SYS_CELL_FAN, 60, 0, 0));                 /* and now it goes through */
+    CHECK(d.code == DEC_ALLOW && s.fan_duty == 60);
+    /* a tainted servo move still prompts */
+    s = fresh(CAP_ALL, 1);
+    step(&s, ev_sys(T, SYS_OBJ_READ, OBJ_MAINT_NOTES, P, 8));
+    d = step(&s, ev_sys(T, SYS_CELL_SERVO, 100, 0, 0));
+    CHECK(d.code == (policy_is_permissive() ? DEC_ALLOW : DEC_CONFIRM_PENDING) &&
+          (policy_is_permissive() || d.reason == R_TAINT));
+    ok();
+}
+
 /* ---- replay: TAPE lines in, AUDIT lines out, same format as kernel/core/audit.c ---- */
 static int replay(void)
 {
@@ -839,6 +980,7 @@ int main(int argc, char **argv)
     t_R6();
     t_R7();
     t_R8();
+    t_F3();
     t_names();
     printf("policy_test: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;
