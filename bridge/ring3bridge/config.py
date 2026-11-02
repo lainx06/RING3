@@ -11,6 +11,9 @@ REPO = Path(__file__).resolve().parents[2]
 MODELS_TOML = REPO / "config" / "models.toml"
 BUDGET_TOML = REPO / "config" / "budget.toml"
 MIN_OUTPUT_TOKENS = 16  # Responses API: max_output_tokens >= 16; it bounds reasoning + visible output (D-55)
+# D-61: the documented reasoning.effort values (https://dev.meta.ai/docs/protocols/responses). "none" is
+# HTTP 400 for Muse Spark and is never sent; an unset key means the field is not sent at all.
+REASONING_EFFORTS = ("minimal", "low", "medium", "high", "xhigh")
 
 
 class ConfigError(ValueError):
@@ -33,6 +36,9 @@ class ModelConfig:
     max_output_tokens: int
     timeout_s: int
     price: Price | None  # None = unset: the ledger refuses to reserve (fails closed)
+    reasoning_effort: str | None = (
+        None  # D-61: one of REASONING_EFFORTS, sent in every request; None = not sent
+    )
 
 
 def _int(d: dict, key: str, lo: int, hi: int) -> int:
@@ -64,6 +70,15 @@ def _price(d: dict) -> Price | None:
     return Price(pin, pout, src, checked, pcached)
 
 
+def _reasoning_effort(d: dict) -> str | None:
+    if "reasoning_effort" not in d:
+        return None
+    v = d["reasoning_effort"]
+    if type(v) is not str or v not in REASONING_EFFORTS:
+        raise ConfigError(f'reasoning_effort must be one of {", ".join(REASONING_EFFORTS)} (never "none")')
+    return v
+
+
 def load_model_config(path: Path = MODELS_TOML) -> ModelConfig:
     with open(path, "rb") as f:
         d = tomllib.load(f)
@@ -81,6 +96,7 @@ def load_model_config(path: Path = MODELS_TOML) -> ModelConfig:
         max_output_tokens=_int(m, "max_output_tokens", MIN_OUTPUT_TOKENS, 65536),
         timeout_s=_int(m, "timeout_s", 1, 600),
         price=_price(m),
+        reasoning_effort=_reasoning_effort(m),
     )
 
 

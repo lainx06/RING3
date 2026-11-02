@@ -32,6 +32,7 @@ def test_shipped_config_has_the_official_price(tmp_path):
     )
     # D-60: 4096 (>= 16, the Responses API minimum); it bounds reasoning + visible output together
     assert cfg.max_output_tokens == 4096
+    assert cfg.reasoning_effort == "low"  # D-61
     assert load_project_cap() == 30_000_000  # $30, D-12
     led = Ledger(load_project_cap(), tmp_path / "l.jsonl")
     r = led.reserve("run1", "hello", cfg.max_output_tokens, cfg.price, usd_to_uusd("1"))
@@ -182,3 +183,20 @@ def test_config_price_needs_source_and_date(tmp_path):
     p.write_text(priced.replace("max_output_tokens = 512", "max_output_tokens = 15"))
     with pytest.raises(ConfigError):
         load_model_config(p)  # below the API minimum of 16
+
+
+def test_config_reasoning_effort_is_a_documented_value(tmp_path):
+    """D-61: minimal/low/medium/high/xhigh pass; "none" (HTTP 400 for Muse Spark) and anything else fail at
+    load; an absent key means the field is not sent."""
+    base = '[model]\nid = "muse-spark-1.3"\nendpoint = "https://api.meta.ai/v1/responses"\n'
+    base += "max_output_tokens = 512\ntimeout_s = 60\n"
+    p = tmp_path / "m.toml"
+    p.write_text(base)
+    assert load_model_config(p).reasoning_effort is None
+    for ok in ("minimal", "low", "medium", "high", "xhigh"):
+        p.write_text(base + f'reasoning_effort = "{ok}"\n')
+        assert load_model_config(p).reasoning_effort == ok
+    for bad in ('"none"', '"None"', '""', '"Low"', '"auto"', "1", "true", '["low"]'):
+        p.write_text(base + f"reasoning_effort = {bad}\n")
+        with pytest.raises(ConfigError):
+            load_model_config(p)

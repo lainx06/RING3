@@ -233,12 +233,35 @@ def test_cached_tokens_reach_the_ledger(tmp_path):
 
 
 def test_request_body_matches_the_responses_api():
-    """D-55: exactly the documented fields, store false, no key, no reasoning.effort."""
+    """D-55 / D-61: exactly the documented fields, store false, reasoning.effort from the config, no key."""
     b = json.loads(build_request("muse-spark-1.3", "ctx", "req", 512))
     assert set(b) == {"model", "instructions", "input", "max_output_tokens", "store"}
     assert b["store"] is False and b["max_output_tokens"] == 512 and b["model"] == "muse-spark-1.3"
     assert b["instructions"] == "ctx" and b["input"] == "req"
     assert "reasoning" not in b and "Authorization" not in build_request("m", "c", "r", 16).decode()
+    # D-61: with an effort the field set is exactly the documented one plus reasoning
+    b = json.loads(build_request("muse-spark-1.3", "ctx", "req", 4096, "low"))
+    assert set(b) == {"model", "instructions", "input", "max_output_tokens", "store", "reasoning"}
+    assert b["reasoning"] == {"effort": "low"} and b["max_output_tokens"] == 4096
+    for effort in ("minimal", "low", "medium", "high", "xhigh"):
+        assert json.loads(build_request("m", "c", "r", 16, effort))["reasoning"] == {"effort": effort}
+    for bad in ("none", "None", "", "LOW", "auto", "lowest", 1, True):
+        with pytest.raises((ValueError, TypeError)):
+            build_request("m", "c", "r", 16, bad)  # type: ignore[arg-type]
+    # the shipped config's effort reaches the wire through the client (the live-run body shape)
+    raw = build_request("muse-spark-1.3", "ctx", "req", 4096, "low").decode()
+    assert '"reasoning":{"effort":"low"}' in raw and '"none"' not in raw
+
+
+def test_client_sends_the_configured_reasoning_effort(tmp_path):
+    client, t, ledger, log = make(
+        tmp_path, [TransportResponse(200, ok_body()), TransportResponse(200, ok_body())]
+    )
+    client.ask("ctx", "req")
+    assert "reasoning" not in json.loads(t.calls[0]["body"])  # the synthetic CFG sets none
+    client.config = ModelConfig(CFG.id, CFG.endpoint, 512, 60, FAKE_PRICE, "low")
+    client.ask("ctx", "req")
+    assert json.loads(t.calls[1]["body"])["reasoning"] == {"effort": "low"}
 
 
 # ---- secrets --------------------------------------------------------------------------------------------

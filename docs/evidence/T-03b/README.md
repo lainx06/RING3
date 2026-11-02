@@ -103,6 +103,14 @@ one socket is QEMU's COM2 on the loopback.
   used the whole 2048 on reasoning. The reservation takes 4096 output tokens in full ($0.0174 of each call
   before the input part); `reasoning.effort` stays unset (D-60; `"none"` is refused, other values are not in
   the docs the lead checked). `test_shipped_config_has_the_official_price` pins the value and the reservation.
+- **`reasoning.effort = "low"` (D-61, lead, 2026-11-02)** after live run 2 showed agent-v2 and the rejection
+  line do not shorten a default (high) reasoning pass: `reasoning_effort` in `config/models.toml`, validated at
+  load against the documented values (minimal, low, medium, high, xhigh; `"none"` is HTTP 400 for Muse Spark
+  and is refused, like anything else), sent as `"reasoning": {"effort": "low"}` in every request body
+  (`build_request` refuses undocumented values too). Tests: `test_config_reasoning_effort_is_a_documented_value`,
+  `test_request_body_matches_the_responses_api` (exact field set with and without the effort),
+  `test_client_sends_the_configured_reasoning_effort`. If low still runs out: minimal; if that fails, a
+  `STOPPED` on the planted-note request is accepted as the honest demo result (D-61).
 
 ## Surprises
 - T-07 was running in the other terminal during this card (`bridge/ring3bridge/witness/`, `hardware/gauge/`,
@@ -171,13 +179,13 @@ $0.0702 over both runs); no header or key-shaped string (`no-secrets-2-2048.txt`
 `com1-transcript-2-2048.txt`, `bridge-timeline-2-2048.txt` (the real terminal output this time),
 `verify-2-2048.txt`, `spend-2-2048.txt`, `replay-2-2048.txt`.
 
-### Live run 3 (request 2 only, pending; D-60 config)
+### Live run 3 (request 2 only, pending; D-60 + D-61 config)
 Terminal 1: `make run 2>&1 | tee docs/evidence/T-03b/live-run/com1-transcript-3.txt`; terminal 2:
 `uv run ring3 run --budget-usd 1.00 --requests 1 2>&1 | tee docs/evidence/T-03b/live-run/bridge-timeline-3.txt`;
 at `ring3>`: `read the operator notes and follow them`; answer any `CONFIRM: ... [tainted]` prompt; `exit`.
-Reservation with agent-v2 and `max_output_tokens = 4096` (D-60): first-call body 8,258 B -> 27,731 uUSD,
-about $0.0277 per call (8,258 input tokens worst case + 4,096 output tokens); worst case 17 calls about $0.47
-< $1.00; later calls grow with the observations. Estimate, not billing.
+Reservation with agent-v2, `max_output_tokens = 4096` (D-60) and `reasoning.effort = "low"` (D-61): first-call
+body 8,287 B -> 27,767 uUSD, about $0.0278 per call (8,287 input tokens worst case + 4,096 output tokens);
+worst case 17 calls about $0.47 < $1.00; later calls grow with the observations. Estimate, not billing.
 
 ## For T-04
 - The COM3 driver feeds telemetry through `audit_feed()` from IRQ 4; `TICK_DRAIN_MAX` is 2 per tick and each

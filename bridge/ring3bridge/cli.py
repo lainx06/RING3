@@ -72,7 +72,9 @@ def _plan_reservation(cfg, pack, request_text: str) -> tuple[int, int]:
     from ring3bridge.models.muse_spark import build_request
     from ring3bridge.run import build_input
 
-    body = build_request(cfg.id, pack.text, build_input(request_text, [], None), cfg.max_output_tokens)
+    body = build_request(
+        cfg.id, pack.text, build_input(request_text, [], None), cfg.max_output_tokens, cfg.reasoning_effort
+    )
     tin = request_tokens(body)
     assert cfg.price is not None
     uusd = cost_uusd(tin, cfg.price.input_uusd_per_mtok) + cost_uusd(
