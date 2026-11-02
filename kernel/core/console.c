@@ -1,6 +1,7 @@
 /* COM1 console: polled line input, the `ring3> ` command loop, and console lines as policy events (D-28).
  * The confirmation prompt (confirm.c) shares the line buffer: while a prompt is open, lines go to it. */
 #include "console.h"
+#include "agentlink.h"
 #include "audit.h"
 #include "confirm.h"
 #include "exec.h"
@@ -59,6 +60,7 @@ void console_drain(void)
 static void read_line(char *dst, uint32_t cap)
 {
     for (;;) {
+        agentlink_poll();
         audit_flush(1);
         console_poll();
         if (ready) {
@@ -112,6 +114,7 @@ static void cmd_status(void)
            "pending=%u seq=%u dropped=%u uptime=%u\n",
            s->fan_duty, s->servo_deg, s->estop_latched, s->tele_valid, s->distance_mm, s->in_request,
            s->tainted, s->pending, s->seq, audit_dropped(), ticks_now());
+    agentlink_print_status();
 }
 
 static void cmd_audit(void)
@@ -142,16 +145,33 @@ static void feed_console(uint8_t sub)
         printk("estop reset: %s %s\n", policy_code_name(d.code), policy_reason_name(d.reason));
 }
 
+/* A plain-English line is a request: agentsh (ring 3, the production capability set) carries it to the
+ * bridge over COM2 and performs what comes back through system calls (ARCHITECTURE §5). */
+static void request(const char *text, int variant)
+{
+    if (*text == 0) {
+        printk("request: empty line\n");
+        return;
+    }
+    if (!agentlink_present()) {
+        printk("request not started: no COM2 device (start QEMU with a second -serial for the bridge)\n");
+        return;
+    }
+    printk("REQUEST %s\n", text);
+    if (!exec_request_agent(text, variant))
+        printk("request not started\n");
+}
+
 static void dispatch(const char *l)
 {
     const char *rest;
     if (*l == 0)
         return;
     if (word(l, "help", &rest)) {
-        printk("commands: help status audit objects 'estop reset' exit"
+        printk("commands: help status audit objects 'estop reset' exit; any other line is a request for the agent"
 #ifdef RING3_TEST
-               " 'run <prog>' 'tele <mm> <estop> [bad]' 'teletick <mm> <estop> <n>|off' 'tape on|off'"
-               " 'confirmrace on|off' panic"
+               "; test: 'run <prog>' 'agent-test <text>' 'agent-nocap <text>' 'tele <mm> <estop> [bad]'"
+               " 'teletick <mm> <estop> <n>|off' 'tape on|off' 'confirmrace on|off' panic"
 #endif
                "\n");
         feed_console(CONSOLE_OTHER);
@@ -220,10 +240,13 @@ static void dispatch(const char *l)
         feed_console(CONSOLE_OTHER);
         printk("deliberate CPL-0 fault (test): write to unmapped 0xFFFFF000\n");
         *(volatile uint32_t *)0xFFFFF000u = 1;
+    } else if (word(l, "agent-test", &rest)) {
+        request(rest, 1);
+    } else if (word(l, "agent-nocap", &rest)) {
+        request(rest, 2);
 #endif
     } else {
-        feed_console(CONSOLE_OTHER);
-        printk("unknown command: %s\n", l);
+        request(l, 0);
     }
 }
 

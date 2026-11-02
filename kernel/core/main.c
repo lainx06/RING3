@@ -1,3 +1,4 @@
+#include "agentlink.h"
 #include "audit.h"
 #include "console.h"
 #include "exec.h"
@@ -73,9 +74,11 @@ void kmain(uint32_t magic, uint32_t mbi_addr)
     kmalloc_init();
     objstore_init();
     audit_init();
+    agentlink_init();
     sti();
     printk("init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, %u frames free\n",
            pmm_free_frames());
+    printk("link: COM2 %s\n", agentlink_present() ? "present (bridge link, HELLO sent)" : "absent (no bridge link)");
 
     uint32_t t0 = ticks_now();
     printk("TIMER t0=%u\n", t0);

@@ -256,7 +256,7 @@ POLICY_REASON_NAMES: tuple[str, ...] = (
     "first_fan", "fan_range", "fan_step", "fan_rate", "servo_range", "servo_step", "servo_rate",
     "no_telemetry", "stale", "presence", "no_echo", "estop", "estop_button", "estop_reset", "not_latched",
     "answer", "timeout", "no_pending", "pending", "action_quota", "request_quota", "nosys", "no_request",
-    "halt", "bad_frame", "permissive",
+    "halt", "bad_frame", "permissive", "action_cap", "flushed",
 )  # fmt: skip
 POLICY_SYSCALL_NAMES: tuple[str, ...] = (
     "exit", "cons_write", "obj_list", "obj_read", "obj_write", "cell_status", "cell_fan", "cell_servo",
@@ -264,8 +264,19 @@ POLICY_SYSCALL_NAMES: tuple[str, ...] = (
 )  # fmt: skip
 POLICY_EVENT_NAMES: tuple[str, ...] = (
     "none", "exec_start", "exec_end", "syscall", "console", "confirm", "tick", "telemetry", "action_boundary",
+    "action", "link_drop",
 )  # fmt: skip
+#: ACTION frames per request (policy.h ACTIONS_PER_REQUEST, D-53); the bridge stops asking the model there.
+ACTIONS_PER_REQUEST = 8
 EV_SYSCALL = 3
+EV_EXEC_START = 1
+EV_EXEC_END = 2
+EV_ACTION = 9
+EV_LINK_DROP = 10
+#: EV_LINK_DROP sub codes (policy.h LINKDROP_*)
+LINKDROP_NAMES: tuple[str, ...] = (
+    "none", "cobs", "len", "crc", "type", "body_len", "oversize", "overflow", "queue_full", "flushed",
+)  # fmt: skip
 #: errno values the kernel returns (negated) in OBSERVATION.result; mirrors policy.h.
 ERRNO: dict[str, int] = {
     "EPERM": 1,

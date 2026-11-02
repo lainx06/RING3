@@ -973,6 +973,141 @@ static void t_F8(void)
     ok();
 }
 
+static struct pol_event ev_action(uint32_t t, int32_t seq)
+{
+    struct pol_event e = { EV_ACTION, 0, 0, 0, t, 0, { seq, 0, 0, 0 } };
+    return e;
+}
+static struct pol_event ev_boundary(uint32_t t)
+{
+    struct pol_event e = { EV_ACTION_BOUNDARY, 0, 0, 0, t, 0, { 0, 0, 0, 0 } };
+    return e;
+}
+static struct pol_event ev_drop(uint32_t t, uint8_t sub, int32_t len)
+{
+    struct pol_event e = { EV_LINK_DROP, sub, 0, 0, t, 0, { len, 0, 0, 0 } };
+    return e;
+}
+
+static void t_D53_action_cap(void)
+{
+    begin("D53_action_cap (ACTION frames are counted in ring 0; the 9th ends the request with LIMIT)");
+    struct pol_state s = fresh(CAP_ALL, 1);
+    struct pol_decision d;
+    for (uint32_t i = 1; i <= ACTIONS_PER_REQUEST; i++) {
+        uint32_t t = T + 100 * i;
+        d = step(&s, ev_action(t, (int32_t)i));
+        CHECK(d.audit == 0 && d.action == ACT_NONE && s.actions == i && s.act_start == t && !s.killing);
+        d = step(&s, ev_tick(t + 1));
+        CHECK(d.audit == 0);                                              /* quota restarted */
+    }
+    CHECK(s.actions == 8);
+    d = step(&s, ev_action(T + 900, 9));
+    CHECK(d.code == DEC_LIMIT && d.reason == R_ACTION_CAP && d.action == ACT_KILL && d.audit && s.killing);
+    CHECK(d.target == 9 && s.actions == 9);
+    d = step(&s, ev_action(T + 901, 10));                                 /* after the LIMIT: silent */
+    CHECK(d.audit == 0 && s.actions == 9);
+    d = step(&s, ev_end(T + 902, END_LIMIT, 900));
+    CHECK(d.code == DEC_LIMIT && !s.in_request && !s.killing);
+    /* a new request starts at 0 */
+    step(&s, ev_start(T + 1000, PROG_AGENTSH, CAP_ALL, 500, 6000, 3000));
+    CHECK(s.actions == 0 && !s.waiting);
+    d = step(&s, ev_action(T + 1000, 1));
+    CHECK(s.actions == 1);
+    /* outside a request: silent, nothing counted, state byte-identical */
+    struct pol_state idle, next;
+    policy_state_init(&idle);
+    struct pol_event a = ev_action(T, 1);
+    decide(&idle, &a, &next, &d);
+    CHECK(d.audit == 0 && d.action == ACT_NONE && memcmp(&idle, &next, sizeof next) == 0);
+    if (!policy_is_permissive()) {
+        /* while a prompt is pending the frame is counted but the paused action quota is left alone */
+        s = fresh(CAP_ALL, 1);
+        step(&s, ev_sys(T, SYS_CELL_FAN, 60, 0, 0));
+        CHECK(s.pending);
+        uint32_t act_start = s.act_start;
+        d = step(&s, ev_action(T + 50, 2));
+        CHECK(d.audit == 0 && s.actions == 1 && s.act_start == act_start && s.pending);
+        /* ... and the 9th still kills even while pending */
+        for (uint32_t i = 2; i <= 8; i++)
+            step(&s, ev_action(T + 50 + i, (int32_t)i));
+        d = step(&s, ev_action(T + 70, 9));
+        CHECK(d.code == DEC_LIMIT && d.reason == R_ACTION_CAP && s.killing && s.pending);
+    }
+    ok();
+}
+
+static void t_D53_waiting(void)
+{
+    begin("D53_waiting (agent_recv pauses the action quota, never the request quota; boundary resumes it)");
+    struct pol_state s = fresh(CAP_ALL, 1);
+    struct pol_decision d = step(&s, ev_sys(T, SYS_AGENT_RECV, 0x40001000, 256, 3000));
+    CHECK(d.code == DEC_ALLOW && d.action == ACT_EXEC && s.waiting);
+    d = step(&s, ev_tick(T + 500));                                       /* action quota would fire here */
+    CHECK(d.audit == 0 && !s.killing);
+    d = step(&s, ev_tick(T + 2000));
+    CHECK(d.audit == 0 && !s.killing);
+    d = step(&s, ev_boundary(T + 2000));                                  /* agent_recv returned */
+    CHECK(d.audit == 0 && !s.waiting && s.act_start == T + 2000);
+    d = step(&s, ev_tick(T + 2499));
+    CHECK(d.audit == 0);
+    d = step(&s, ev_tick(T + 2500));
+    CHECK(d.code == DEC_LIMIT && d.reason == R_ACTION_QUOTA && d.action == ACT_KILL);
+    /* the request quota is not paused by a wait */
+    s = fresh(CAP_ALL, 1);
+    step(&s, ev_sys(T, SYS_AGENT_RECV, 0x40001000, 256, 100000));
+    d = step(&s, ev_tick(T + 6000));
+    CHECK(d.code == DEC_LIMIT && d.reason == R_REQUEST_QUOTA && d.action == ACT_KILL);
+    d = step(&s, ev_end(T + 6001, END_LIMIT, 6000));
+    CHECK(!s.waiting && !s.in_request);
+    /* a denied agent_recv (bad timeout argument, no capability) does not set waiting */
+    s = fresh(CAP_ALL, 1);
+    d = step(&s, ev_sys(T, SYS_AGENT_RECV, 0x40001000, 256, -1));
+    CHECK(d.code == DEC_DENY_ARG && !s.waiting);
+    s = fresh(CAP_CONSOLE, 1);
+    d = step(&s, ev_sys(T, SYS_AGENT_RECV, 0x40001000, 256, 100));
+    CHECK((policy_is_permissive() || d.code == DEC_DENY_CAP) && (policy_is_permissive() || !s.waiting));
+    /* an ACTION arriving during the wait restarts the quota too; the boundary then clears waiting */
+    s = fresh(CAP_ALL, 1);
+    step(&s, ev_sys(T, SYS_AGENT_RECV, 0x40001000, 256, 3000));
+    d = step(&s, ev_action(T + 700, 1));
+    CHECK(s.act_start == T + 700 && s.waiting && s.actions == 1);
+    step(&s, ev_boundary(T + 701));
+    CHECK(!s.waiting && s.act_start == T + 701);
+    /* a boundary outside a request is silent */
+    struct pol_state idle, next;
+    policy_state_init(&idle);
+    struct pol_event b = ev_boundary(T);
+    decide(&idle, &b, &next, &d);
+    CHECK(d.audit == 0 && memcmp(&idle, &next, sizeof next) == 0);
+    ok();
+}
+
+static void t_D53_link_drop(void)
+{
+    begin("D53_link_drop (every dropped or flushed COM2 frame is a FRAME_DROP audit; no state change)");
+    struct pol_state idle, next;
+    policy_state_init(&idle);
+    struct pol_decision d;
+    const uint8_t subs[] = { LINKDROP_COBS, LINKDROP_LEN, LINKDROP_CRC, LINKDROP_TYPE, LINKDROP_BODY_LEN,
+                             LINKDROP_OVERSIZE, LINKDROP_OVERFLOW, LINKDROP_QUEUE_FULL };
+    for (unsigned i = 0; i < sizeof subs; i++) {
+        struct pol_event e = ev_drop(T, subs[i], 33);
+        decide(&idle, &e, &next, &d);
+        CHECK(d.code == DEC_FRAME_DROP && d.reason == R_BAD_FRAME && d.audit && d.action == ACT_NONE);
+        CHECK(d.target == subs[i] && memcmp(&idle, &next, sizeof next) == 0);
+    }
+    struct pol_event f = ev_drop(T, LINKDROP_FLUSHED, 0x90);
+    decide(&idle, &f, &next, &d);
+    CHECK(d.code == DEC_FRAME_DROP && d.reason == R_FLUSHED && d.audit && d.target == LINKDROP_FLUSHED);
+    /* inside a request as well, and the audit sequence advances */
+    struct pol_state s = fresh(CAP_ALL, 1);
+    uint32_t seq = s.seq;
+    d = step(&s, ev_drop(T + 1, LINKDROP_CRC, 20));
+    CHECK(d.code == DEC_FRAME_DROP && s.seq == seq + 1 && s.in_request && s.actions == 0);
+    ok();
+}
+
 /* ---- replay: TAPE lines in, AUDIT lines out, same format as kernel/core/audit.c ---- */
 static int replay(void)
 {
@@ -1029,6 +1164,9 @@ int main(int argc, char **argv)
     t_F3();
     t_F7();
     t_F8();
+    t_D53_action_cap();
+    t_D53_waiting();
+    t_D53_link_drop();
     t_names();
     printf("policy_test: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

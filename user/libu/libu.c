@@ -25,6 +25,15 @@ int u_cell_lcd(int line, const char *text)
 {
     return syscall2(SYS_CELL_LCD, (uint32_t)line, (uint32_t)(uintptr_t)text);
 }
+int u_cell_status(void *buf16) { return syscall2(SYS_CELL_STATUS, (uint32_t)(uintptr_t)buf16, 0); }
+int u_agent_send(uint32_t type, const void *body, size_t n)
+{
+    return syscall4(SYS_AGENT_SEND, (uint32_t)(uintptr_t)body, (uint32_t)n, type, 0);
+}
+int u_agent_recv(void *buf, size_t cap, uint32_t timeout_ticks)
+{
+    return syscall4(SYS_AGENT_RECV, (uint32_t)(uintptr_t)buf, (uint32_t)cap, timeout_ticks, 0);
+}
 int u_test_tele(int distance_mm, int estop, int valid)
 {
     return syscall4(SYS_TEST_TELE, (uint32_t)distance_mm, (uint32_t)estop, (uint32_t)valid, 0);

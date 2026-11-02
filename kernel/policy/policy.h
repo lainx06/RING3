@@ -83,6 +83,9 @@ const struct pol_object_rule *policy_object(uint32_t id);   /* 0 when id >= OBJ_
 #define STALE_TICKS          (500u * POLICY_HZ / 1000u)       /* 500 ms */
 #define LCD_TEXT_MAX         16u
 
+/* ---- agent bounds (INV-07, D-53): ACTION frames per request; the 9th ends the executor with LIMIT ---- */
+#define ACTIONS_PER_REQUEST  8u
+
 /* ---- events ---- */
 enum pol_event_kind {
     EV_NONE = 0,
@@ -94,10 +97,17 @@ enum pol_event_kind {
     EV_CONFIRM = 5,      /* sub = ANSWER_* (a timeout is a tick event, not an answer) */
     EV_TICK = 6,         /* timer tick */
     EV_TELEMETRY = 7,    /* flags = EVF_TELE_VALID, a0 = distance_mm, a1 = estop pressed */
-    EV_ACTION_BOUNDARY = 8, /* the executor finished one action: the action quota restarts (R2) */
-    EV_COUNT = 9
+    EV_ACTION_BOUNDARY = 8, /* agent_recv returned to the executor: the action quota restarts (R2) */
+    EV_ACTION = 9,       /* a valid ACTION frame arrived on the link (D-53): counted per request, quota
+                            restarts; a0 = link frame seq (header, not body: the kernel never parses bodies) */
+    EV_LINK_DROP = 10,   /* a COM2 frame was dropped: sub = LINKDROP_*, a0 = raw length or frame type */
+    EV_COUNT = 11
 };
 enum { END_EXIT = 0, END_FAULT = 1, END_LIMIT = 2 };
+enum {
+    LINKDROP_COBS = 1, LINKDROP_LEN = 2, LINKDROP_CRC = 3, LINKDROP_TYPE = 4, LINKDROP_BODY_LEN = 5,
+    LINKDROP_OVERSIZE = 6, LINKDROP_OVERFLOW = 7, LINKDROP_QUEUE_FULL = 8, LINKDROP_FLUSHED = 9
+};
 enum { CONSOLE_OTHER = 0, CONSOLE_ESTOP_RESET = 1 };
 enum { ANSWER_NO = 0, ANSWER_YES = 1 };
 #define EVF_UACCESS_OK  0x01u   /* syscall: every user pointer passed uaccess (R3) */
@@ -116,7 +126,10 @@ struct pol_state {
     uint32_t seq;                      /* audit sequence, kept across requests (R7) */
     /* request */
     uint8_t in_request, prog, tainted, fan_confirmed;
-    uint8_t killing, pad0[3];          /* LIMIT decided, EXEC_END not yet seen */
+    uint8_t killing;                   /* LIMIT decided, EXEC_END not yet seen */
+    uint8_t actions;                   /* ACTION frames accepted this request (D-53 cap) */
+    uint8_t waiting;                   /* the executor is inside agent_recv: the action quota is paused */
+    uint8_t pad0;
     uint32_t caps;
     uint32_t req_start, req_limit;     /* ticks (R2: start ticks, not counters) */
     uint32_t act_start, act_limit;
@@ -146,7 +159,7 @@ enum pol_reason {
     R_FIRST_FAN, R_FAN_RANGE, R_FAN_STEP, R_FAN_RATE, R_SERVO_RANGE, R_SERVO_STEP, R_SERVO_RATE,
     R_NO_TELEMETRY, R_STALE, R_PRESENCE, R_NO_ECHO, R_ESTOP, R_ESTOP_BUTTON, R_ESTOP_RESET, R_NOT_LATCHED,
     R_ANSWER, R_TIMEOUT, R_NO_PENDING, R_PENDING, R_ACTION_QUOTA, R_REQUEST_QUOTA, R_NOSYS, R_NO_REQUEST,
-    R_HALT, R_BAD_FRAME, R_PERMISSIVE, R_COUNT
+    R_HALT, R_BAD_FRAME, R_PERMISSIVE, R_ACTION_CAP, R_FLUSHED, R_COUNT
 };
 enum pol_action { ACT_NONE = 0, ACT_EXEC = 1, ACT_PROMPT = 2, ACT_KILL = 3, ACT_HALT = 4 };
 

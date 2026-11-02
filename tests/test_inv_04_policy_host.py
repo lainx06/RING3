@@ -41,6 +41,9 @@ def test_host_policy_tests():
         "F3_",
         "F7_",
         "F8_",
+        "D53_action_cap",
+        "D53_waiting",
+        "D53_link_drop",
     ):
         assert re.search(rf"^ok .*{name}", p.stdout, re.M), f"{name} missing:\n{p.stdout}"
 

@@ -11,7 +11,10 @@ uprog_\name\()_end:
     .align 4
 .endm
 
+UPROG agentsh
 #ifdef RING3_TEST
+UPROG agentsh_test
+UPROG agentsh_nocap
 UPROG hello
 UPROG kwrite
 UPROG ticks

@@ -16,11 +16,12 @@ def test_boot_banner_prompt_and_exit():
         assert t1 > t0, "ticks did not advance"
         assert s.proc.poll() is None
         s.prompt()
-        s.send("run hello")  # not a production command
-        s.expect(r"^unknown command: run hello$")
+        s.send("run hello")  # not a production command: a free-text line is a request for the agent (T-03b)
+        s.expect(r"^request not started: no COM2 device .*$")  # this boot has no second serial port
         s.prompt()
         s.send("help")
-        s.expect(r"^commands: .*$")
+        m = s.expect(r"^commands: .*$")
+        assert "run" not in m.group(0).replace("any other line is a request", ""), m.group(0)
         run = s.close()
     record_evidence("boot.txt", run)
     assert run.exit_code == EXIT_PASS, run.output

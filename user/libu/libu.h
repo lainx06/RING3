@@ -40,6 +40,9 @@
 
 #define USER_BASE 0x40000000u
 #define USER_TOP 0x7FFFF000u
+/* The request text the kernel places for agentsh (kernel/include/exec.h USER_ARG_ADDR), NUL-terminated. */
+#define USER_ARG_ADDR (USER_TOP - 1024u)
+#define USER_ARG_MAX 512u
 
 static inline int syscall4(uint32_t nr, uint32_t a, uint32_t b, uint32_t c, uint32_t d)
 {
@@ -64,6 +67,11 @@ int u_cell_fan(int duty);
 int u_cell_servo(int deg);
 int u_cell_halt(void);
 int u_cell_lcd(int line, const char *text);
+int u_cell_status(void *buf16);
+/* COM2 link (CAP_AGENT_LINK): send a REQUEST or OBSERVATION body; receive one bridge frame as
+ * type u8 | seq u16 | len u16 | body (cap >= 206), waiting at most timeout_ticks. */
+int u_agent_send(uint32_t type, const void *body, size_t n);
+int u_agent_recv(void *buf, size_t cap, uint32_t timeout_ticks);
 int u_test_tele(int distance_mm, int estop, int valid);
 int u_test_boundary(void);
 /* prints "<label>=<r>" and returns 1 when r != expect */

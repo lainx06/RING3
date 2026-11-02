@@ -2,6 +2,7 @@
  * iret entry with IOPL = 0; faults, LIMIT and exit all return to the context saved here (D-41b, D-41c).
  * Request boundaries are policy events (R7); the tick quota is a policy decision (R2). */
 #include "exec.h"
+#include "agentlink.h"
 #include "audit.h"
 #include "gdt.h"
 #include "io.h"
@@ -50,6 +51,12 @@ int exec_current_pid(void) { return cur.active ? cur.pid : 0; }
 const char *exec_current_name(void) { return cur.active ? cur.name : "kernel"; }
 int exec_kill_pending(void) { return cur.active && cur.kill_pending; }
 
+void exec_flag_kill(void)
+{
+    if (cur.active)
+        cur.kill_pending = 1;                   /* carried out at the executor's syscall return (F1, D-50) */
+}
+
 static void map_fresh(uint32_t vaddr, int writable)
 {
     uint32_t f = pmm_alloc();
@@ -74,7 +81,7 @@ static void teardown(void)
     paging_flush_tlb();
 }
 
-static struct exec_outcome exec_run(const struct uprog *p, int pid)
+static struct exec_outcome exec_run(const struct uprog *p, int pid, const char *arg)
 {
     const struct uprog_header *h = (const struct uprog_header *)p->image;
     if (p->image_len < sizeof *h || h->magic != UPROG_MAGIC)
@@ -99,6 +106,19 @@ static struct exec_outcome exec_run(const struct uprog *p, int pid)
         uint32_t n = p->image_len - off < PAGE_SIZE ? p->image_len - off : PAGE_SIZE;
         memcpy((void *)(uintptr_t)cur.frames[off / PAGE_SIZE], p->image + off, n);
     }
+    /* The request text (if any) goes into the top stack page at USER_ARG_ADDR, NUL-terminated and bounded;
+     * the program's stack starts below it. Written through the physical frame like the image above. */
+    {
+        uint8_t *top = (uint8_t *)(uintptr_t)cur.frames[cur.nframes - 1] + (USER_ARG_ADDR & (PAGE_SIZE - 1));
+        uint32_t n = 0;
+        if (arg) {
+            while (n < USER_ARG_MAX - 1 && arg[n]) {
+                top[n] = (uint8_t)arg[n];
+                n++;
+            }
+        }
+        top[n] = 0;
+    }
     paging_flush_tlb();
 
     trap_stack[0] = STACK_CANARY;
@@ -106,7 +126,7 @@ static struct exec_outcome exec_run(const struct uprog *p, int pid)
     cur.start_tick = ticks_now();
 
     if (kctx_save(&cur.loop) == 0) {
-        user_enter(USER_BASE + h->entry_off, USER_STACK_TOP - 16);
+        user_enter(USER_BASE + h->entry_off, USER_ARG_ADDR - 16);
         /* not reached */
     }
     /* Resumed from exec_on_exit / exec_on_user_fault / exec_kill_limit / exec_abandon_limit, on the
@@ -128,7 +148,7 @@ static void feed(const struct pol_event *ev, struct pol_decision *d)
     audit_flush(1);
 }
 
-struct exec_outcome exec_request(const struct uprog *p)
+struct exec_outcome exec_request(const struct uprog *p, const char *arg)
 {
     int pid = ++next_pid;
     struct pol_decision d;
@@ -147,10 +167,12 @@ struct exec_outcome exec_request(const struct uprog *p)
     }
     printk("RUN pid=%d name=%s prog=%u caps=0x%x uptime=%u\n", pid, p->name, p->prog,
            audit_state()->caps, ticks_now());
-    struct exec_outcome o = exec_run(p, pid);
+    agentlink_flush_queue();                    /* D-53: nothing from before this request reaches it */
+    struct exec_outcome o = exec_run(p, pid, arg);
     const char *kind = o.kind == EXEC_EXIT ? "EXIT" : o.kind == EXEC_FAULT ? "FAULT" : "LIMIT";
     if (o.kind == EXEC_LIMIT)
         printk("LIMIT pid=%d ticks=%u\n", pid, o.ticks_used);
+    agentlink_flush_queue();                    /* D-53: a late frame never reaches the next request */
     struct pol_event end = { EV_EXEC_END, (uint8_t)o.kind, 0, 0, ticks_now(), 0,
                              { o.kind == EXEC_EXIT ? o.exit_code : o.kind == EXEC_FAULT ? (int32_t)o.vector
                                                                                         : (int32_t)o.ticks_used,
@@ -213,10 +235,38 @@ void exec_abandon_limit(void)
     kctx_resume(&cur.loop, 1);
 }
 
-#ifdef RING3_TEST
 #define UPROG(sym) extern const uint8_t uprog_##sym##_start[], uprog_##sym##_end[];
 #define ENTRY(sym, prof) { #sym, uprog_##sym##_start, 0, prof }
 #define LEN(sym) (uint32_t)(uprog_##sym##_end - uprog_##sym##_start)
+
+/* The production executor (ARCHITECTURE §5), embedded in every image. Test images add two builds of the
+ * same source: AGENTSH_TEST (a crash op for the fault tests) and AGENTSH_TEST + AGENTSH_NO_CAP (the kernel's
+ * own 8-action cap is what ends it, A7). */
+UPROG(agentsh)
+static struct uprog agent_progs[3] = { ENTRY(agentsh, PROG_AGENTSH) };
+#ifdef RING3_TEST
+UPROG(agentsh_test) UPROG(agentsh_nocap)
+#endif
+
+int exec_request_agent(const char *text, int variant)
+{
+    if (!agent_progs[0].image_len) {
+        agent_progs[0].image_len = LEN(agentsh);
+#ifdef RING3_TEST
+        struct uprog t = ENTRY(agentsh_test, PROG_AGENTSH), n = ENTRY(agentsh_nocap, PROG_AGENTSH);
+        t.image_len = LEN(agentsh_test);
+        n.image_len = LEN(agentsh_nocap);
+        agent_progs[1] = t;
+        agent_progs[2] = n;
+#endif
+    }
+    if (variant < 0 || variant > 2 || !agent_progs[variant].image_len)
+        return 0;
+    struct exec_outcome o = exec_request(&agent_progs[variant], text);
+    return o.kind == EXEC_REFUSED ? 0 : 1;
+}
+
+#ifdef RING3_TEST
 UPROG(hello) UPROG(kwrite) UPROG(ticks) UPROG(priv) UPROG(spin) UPROG(badptr) UPROG(null) UPROG(hlt)
 UPROG(ud) UPROG(div0) UPROG(stack) UPROG(dflag) UPROG(fuzz) UPROG(taint) UPROG(confirmw) UPROG(nocap)
 UPROG(objs) UPROG(fan) UPROG(multi) UPROG(lcd) UPROG(audspin)
@@ -250,7 +300,7 @@ int exec_request_by_name(const char *name)
         if (strncmp(name, progs[i].name, 32) == 0) {
             static int first = 1;
             uint32_t before = pmm_free_frames();
-            struct exec_outcome o = exec_request(&progs[i]);
+            struct exec_outcome o = exec_request(&progs[i], 0);
             if (o.kind == EXEC_REFUSED)
                 return 1;                        /* nothing was mapped */
             /* The first request allocates the (kept) user page tables; after that every request must give

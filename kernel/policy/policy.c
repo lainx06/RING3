@@ -324,6 +324,8 @@ static void eval_call(const struct pol_state *s, uint32_t tick, uint32_t nr, con
     /* ALLOW: apply the state changes of the call. */
     if (nr == SYS_OBJ_READ && !obj->trusted)
         n->tainted = 1;
+    if (nr == SYS_AGENT_RECV)
+        n->waiting = 1;                            /* a kernel wait for the bridge pauses the action quota (R2) */
     if (nr == SYS_CELL_FAN) {
         if (a[0] != s->fan_duty) {
             n->fan_change_tick = tick;
@@ -370,6 +372,8 @@ void decide(const struct pol_state *s, const struct pol_event *ev, struct pol_st
         n->tainted = 0;
         n->fan_confirmed = 0;
         n->killing = 0;
+        n->actions = 0;
+        n->waiting = 0;
 #if POLICY_PERMISSIVE
         n->caps = CAP_ALL;
 #else
@@ -393,6 +397,7 @@ void decide(const struct pol_state *s, const struct pol_event *ev, struct pol_st
             return;                                   /* silent: nothing was running */
         n->in_request = 0;
         n->killing = 0;
+        n->waiting = 0;
         n->caps = 0;
         n->tainted = 0;
         if (s->pending)
@@ -467,7 +472,7 @@ void decide(const struct pol_state *s, const struct pol_event *ev, struct pol_st
                 d->target = TICKS_SINCE(tick, s->req_start);
                 return;
             }
-            if (!s->pending && TICKS_SINCE(tick, s->act_start) >= s->act_limit) {
+            if (!s->pending && !s->waiting && TICKS_SINCE(tick, s->act_start) >= s->act_limit) {
                 n->killing = 1;
                 set(d, DEC_LIMIT, R_ACTION_QUOTA, 0, ACT_KILL);
                 d->target = TICKS_SINCE(tick, s->act_start);
@@ -501,8 +506,35 @@ void decide(const struct pol_state *s, const struct pol_event *ev, struct pol_st
         return;
 
     case EV_ACTION_BOUNDARY:
-        if (s->in_request && !s->killing && !s->pending)
+        if (!s->in_request)
+            return;
+        n->waiting = 0;                               /* agent_recv returned: the executor runs again */
+        if (!s->killing && !s->pending)
             n->act_start = tick;                      /* silent; the state change puts it on the tape */
+        return;
+
+    case EV_ACTION:
+        /* D-53: a valid ACTION frame accepted by the link, whatever the executor does with it. Counted per
+         * request; the (ACTIONS_PER_REQUEST + 1)th ends the request with LIMIT in ring 0. Outside a request
+         * (or after a LIMIT) it changes nothing: the link flushes it at the next boundary. */
+        d->target = (uint32_t)ev->a[0];
+        if (!s->in_request || s->killing)
+            return;
+        n->actions = (uint8_t)(s->actions + 1);
+        d->target = n->actions;
+        if (n->actions > ACTIONS_PER_REQUEST) {
+            n->killing = 1;
+            set(d, DEC_LIMIT, R_ACTION_CAP, 0, ACT_KILL);
+            return;
+        }
+        if (!s->pending)
+            n->act_start = tick;                      /* the action quota restarts (silent, on the tape) */
+        return;
+
+    case EV_LINK_DROP:
+        /* INV-02: a malformed, oversize, unqueueable or flushed COM2 frame. Audited, no state change. */
+        set(d, DEC_FRAME_DROP, ev->sub == LINKDROP_FLUSHED ? R_FLUSHED : R_BAD_FRAME, 0, ACT_NONE);
+        d->target = ev->sub;
         return;
 
     default:
@@ -521,7 +553,7 @@ static const char *const reason_names[R_COUNT] = {
     "first_fan", "fan_range", "fan_step", "fan_rate", "servo_range", "servo_step", "servo_rate",
     "no_telemetry", "stale", "presence", "no_echo", "estop", "estop_button", "estop_reset", "not_latched",
     "answer", "timeout", "no_pending", "pending", "action_quota", "request_quota", "nosys", "no_request",
-    "halt", "bad_frame", "permissive",
+    "halt", "bad_frame", "permissive", "action_cap", "flushed",
 };
 static const char *const syscall_names[SYS_COUNT] = {
     "exit", "cons_write", "obj_list", "obj_read", "obj_write", "cell_status", "cell_fan", "cell_servo",
@@ -530,6 +562,7 @@ static const char *const syscall_names[SYS_COUNT] = {
 
 static const char *const event_names[EV_COUNT] = {
     "none", "exec_start", "exec_end", "syscall", "console", "confirm", "tick", "telemetry", "action_boundary",
+    "action", "link_drop",
 };
 
 const char *policy_event_name(uint8_t kind) { return kind < EV_COUNT ? event_names[kind] : "?"; }

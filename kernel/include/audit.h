@@ -23,6 +23,7 @@ uint32_t audit_drain(uint32_t max);
 uint32_t audit_dropped(void);
 void audit_set_tape(int on);
 void audit_print_banner(void);
+const char *audit_policy_hash(void);                 /* 64 hex chars: the SHA-256 of the compiled policy source */
 /* Timer path (IRQ context): feeds a tick; acts on LIMIT (kill) and AUTO_HALT. */
 void audit_on_tick(struct trap_frame *f);
 #ifdef RING3_TEST

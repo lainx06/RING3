@@ -7,6 +7,7 @@
 #   make KTEST_LINK=1        COM3 link smoke-test image (build/kernel-link.elf, T-01B): polling COM3 probe
 #   make test-link           boot it with the Uno as COM3 (CELL_PORT, default /dev/ttyACM0); pass = exit 33
 #   make run-link            like `make run`, with COM2 null and the Uno as COM3
+#   make run                 COM1 on this terminal, COM2 = tcp:127.0.0.1:$(COM2_PORT) for `uv run ring3 run`
 VERSION    := 0.1.0
 BUILD_HASH := $(shell git rev-parse --short HEAD 2>/dev/null || echo nogit)
 POLICY     ?= default
@@ -52,7 +53,7 @@ POLICY_HASH := $(shell cat $(POLICY_SRC) | sha256sum | cut -d' ' -f1)
 POLICY_DEFS := -Ikernel/policy -DPOLICY_VARIANT_HEADER='"variant_$(POLICY).h"'
 
 CFLAGS  := $(TARGET) -std=c11 -ffreestanding -nostdlib -fno-pic -fno-stack-protector -mno-sse -mno-mmx -mno-80387 \
-           -fno-asynchronous-unwind-tables -O2 -g -Wall -Wextra -Werror -Ikernel/include -I$(BUILD)/gen \
+           -fno-asynchronous-unwind-tables -O2 -g -Wall -Wextra -Werror -Ikernel/include -Iabi -I$(BUILD)/gen \
            $(POLICY_DEFS) -DRING3_VERSION=\"$(VERSION)\" -DBUILD_HASH=\"$(BUILD_HASH)\"
 ASFLAGS := $(TARGET) -ffreestanding -nostdlib -fno-pic -g -Wall -Wextra -Werror -Ikernel/include
 LDFLAGS := -m elf_i386 -nostdlib --gc-sections
@@ -66,10 +67,11 @@ endif
 ifeq ($(TEST),1)
   CFLAGS  += -DRING3_TEST=1
   ASFLAGS += -DRING3_TEST=1
-  UPROGS  := hello kwrite ticks priv spin badptr null hlt ud div0 stack dflag fuzz taint confirmw nocap objs \
+  UPROGS  := agentsh agentsh_test agentsh_nocap \
+             hello kwrite ticks priv spin badptr null hlt ud div0 stack dflag fuzz taint confirmw nocap objs \
              fan multi lcd audspin
 else
-  UPROGS  :=
+  UPROGS  := agentsh
 endif
 
 KSRC_C := $(wildcard kernel/arch/i386/*.c kernel/core/*.c kernel/lib/*.c kernel/drivers/*.c) kernel/policy/policy.c
@@ -78,11 +80,14 @@ KOBJ   := $(patsubst %.c,$(BUILD)/%.o,$(KSRC_C)) $(patsubst %.S,$(BUILD)/%.o,$(K
 
 # User programs: flat binaries in the D-41 layout, embedded into test images.
 UCFLAGS := $(TARGET) -std=c11 -ffreestanding -nostdlib -fno-pic -fno-stack-protector -mno-sse -mno-mmx -mno-80387 \
-           -fno-asynchronous-unwind-tables -O2 -g -Wall -Wextra -Werror -Iuser/libu
+           -fno-asynchronous-unwind-tables -O2 -g -Wall -Wextra -Werror -Iuser/libu -Iabi
 UBIN    := $(patsubst %,build/user/%.bin,$(UPROGS))
 
 QEMU_BASE := $(QEMU) -m 64 -display none -serial stdio -monitor none \
              -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot
+# COM2 = the bridge link (T-03b): a local TCP server the bridge connects to (`uv run ring3 run ...`).
+COM2_PORT ?= 4555
+QEMU_RUN  := $(QEMU_BASE) -serial tcp:127.0.0.1:$(COM2_PORT),server=on,wait=off
 # The Uno (ring3cell firmware) as the guest's third serial port = COM3 (0x3E8, IRQ 4). COM2 stays null here.
 CELL_PORT ?= /dev/ttyACM0
 QEMU_LINK := $(QEMU_BASE) -serial null -serial $(CELL_PORT)
@@ -122,11 +127,27 @@ build/user/%.elf: user/test/%.c user/crt0.S user/libu/libu.c user/libu/libu.h us
 	$(CC) $(UCFLAGS) -c $< -o build/user/$*.o
 	$(LD) -m elf_i386 -nostdlib -T user/user.ld -o $@ build/user/crt0.o build/user/$*.o build/user/libu.o
 
+# The production executor and its two test-image builds (same source, user/prog/agentsh.c).
+AGENTSH_DEPS := user/prog/agentsh.c user/crt0.S user/libu/libu.c user/libu/libu.h user/user.ld abi/link_abi.h
+define AGENTSH_BUILD
+	@mkdir -p $(dir $@)
+	$(CC) $(UCFLAGS) -c user/crt0.S -o build/user/crt0.o
+	$(CC) $(UCFLAGS) -c user/libu/libu.c -o build/user/libu.o
+	$(CC) $(UCFLAGS) $(1) -c user/prog/agentsh.c -o build/user/$(2).o
+	$(LD) -m elf_i386 -nostdlib -T user/user.ld -o $@ build/user/crt0.o build/user/$(2).o build/user/libu.o
+endef
+build/user/agentsh.elf: $(AGENTSH_DEPS)
+	$(call AGENTSH_BUILD,,agentsh)
+build/user/agentsh_test.elf: $(AGENTSH_DEPS)
+	$(call AGENTSH_BUILD,-DAGENTSH_TEST,agentsh_test)
+build/user/agentsh_nocap.elf: $(AGENTSH_DEPS)
+	$(call AGENTSH_BUILD,-DAGENTSH_TEST -DAGENTSH_NO_CAP,agentsh_nocap)
+
 build/user/%.bin: build/user/%.elf
 	$(OBJCOPY) -O binary $< $@
 
 run: $(KERNEL)
-	$(QEMU_BASE) -kernel $(KERNEL) $(QEMU_EXTRA)
+	$(QEMU_RUN) -kernel $(KERNEL) $(QEMU_EXTRA)
 
 run-link: $(KERNEL)
 	$(QEMU_LINK) -kernel $(KERNEL) $(QEMU_EXTRA)

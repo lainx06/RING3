@@ -16,6 +16,10 @@ struct uprog {
 #define USER_TOP    0x7FFFF000u
 #define USER_STACK_TOP   USER_TOP
 #define USER_STACK_SIZE  (16u * 1024)
+/* The request text for agentsh: a NUL-terminated string the kernel writes into the top stack page before
+ * entry (mirrored in user/libu/libu.h); the initial stack pointer sits below it. */
+#define USER_ARG_ADDR    (USER_TOP - 1024u)
+#define USER_ARG_MAX     512u
 
 /* Production quotas (prov.), fixed in code. Test images may shorten them through boot options. */
 #define QUOTA_ACTION_TICKS   500u     /* 5 s per action */
@@ -31,10 +35,15 @@ struct exec_outcome {
     uint32_t ticks_used;
 };
 
-struct exec_outcome exec_request(const struct uprog *p);
+/* Runs `p` as one request; `arg` (may be 0) is copied to USER_ARG_ADDR for the program (agentsh's request). */
+struct exec_outcome exec_request(const struct uprog *p, const char *arg);
+/* The production executor on a console request line; `variant` selects a test-image build of agentsh
+ * (0 production, 1 AGENTSH_TEST with the crash op, 2 AGENTSH_TEST + no action cap); test images only. */
+int exec_request_agent(const char *text, int variant);
 const char *exec_current_name(void);
 int exec_current_pid(void);
-void exec_action_boundary(void);                 /* one action done: the action quota restarts (T-03b) */
+void exec_action_boundary(void);                 /* agent_recv returned: the action quota restarts (R2) */
+void exec_flag_kill(void);                       /* a LIMIT decided in main context on the executor's behalf */
 
 /* Trap-path entry points. */
 void exec_on_user_fault(struct trap_frame *f) __attribute__((noreturn));

@@ -1,4 +1,5 @@
 #include "audit.h"
+#include "agentlink.h"
 #include "exec.h"
 #include "io.h"
 #include "kstring.h"
@@ -111,6 +112,11 @@ static uint32_t queued(void)
 static void print_record(const struct rec *r)
 {
     char line[160];
+    /* The tape goes to the bridge as fixed-layout frames (T-03b, resolves F11): one EVENT per record, one
+     * AUDIT per audited decision. Test images also keep the text lines on COM1 for the QEMU tests. */
+    agentlink_send_event(&r->ev);
+    if (r->dec.audit)
+        agentlink_send_audit(r->seq, &r->ev, &r->dec, r->result, r->tainted);
 #ifdef RING3_TEST
     if (tape_on)
         printk("TAPE k=%u s=%u f=%u t=%u nr=%u a0=%d a1=%d a2=%d a3=%d\n", r->ev.kind, r->ev.sub, r->ev.flags,
@@ -169,6 +175,8 @@ void audit_print_banner(void)
 {
     printk("policy: %s sha256=%s\n", policy_variant_name(), POLICY_HASH);
 }
+
+const char *audit_policy_hash(void) { return POLICY_HASH; }
 
 #ifdef RING3_TEST
 /* Test images: a telemetry sample injected from the tick IRQ every `tt_every` ticks, the way the COM3 driver

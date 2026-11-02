@@ -4,10 +4,13 @@
  * before uaccess passed (INV-3). Numbers without a driver yet (cell_*, agent_*) return -ENOSYS after the
  * decision. */
 #include "syscall.h"
+#include "agentlink.h"
 #include "audit.h"
 #include "confirm.h"
 #include "exec.h"
+#include "io.h"
 #include "kstring.h"
+#include "link_abi.h"
 #include "objstore.h"
 #include "pit.h"
 #include "printk.h"
@@ -16,6 +19,7 @@
 
 #define CELL_STATUS_BYTES 16u        /* fixed struct size reserved for T-04 */
 #define SYSCALL_DRAIN_MAX 4u         /* audit records printed per syscall return (F5): >= 1 produced per call */
+#define AGENT_RECV_MIN_CAP (LINK_HDR_LEN + LINK_FINAL_MAX)   /* 206: any bridge frame fits */
 
 static int32_t do_cons_write(uint32_t buf, uint32_t len)
 {
@@ -53,6 +57,72 @@ static int32_t do_obj_write(uint32_t id, uint32_t buf, uint32_t len)
     return (int32_t)len;
 }
 
+/* agent_send(buf, len, type): the executor's REQUEST or OBSERVATION. The kernel only frames it; the body
+ * bounds are the ABI's per-type bounds, REQUEST text must be printable ASCII (docs/LINK_ABI.md §2). */
+static int32_t do_agent_send(uint32_t buf, uint32_t len, uint32_t type)
+{
+    static uint8_t tmp[LINK_MAX_BODY];
+    if (type == LINK_T_REQUEST) {
+        if (len < LINK_REQUEST_MIN || len > LINK_REQUEST_MAX)
+            return -EINVAL;
+    } else if (type == LINK_T_OBSERVATION) {
+        if (len < LINK_OBS_MIN || len > LINK_OBS_MAX)
+            return -EINVAL;
+    } else {
+        return -EINVAL;                          /* HELLO, AUDIT, EVENT, HEARTBEAT are the kernel's own */
+    }
+    memcpy(tmp, (const void *)(uintptr_t)buf, len);
+    if (type == LINK_T_REQUEST)
+        for (uint32_t i = 0; i < len; i++)
+            if (tmp[i] < LINK_TEXT_CHAR_MIN || tmp[i] > LINK_TEXT_CHAR_MAX)
+                return -EINVAL;
+    int r = agentlink_send((uint8_t)type, tmp, len);
+    return r < 0 ? r : (int32_t)len;
+}
+
+/* agent_recv(buf, cap, timeout_ticks): waits with interrupts on for one bridge frame (type|seq|len|body),
+ * -ETIMEDOUT when none arrives, -ECANCELED when the request is being ended (the kill is carried out at the
+ * syscall return). The wait polls the link (frames, EV_ACTION, HELLO/HEARTBEAT) and streams the tape. Every
+ * return to ring 3 is an action boundary (R2): the action quota, paused while waiting, restarts. */
+static int32_t do_agent_recv(uint32_t buf, uint32_t cap, uint32_t timeout)
+{
+    static uint8_t tmp[AGENT_RECV_MIN_CAP];
+    if (cap < AGENT_RECV_MIN_CAP)
+        return -EINVAL;
+    if (!agentlink_present())
+        return -ENOSYS;
+    uint32_t t0 = ticks_now();
+    int32_t r;
+    for (;;) {
+        agentlink_poll();
+        if (exec_kill_pending()) {
+            r = -ECANCELED;
+            break;
+        }
+        int n = agentlink_recv(tmp, sizeof tmp);
+        if (n > 0) {
+            memcpy((void *)(uintptr_t)buf, tmp, (uint32_t)n);   /* uaccess checked [buf, buf+cap) */
+            r = n;
+            break;
+        }
+        if (n < 0) {
+            r = n;
+            break;
+        }
+        if (ticks_now() - t0 >= timeout) {
+            r = -ETIMEDOUT;
+            break;
+        }
+        audit_flush(1);                          /* the tape streams while the executor waits */
+        sti();
+        hlt();
+        cli();
+    }
+    if (r != -ECANCELED)
+        exec_action_boundary();
+    return r;
+}
+
 static int32_t execute(uint32_t nr, uint32_t b, uint32_t c, uint32_t d)
 {
     switch (nr) {
@@ -61,7 +131,9 @@ static int32_t execute(uint32_t nr, uint32_t b, uint32_t c, uint32_t d)
     case SYS_OBJ_READ:   return do_obj_read(b, c, d);
     case SYS_OBJ_WRITE:  return do_obj_write(b, c, d);
     case SYS_UPTIME:     return (int32_t)ticks_now();
-    default:             return -ENOSYS;        /* cell_*, agent_*: drivers arrive in T-04 / T-03b */
+    case SYS_AGENT_SEND: return do_agent_send(b, c, d);
+    case SYS_AGENT_RECV: return do_agent_recv(b, c, d);
+    default:             return -ENOSYS;        /* cell_*: the driver arrives in T-04 */
     }
 }
 

@@ -2,6 +2,7 @@
  * NMI, #DF and #MC are never user faults. Timer -> tick + a policy tick event (quotas, lease; R2). int 0x80 ->
  * syscall. */
 #include "trap.h"
+#include "agentlink.h"
 #include "audit.h"
 #include "panic.h"
 #include "pic.h"
@@ -29,6 +30,8 @@ void isr_dispatch(struct trap_frame *f)
         if (irq == 0) {
             pit_on_tick();
             audit_on_tick(f);                 /* may not return (LIMIT from ring 3): sends EOI itself first */
+        } else if (irq == 3) {
+            agentlink_on_irq();               /* COM2: bytes into the link ring, nothing else */
         }
         pic_eoi(irq);
         return;
