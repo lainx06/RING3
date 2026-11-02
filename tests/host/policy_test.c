@@ -57,7 +57,14 @@ static struct pol_event ev_answer(uint32_t t, int yes)
 }
 static struct pol_event ev_console(uint32_t t, uint8_t sub)
 {
-    struct pol_event e = { EV_CONSOLE, sub, 0, 0, t, 0, { 0, 0, 0, 0 } };
+    struct pol_event e = { EV_CONSOLE, sub, 0, 0, t, 0, { 3000, 0, 0, 0 } };   /* a0: 30 s to answer */
+    return e;
+}
+/* A real COM3 frame (T-04): sequenced, the whole STATE packed as the kernel puts it on the tape. */
+static struct pol_event ev_frame(uint32_t t, int32_t mm, int estop, uint16_t seq, uint32_t tms)
+{
+    struct pol_event e = { EV_TELEMETRY, 0, EVF_TELE_VALID | EVF_TELE_SEQ, 0, t, 0,
+                           { mm, estop | (60 << 8) | (90 << 16), (int32_t)seq, (int32_t)tms } };
     return e;
 }
 
@@ -71,6 +78,25 @@ static struct pol_decision step(struct pol_state *s, struct pol_event e)
         n.seq = s->seq + 1;
     *s = n;
     return d;
+}
+
+/* `estop reset` at the console followed by the answer (T-04: two-phase). */
+static struct pol_decision estop_reset(struct pol_state *s, uint32_t t, int yes)
+{
+    struct pol_decision d = step(s, ev_console(t, CONSOLE_ESTOP_RESET));
+    if (d.code == DEC_CONFIRM_PENDING)
+        d = step(s, ev_answer(t, yes));
+    return d;
+}
+
+/* Permissive build (§7): the executor's confirmations are skipped, so a prompt reads as ALLOW there. */
+static int prompted(struct pol_decision d, uint8_t reason)
+{
+    return policy_is_permissive() ? d.code == DEC_ALLOW : d.code == DEC_CONFIRM_PENDING && d.reason == reason;
+}
+static int confirmed(struct pol_decision d)
+{
+    return policy_is_permissive() ? d.code == DEC_ALLOW : d.code == DEC_CONFIRM_YES;
 }
 
 /* A fresh state inside a request with the given caps, telemetry clear and fresh at tick 1000. */
@@ -455,28 +481,48 @@ static void t_estop(void)
     d = step(&s, ev_sys(T + 20, SYS_CELL_SERVO, 100, 0, 0));
     CHECK(d.code == DEC_DENY_ESTOP);
     CHECK(step(&s, ev_sys(T + 20, SYS_CELL_HALT, 0, 0, 0)).code == DEC_ALLOW);
-    /* reset attempts */
+    /* reset attempts: the console line opens a prompt (T-04, INV-05), the rules run at the answer's tick */
     d = step(&s, ev_console(T + 30, CONSOLE_ESTOP_RESET));
-    CHECK(d.code == DEC_DENY_ESTOP && d.reason == R_ESTOP_BUTTON && s.estop_latched);   /* still pressed */
+    CHECK(d.code == DEC_CONFIRM_PENDING && d.reason == R_ESTOP_RESET && d.action == ACT_PROMPT && s.pending);
+    CHECK(s.pend_nr == PEND_ESTOP_RESET && s.confirm_limit == 3000 && s.estop_latched);
+    d = step(&s, ev_console(T + 30, CONSOLE_ESTOP_RESET));
+    CHECK(d.code == DEC_DENY_RULE && d.reason == R_PENDING && s.pending);
+    d = step(&s, ev_answer(T + 31, 1));
+    CHECK(d.code == DEC_DENY_ESTOP && d.reason == R_ESTOP_BUTTON && s.estop_latched && !s.pending); /* pressed */
     step(&s, ev_tele(T + 40, 300, 0, 1));                                 /* released */
     CHECK(s.estop_latched);                                               /* release alone never clears */
-    d = step(&s, ev_console(T + 100, CONSOLE_ESTOP_RESET));
+    d = estop_reset(&s, T + 100, 1);
     CHECK(d.code == DEC_DENY_ESTOP && d.reason == R_STALE && s.estop_latched);           /* 600 ms old */
     step(&s, ev_tele(T + 100, 300, 0, 1));
+    d = estop_reset(&s, T + 101, 0);
+    CHECK(d.code == DEC_CONFIRM_NO && d.reason == R_ANSWER && s.estop_latched);          /* n: stays latched */
     d = step(&s, ev_console(T + 101, CONSOLE_ESTOP_RESET));
-    CHECK(d.code == DEC_ALLOW && d.reason == R_ESTOP_RESET && !s.estop_latched);
-    d = step(&s, ev_console(T + 102, CONSOLE_ESTOP_RESET));
-    CHECK(d.code == DEC_DENY_RULE && d.reason == R_NOT_LATCHED);
-    d = step(&s, ev_sys(T + 2000, SYS_CELL_FAN, 60, 0, 0));
+    CHECK(d.code == DEC_CONFIRM_PENDING);
+    d = step(&s, ev_tick(T + 101 + 3000));
+    CHECK(d.code == DEC_CONFIRM_NO && d.reason == R_TIMEOUT && s.estop_latched && !s.pending); /* timeout */
+    step(&s, ev_tele(T + 3101, 300, 0, 1));
+    d = estop_reset(&s, T + 3101, 1);
+    CHECK(d.code == DEC_CONFIRM_YES && d.reason == R_ESTOP_RESET && d.action == ACT_EXEC && !s.estop_latched);
+    d = step(&s, ev_console(T + 3102, CONSOLE_ESTOP_RESET));
+    CHECK(d.code == DEC_DENY_RULE && d.reason == R_NOT_LATCHED && !s.pending);
+    d = step(&s, ev_sys(T + 5000, SYS_CELL_FAN, 60, 0, 0));
     CHECK(d.code == DEC_DENY_STALE);                                      /* telemetry aged meanwhile */
-    step(&s, ev_tele(T + 2000, 300, 0, 1));
-    d = step(&s, ev_sys(T + 2000, SYS_CELL_FAN, 60, 0, 0));
-    CHECK(d.code == DEC_ALLOW && s.fan_duty == 60);                       /* motion again after the reset */
+    step(&s, ev_tele(T + 5000, 300, 0, 1));
+    d = fan(&s, T + 5000, 60);
+    CHECK(confirmed(d) && s.fan_duty == 60);   /* motion again after the reset; the hazard stop withdrew the
+                                                  first-fan confirmation (T-04) */
     /* no telemetry at all: reset refused */
     s = fresh(CAP_ALL, 0);
     s.estop_latched = 1;
-    d = step(&s, ev_console(T, CONSOLE_ESTOP_RESET));
+    d = estop_reset(&s, T, 1);
     CHECK(d.code == DEC_DENY_ESTOP && d.reason == R_NO_TELEMETRY && s.estop_latched);
+    /* a zero timeout is refused (F8) and opens nothing */
+    {
+        struct pol_event z = ev_console(T, CONSOLE_ESTOP_RESET);
+        z.a[0] = 0;
+        d = step(&s, z);
+        CHECK(d.code == DEC_DENY_RULE && d.reason == R_ARG && !s.pending && s.estop_latched);
+    }
     /* the latch outlives the request (R7) */
     s = fresh(CAP_ALL, 1);
     step(&s, ev_tele(T, 300, 1, 1));
@@ -496,10 +542,14 @@ static void t_tick_autohalt(void)
     d = step(&s, ev_tick(T + 51));
     CHECK(d.code == DEC_AUTO_HALT && d.reason == R_STALE && d.action == ACT_HALT && d.target == 60);
     CHECK(s.fan_duty == 0 && s.fan_change_tick == T + 51);
+    CHECK(!s.fan_confirmed);                                              /* T-04: the hazard stop withdrew it */
     /* presence arriving in a telemetry sample */
     step(&s, ev_tele(T + 200, 300, 0, 1));
-    fan(&s, T + 200, 60);
-    CHECK(s.fan_duty == 60);
+    d = step(&s, ev_sys(T + 200, SYS_CELL_FAN, 60, 0, 0));
+    CHECK(prompted(d, R_FIRST_FAN));                                      /* asks again after an AUTO_HALT */
+    if (!policy_is_permissive())
+        d = step(&s, ev_answer(T + 200, 1));
+    CHECK(confirmed(d) && s.fan_duty == 60);
     d = step(&s, ev_tele(T + 210, 80, 0, 1));
     CHECK(d.code == DEC_AUTO_HALT && d.reason == R_PRESENCE && s.fan_duty == 0);
     /* no echo */
@@ -785,6 +835,170 @@ static void t_names(void)
             CHECK(strstr(policy_reason_name(r), banned[b]) == 0);
     }
     CHECK(strlen(policy_variant_name()) > 0);
+    ok();
+}
+
+/* ---- T-04 (D-53, D-54): sequenced telemetry, board boots, re-delivered frames ---- */
+static void t_T04_telemetry_seq(void)
+{
+    begin("T04_telemetry_seq (first frame = BOARD_BOOT, fresh after 3 monotonic frames, old frames silent)");
+    struct pol_state s = fresh(CAP_ALL, 0);
+    struct pol_decision d = step(&s, ev_frame(T, 300, 0, 0, 16));
+    CHECK(d.code == DEC_BOARD_BOOT && d.reason == R_BOARD_BOOT && d.action == ACT_HALT && d.audit);
+    CHECK(d.target == 0 && s.tele_run == 1 && !s.tele_valid && s.tele_seq == 0 && s.tele_tms == 16);
+    CHECK(s.distance_mm == 300 && s.servo_deg == SERVO_PARK_DEG && s.fan_duty == 0 && !s.fan_confirmed);
+    d = step(&s, ev_sys(T, SYS_CELL_FAN, 60, 0, 0));
+    CHECK(d.code == DEC_DENY_STALE && d.reason == R_NO_TELEMETRY);       /* 1 frame: not fresh yet */
+    d = step(&s, ev_frame(T + 5, 300, 0, 1, 66));
+    CHECK(d.audit == 0 && s.tele_run == 2 && !s.tele_valid);
+    d = step(&s, ev_sys(T + 5, SYS_CELL_FAN, 60, 0, 0));
+    CHECK(d.code == DEC_DENY_STALE);
+    d = step(&s, ev_frame(T + 10, 300, 0, 2, 116));
+    CHECK(d.audit == 0 && s.tele_run == 3 && s.tele_valid && s.tele_tick == T + 10);
+    d = fan(&s, T + 10, 60);
+    CHECK(confirmed(d) && s.fan_duty == 60);
+    /* a lost frame (gap) is still forward; the run stays at 3 */
+    d = step(&s, ev_frame(T + 20, 300, 0, 4, 216));
+    CHECK(d.audit == 0 && s.tele_run == 3 && s.tele_valid && s.tele_seq == 4 && s.fan_duty == 60);
+    /* a re-delivered block (D-54): seq behind, t_ms not ahead: ignored; only the old-frame counter moves */
+    {
+        struct pol_state before = s;
+        struct pol_event e = ev_frame(T + 21, 50, 1, 3, 166);             /* even with a hand and E-stop in it */
+        struct pol_state n;
+        decide(&s, &e, &n, &d);
+        before.tele_old_run = 1;
+        CHECK(d.audit == 0 && d.reason == R_OLD_FRAME && memcmp(&before, &n, sizeof n) == 0);
+        e = ev_frame(T + 21, 300, 0, 4, 216);                              /* the same frame twice */
+        decide(&s, &e, &n, &d);
+        CHECK(d.audit == 0 && d.reason == R_OLD_FRAME && memcmp(&before, &n, sizeof n) == 0);
+        CHECK(s.distance_mm == 300 && !s.estop_latched && s.fan_duty == 60);
+    }
+    /* the board restarts while the fan runs (after a long uptime: seq and t_ms far back): BOARD_BOOT with
+     * the running duty as target, duty 0, stale, the first-fan confirmation withdrawn; the previous motion
+     * is never re-commanded */
+    step(&s, ev_frame(T + 25, 300, 0, 900, 45016));                       /* a gap of 896 frames, still ahead */
+    step(&s, ev_sys(T + 25, SYS_CELL_SERVO, 110, 0, 0));
+    CHECK(s.servo_deg == 110 && s.fan_duty == 60 && s.tele_valid);
+    d = step(&s, ev_frame(T + 30, 300, 0, 0, 16));
+    CHECK(d.code == DEC_BOARD_BOOT && d.target == 60 && d.action == ACT_HALT);
+    CHECK(s.fan_duty == 0 && s.fan_change_tick == T + 30 && !s.fan_confirmed && !s.tele_valid && s.tele_run == 1);
+    CHECK(s.servo_deg == SERVO_PARK_DEG);
+    d = step(&s, ev_sys(T + 30, SYS_CELL_FAN, 60, 0, 0));
+    CHECK(d.code == DEC_DENY_LIMIT && d.reason == R_FAN_RATE);           /* the boot was a change (R5 order) */
+    d = step(&s, ev_sys(T + 131, SYS_CELL_FAN, 60, 0, 0));
+    CHECK(d.code == DEC_DENY_STALE && d.reason == R_NO_TELEMETRY);
+    step(&s, ev_frame(T + 135, 300, 0, 1, 66));
+    d = step(&s, ev_sys(T + 135, SYS_CELL_FAN, 60, 0, 0));
+    CHECK(d.code == DEC_DENY_STALE && d.reason == R_NO_TELEMETRY && s.tele_run == 2);
+    step(&s, ev_frame(T + 140, 300, 0, 2, 116));
+    CHECK(s.tele_valid);
+    d = step(&s, ev_sys(T + 140, SYS_CELL_FAN, 60, 0, 0));
+    CHECK(prompted(d, R_FIRST_FAN));                                      /* asks the human again */
+    if (!policy_is_permissive())
+        d = step(&s, ev_answer(T + 140, 1));
+    CHECK(confirmed(d) && s.fan_duty == 60);
+    /* t_ms going backwards with seq ahead is a boot too (a counter reset we cannot explain otherwise) */
+    d = step(&s, ev_frame(T + 150, 300, 0, 9, 10));
+    CHECK(d.code == DEC_BOARD_BOOT && s.fan_duty == 0);
+    /* a restart while the previous boot was young: its first frames look re-delivered (seq inside the
+     * window, t_ms behind by less than the window); after TELE_OLD_MAX of them in a row the stream is a
+     * new boot and the baseline moves. Meanwhile the lease sees stale telemetry (nothing fresh arrives). */
+    step(&s, ev_frame(T + 155, 300, 0, 10, 60));
+    step(&s, ev_frame(T + 160, 300, 0, 11, 110));
+    for (uint16_t q = 12; q <= 40; q++)
+        step(&s, ev_frame(T + 160 + 5 * (q - 11), 300, 0, q, 60 + 50 * (q - 10)));
+    CHECK(s.tele_valid && s.tele_seq == 40 && s.tele_tms == 1560);
+    {
+        uint32_t t0 = T + 300;
+        for (uint16_t q = 0; q < TELE_OLD_MAX; q++) {
+            d = step(&s, ev_frame(t0 + 5 * q, 300, 0, q, 16 + 50 * q));
+            CHECK(d.audit == 0 && d.reason == R_OLD_FRAME && s.tele_old_run == q + 1 && s.tele_seq == 40);
+        }
+        d = step(&s, ev_frame(t0 + 5 * TELE_OLD_MAX, 300, 0, TELE_OLD_MAX, 16 + 50 * TELE_OLD_MAX));
+        CHECK(d.code == DEC_BOARD_BOOT && s.tele_seq == TELE_OLD_MAX && s.tele_old_run == 0 && !s.tele_valid);
+        d = step(&s, ev_frame(t0 + 5 * (TELE_OLD_MAX + 1), 300, 0, TELE_OLD_MAX + 1, 66 + 50 * TELE_OLD_MAX));
+        CHECK(d.audit == 0 && s.tele_run == 2);
+    }
+    /* a boot frame with the button held latches */
+    s = fresh(CAP_ALL, 0);
+    d = step(&s, ev_frame(T, 300, 1, 0, 16));
+    CHECK(d.code == DEC_BOARD_BOOT && s.estop_latched);
+    step(&s, ev_frame(T + 5, 300, 1, 1, 66));
+    step(&s, ev_frame(T + 10, 300, 1, 2, 116));
+    d = step(&s, ev_sys(T + 10, SYS_CELL_FAN, 60, 0, 0));
+    CHECK(d.code == DEC_DENY_ESTOP);
+    /* the packed fan/servo/flags bits of a1 never reach the state */
+    s = fresh(CAP_ALL, 0);
+    {
+        struct pol_event e = ev_frame(T, 300, 0, 0, 16);
+        e.a[1] = 0xFFFFFF00;                                               /* every bit but estop */
+        step(&s, e);
+        CHECK(!s.estop_pressed && !s.estop_latched);
+    }
+    /* the baseline survives the request boundary (R7): the next request does not need a new boot */
+    s = fresh(CAP_ALL, 0);
+    step(&s, ev_frame(T, 300, 0, 0, 16));
+    step(&s, ev_frame(T + 5, 300, 0, 1, 66));
+    step(&s, ev_frame(T + 10, 300, 0, 2, 116));
+    step(&s, ev_end(T + 11, END_EXIT, 0));
+    step(&s, ev_start(T + 12, PROG_AGENTSH, CAP_ALL, 500, 6000, 3000));
+    step(&s, ev_frame(T + 15, 300, 0, 3, 166));
+    CHECK(s.tele_valid && s.tele_run == 3);
+    /* stale by time, then frames of the same boot resume: fresh again without a new boot */
+    d = step(&s, ev_tick(T + 70));
+    d = step(&s, ev_sys(T + 70, SYS_CELL_FAN, 60, 0, 0));
+    CHECK(d.code == DEC_DENY_STALE && d.reason == R_STALE);
+    d = step(&s, ev_frame(T + 70, 300, 0, 4, 2800));
+    CHECK(d.audit == 0 && s.tele_valid);
+    /* an invalid frame: FRAME_DROP with the decoder code as target, no state change */
+    {
+        struct pol_event e = { EV_TELEMETRY, 5, 0, 0, T + 71, 0, { 20, 0, 0, 0 } };
+        struct pol_state before = s;
+        d = step(&s, e);
+        before.seq = s.seq;
+        CHECK(d.code == DEC_FRAME_DROP && d.target == 5 && memcmp(&before, &s, sizeof s) == 0);
+    }
+    ok();
+}
+
+static void t_T04_autohalt_then_fan(void)
+{
+    begin("T04_A7 (AUTO_HALT then cell_fan(50) while tainted prompts; hazards during the prompt deny on y)");
+    struct pol_state s = fresh(CAP_ALL, 1);
+    fan(&s, T, 60);
+    step(&s, ev_sys(T, SYS_OBJ_READ, OBJ_MAINT_NOTES, 0x40001000, 8));
+    CHECK(s.tainted && s.fan_duty == 60);
+    struct pol_decision d = step(&s, ev_tele(T + 10, 50, 0, 1));
+    CHECK(d.code == DEC_AUTO_HALT && d.reason == R_PRESENCE && s.fan_duty == 0);
+    step(&s, ev_tele(T + 120, 300, 0, 1));
+    d = step(&s, ev_sys(T + 120, SYS_CELL_FAN, 50, 0, 0));
+    CHECK(prompted(d, R_TAINT));                                          /* a step from 0, not a decrease */
+    if (!policy_is_permissive())
+        d = step(&s, ev_answer(T + 121, 1));
+    CHECK(confirmed(d) && s.fan_duty == 50);
+    if (policy_is_permissive()) {                                         /* no prompts to race (§7) */
+        ok();
+        return;
+    }
+    /* a hand during a pending first-fan prompt, then y: denied, nothing to send */
+    s = fresh(CAP_ALL, 1);
+    d = step(&s, ev_sys(T, SYS_CELL_FAN, 60, 0, 0));
+    CHECK(d.code == DEC_CONFIRM_PENDING && d.reason == R_FIRST_FAN);
+    step(&s, ev_tele(T + 5, 50, 0, 1));
+    d = step(&s, ev_answer(T + 10, 1));
+    CHECK(d.code == DEC_DENY_INTERLOCK && d.reason == R_PRESENCE && d.action == ACT_NONE && s.fan_duty == 0);
+    /* E-stop during the prompt, then y */
+    s = fresh(CAP_ALL, 1);
+    step(&s, ev_sys(T, SYS_CELL_FAN, 60, 0, 0));
+    d = step(&s, ev_tele(T + 5, 300, 1, 1));
+    CHECK(d.code == DEC_AUTO_HALT && d.reason == R_ESTOP && d.target == 0);
+    d = step(&s, ev_answer(T + 10, 1));
+    CHECK(d.code == DEC_DENY_ESTOP && d.action == ACT_NONE && s.fan_duty == 0);
+    /* stale during the prompt, then y */
+    s = fresh(CAP_ALL, 1);
+    step(&s, ev_sys(T, SYS_CELL_FAN, 60, 0, 0));
+    d = step(&s, ev_answer(T + 60, 1));
+    CHECK(d.code == DEC_DENY_STALE && d.reason == R_STALE && s.fan_duty == 0);
     ok();
 }
 
@@ -1188,6 +1402,8 @@ int main(int argc, char **argv)
     t_D53_action_cap();
     t_D53_waiting();
     t_D53_link_drop();
+    t_T04_telemetry_seq();
+    t_T04_autohalt_then_fan();
     t_names();
     printf("policy_test: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

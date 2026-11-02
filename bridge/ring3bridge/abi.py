@@ -249,14 +249,14 @@ STOP_NAMES: dict[int, str] = {
 POLICY_CODE_NAMES: tuple[str, ...] = (
     "NONE", "ALLOW", "DENY_CAP", "DENY_RULE", "DENY_ARG", "DENY_FAULT", "DENY_LIMIT", "DENY_INTERLOCK",
     "DENY_STALE", "DENY_ESTOP", "CONFIRM_PENDING", "CONFIRM_YES", "CONFIRM_NO", "FRAME_DROP", "PROC_FAULT",
-    "LIMIT", "AUTO_HALT",
+    "LIMIT", "AUTO_HALT", "BOARD_BOOT",
 )  # fmt: skip
 POLICY_REASON_NAMES: tuple[str, ...] = (
     "none", "exec_start", "exec_end", "arg_range", "uaccess", "no_cap", "obj_rule", "obj_confirm", "taint",
     "first_fan", "fan_range", "fan_step", "fan_rate", "servo_range", "servo_step", "servo_rate",
     "no_telemetry", "stale", "presence", "no_echo", "estop", "estop_button", "estop_reset", "not_latched",
     "answer", "timeout", "no_pending", "pending", "action_quota", "request_quota", "nosys", "no_request",
-    "halt", "bad_frame", "permissive", "action_cap", "flushed",
+    "halt", "bad_frame", "permissive", "action_cap", "flushed", "board_boot", "old_frame",
 )  # fmt: skip
 POLICY_SYSCALL_NAMES: tuple[str, ...] = (
     "exit", "cons_write", "obj_list", "obj_read", "obj_write", "cell_status", "cell_fan", "cell_servo",
@@ -265,6 +265,28 @@ POLICY_SYSCALL_NAMES: tuple[str, ...] = (
 POLICY_EVENT_NAMES: tuple[str, ...] = (
     "none", "exec_start", "exec_end", "syscall", "console", "confirm", "tick", "telemetry", "action_boundary",
     "action", "link_drop",
+)  # fmt: skip
+#: EV_TELEMETRY flags (policy.h EVF_TELE_*): a real COM3 frame carries seq / t_ms in a2 / a3 (T-04).
+EVF_TELE_VALID = 0x01
+EVF_TELE_SEQ = 0x02
+EV_TELEMETRY = 7
+#: cell_status record (link_abi.h LINK_CELLST_*): the 16 output bytes of a cell_status OBSERVATION (T-04).
+LINK_CELLST_LEN = 16
+LINK_CELLST_OFF_DIST = 0
+LINK_CELLST_OFF_FAN = 2
+LINK_CELLST_OFF_SERVO = 3
+LINK_CELLST_OFF_ESTOP = 4
+LINK_CELLST_OFF_FLAGS = 5
+LINK_CELLST_OFF_FRESH = 6
+LINK_CELLST_OFF_LATCHED = 7
+LINK_CELLST_OFF_AGE_MS = 8
+LINK_CELLST_OFF_SEQ = 12
+LINK_CELLST_OFF_CMD_FAN = 14
+LINK_CELLST_OFF_CMD_SERVO = 15
+#: the board's STATE.flags bits (firmware/ring3cell/protocol.h CELL_F_*), named for the model
+CELL_FLAG_NAMES: tuple[tuple[int, str], ...] = (
+    (1 << 0, "WDT_RESET"), (1 << 1, "CLAMP"), (1 << 2, "BAD_FRAME"), (1 << 3, "ESTOP_LATCHED"),
+    (1 << 4, "PRESENCE_FAULT"), (1 << 5, "LINK_LOST"),
 )  # fmt: skip
 #: ACTION frames per request (policy.h ACTIONS_PER_REQUEST, D-53); the bridge stops asking the model there.
 ACTIONS_PER_REQUEST = 8
@@ -294,6 +316,38 @@ ERRNO: dict[str, int] = {
 def c_constants() -> dict[str, int]:
     """Every ``LINK_*`` constant of this module (compared with the C header by the ABI test)."""
     return {k: v for k, v in globals().items() if k.startswith("LINK_") and isinstance(v, int)}
+
+
+def decode_cell_status(b: bytes) -> dict[str, int]:
+    """The 16-byte cell_status record as integers (ValueError on any other length)."""
+    if len(b) != LINK_CELLST_LEN:
+        raise ValueError(f"cell_status record is {LINK_CELLST_LEN} bytes, got {len(b)}")
+    return {
+        "distance_mm": int.from_bytes(b[0:2], "little"),
+        "fan": b[LINK_CELLST_OFF_FAN],
+        "servo": b[LINK_CELLST_OFF_SERVO],
+        "estop": b[LINK_CELLST_OFF_ESTOP],
+        "flags": b[LINK_CELLST_OFF_FLAGS],
+        "fresh": b[LINK_CELLST_OFF_FRESH],
+        "estop_latched": b[LINK_CELLST_OFF_LATCHED],
+        "age_ms": int.from_bytes(b[8:12], "little"),
+        "seq": int.from_bytes(b[12:14], "little"),
+        "cmd_fan": b[LINK_CELLST_OFF_CMD_FAN],
+        "cmd_servo": b[LINK_CELLST_OFF_CMD_SERVO],
+    }
+
+
+def cell_status_text(b: bytes) -> str:
+    """One line of key=value pairs for the model (no words the kernel would not say, INV-11)."""
+    d = decode_cell_status(b)
+    dist = "no_echo" if d["distance_mm"] == 0xFFFF else str(d["distance_mm"])
+    flags = ",".join(name for bit, name in CELL_FLAG_NAMES if d["flags"] & bit) or "none"
+    age = "none" if d["age_ms"] == 0xFFFFFFFF else str(d["age_ms"])
+    return (
+        f"distance_mm={dist} fan_pct={d['fan']} servo_deg={d['servo']} estop_pressed={d['estop']} "
+        f"device_flags={flags} telemetry_fresh={d['fresh']} estop_latched={d['estop_latched']} "
+        f"age_ms={age} seq={d['seq']} commanded_fan_pct={d['cmd_fan']} commanded_servo_deg={d['cmd_servo']}"
+    )
 
 
 # ---- body codecs -------------------------------------------------------------------------------------------

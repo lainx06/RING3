@@ -122,7 +122,8 @@ static uint8_t code_for_hazard(uint8_t reason)
 }
 
 /* Tick-driven lease (D-30, INV-16): a hazard while the fan is commanded on -> AUTO_HALT, once per hazard (R8),
- * because the commanded duty drops to 0 in `next`. */
+ * because the commanded duty drops to 0 in `next`. The first-fan confirmation is withdrawn too (D-53, T-04):
+ * after a hazard stop any duty > 0 is a step from 0 that asks the human again. */
 static void lease(const struct pol_state *s, uint32_t tick, struct pol_state *n, struct pol_decision *d)
 {
     uint8_t duty = s->fan_duty;               /* F7: `s` may alias `n` (the telemetry path evaluates `next`) */
@@ -134,8 +135,46 @@ static void lease(const struct pol_state *s, uint32_t tick, struct pol_state *n,
     n->fan_duty = 0;
     n->fan_change_tick = tick;
     n->fan_changed = 1;
+    n->fan_confirmed = 0;
     set(d, DEC_AUTO_HALT, h, 0, ACT_HALT);
     d->target = duty;                         /* the duty that was running */
+}
+
+/* R10: the console E-stop reset goes through only on valid, fresh telemetry that shows the button released.
+ * Called at the answer's tick (T-04: the reset is confirmed first, like any destructive action, INV-05). */
+static void estop_reset_rules(const struct pol_state *s, uint32_t tick, struct pol_state *n,
+                              struct pol_decision *d)
+{
+    if (!s->tele_valid) {
+        set(d, DEC_DENY_ESTOP, R_NO_TELEMETRY, -ESAFETY, ACT_NONE);
+        return;
+    }
+    if (TICKS_SINCE(tick, s->tele_tick) > STALE_TICKS) {
+        set(d, DEC_DENY_ESTOP, R_STALE, -ESAFETY, ACT_NONE);
+        return;
+    }
+    if (s->estop_pressed) {
+        set(d, DEC_DENY_ESTOP, R_ESTOP_BUTTON, -ESAFETY, ACT_NONE);
+        return;
+    }
+    n->estop_latched = 0;
+    set(d, DEC_CONFIRM_YES, R_ESTOP_RESET, 0, ACT_EXEC);   /* ACT_EXEC: the kernel sends ESTOP_RESET on COM3 */
+}
+
+/* A sequenced telemetry sample against the current boot baseline (T-04, D-53, D-54). */
+enum { TELE_BOOT = 0, TELE_FORWARD = 1, TELE_OLD = 2 };
+static int classify_frame(const struct pol_state *s, uint16_t seq, uint32_t tms)
+{
+    if (s->tele_run == 0)
+        return TELE_BOOT;
+    uint16_t ahead = (uint16_t)(seq - s->tele_seq);
+    uint16_t behind = (uint16_t)(s->tele_seq - seq);
+    if (ahead >= 1 && ahead <= TELE_GAP_MAX && tms >= s->tele_tms)
+        return TELE_FORWARD;
+    if (behind <= TELE_OLD_WINDOW && tms <= s->tele_tms && s->tele_tms - tms <= TELE_OLD_MS &&
+        s->tele_old_run < TELE_OLD_MAX)
+        return TELE_OLD;
+    return TELE_BOOT;                         /* seq or t_ms went backwards: the board rebooted */
 }
 
 static void resolve_pending(const struct pol_state *s, uint32_t tick, struct pol_state *n)
@@ -430,7 +469,10 @@ void decide(const struct pol_state *s, const struct pol_event *ev, struct pol_st
         {
             struct pol_state base;
             copy_state(&base, n);                     /* pending already cleared, quota un-paused */
-            eval_call(&base, tick, s->pend_nr, s->pend_a, EVF_UACCESS_OK, 1, n, d);
+            if (s->pend_nr == PEND_ESTOP_RESET)
+                estop_reset_rules(&base, tick, n, d);
+            else
+                eval_call(&base, tick, s->pend_nr, s->pend_a, EVF_UACCESS_OK, 1, n, d);
         }
         return;
 
@@ -441,21 +483,21 @@ void decide(const struct pol_state *s, const struct pol_event *ev, struct pol_st
             set(d, DEC_DENY_RULE, R_NOT_LATCHED, -EINVAL, ACT_NONE);
             return;
         }
-        /* R10: only on valid, fresh telemetry that shows the button released. */
-        if (!s->tele_valid) {
-            set(d, DEC_DENY_ESTOP, R_NO_TELEMETRY, -ESAFETY, ACT_NONE);
+        if (s->pending) {
+            set(d, DEC_DENY_RULE, R_PENDING, -EPERM, ACT_NONE);
             return;
         }
-        if (TICKS_SINCE(tick, s->tele_tick) > STALE_TICKS) {
-            set(d, DEC_DENY_ESTOP, R_STALE, -ESAFETY, ACT_NONE);
+        if (ev->a[0] <= 0) {                          /* F8: a positive timeout, never "wait forever" */
+            set(d, DEC_DENY_RULE, R_ARG, -EINVAL, ACT_NONE);
             return;
         }
-        if (s->estop_pressed) {
-            set(d, DEC_DENY_ESTOP, R_ESTOP_BUTTON, -ESAFETY, ACT_NONE);
-            return;
-        }
-        n->estop_latched = 0;
-        set(d, DEC_ALLOW, R_ESTOP_RESET, 0, ACT_EXEC);
+        /* T-04: a human "y" at the console is required (INV-05); the R10 rules run at the answer's tick. */
+        n->pending = 1;
+        n->pend_nr = PEND_ESTOP_RESET;
+        n->pend_a[0] = n->pend_a[1] = n->pend_a[2] = n->pend_a[3] = 0;
+        n->pend_since = tick;
+        n->confirm_limit = (uint32_t)ev->a[0];
+        set(d, DEC_CONFIRM_PENDING, R_ESTOP_RESET, 0, ACT_PROMPT);
         return;
 
     case EV_TICK:
@@ -485,12 +527,54 @@ void decide(const struct pol_state *s, const struct pol_event *ev, struct pol_st
     case EV_TELEMETRY:
         if (!(ev->flags & EVF_TELE_VALID)) {
             set(d, DEC_FRAME_DROP, R_BAD_FRAME, 0, ACT_NONE);
+            d->target = ev->sub;                      /* the decoder's error code */
             return;
         }
-        n->tele_valid = 1;
-        n->tele_tick = tick;
-        n->distance_mm = (uint16_t)ev->a[0];
-        n->estop_pressed = ev->a[1] != 0;
+        if (ev->flags & EVF_TELE_SEQ) {
+            uint16_t seq = (uint16_t)ev->a[2];
+            uint32_t tms = (uint32_t)ev->a[3];
+            int cls = classify_frame(s, seq, tms);
+            if (cls == TELE_OLD) {
+                d->reason = R_OLD_FRAME;              /* delivered again (D-54): no decision, only counted */
+                n->tele_old_run = (uint8_t)(s->tele_old_run + 1);
+                return;
+            }
+            n->tele_old_run = 0;
+            n->tele_seq = seq;
+            n->tele_tms = tms;
+            n->tele_tick = tick;
+            n->distance_mm = (uint16_t)ev->a[0];
+            n->estop_pressed = (ev->a[1] & 1) != 0;
+            if (cls == TELE_BOOT) {
+                /* The board (re)started (D-53): the baseline moves to this frame, telemetry is stale until
+                 * TELE_SYNC_FRAMES monotonic frames, the commanded duty is 0 (the firmware boots with the fan
+                 * off and the servo parked) and the first-fan confirmation is withdrawn. The kernel sends
+                 * FAN 0 and nothing else; the previous motion is never re-commanded. Audited as BOARD_BOOT,
+                 * not as a fault: the port open resets the board every time. */
+                n->tele_run = 1;
+                n->tele_valid = 0;
+                d->target = s->fan_duty;
+                n->fan_duty = 0;
+                if (s->fan_duty) {
+                    n->fan_change_tick = tick;
+                    n->fan_changed = 1;
+                }
+                n->fan_confirmed = 0;
+                n->servo_deg = SERVO_PARK_DEG;
+                if (n->estop_pressed)
+                    n->estop_latched = 1;             /* a button held through the boot latches too */
+                set(d, DEC_BOARD_BOOT, R_BOARD_BOOT, 0, ACT_HALT);
+                return;
+            }
+            if (s->tele_run < TELE_SYNC_FRAMES)
+                n->tele_run = (uint8_t)(s->tele_run + 1);
+            n->tele_valid = n->tele_run >= TELE_SYNC_FRAMES;
+        } else {
+            n->tele_valid = 1;                        /* an unsequenced sample (test injection) */
+            n->tele_tick = tick;
+            n->distance_mm = (uint16_t)ev->a[0];
+            n->estop_pressed = (ev->a[1] & 1) != 0;
+        }
         if (n->estop_pressed && !s->estop_latched) {
             n->estop_latched = 1;                     /* latched until a human resets it (INV-13) */
             d->target = s->fan_duty;
@@ -499,6 +583,7 @@ void decide(const struct pol_state *s, const struct pol_event *ev, struct pol_st
                 n->fan_change_tick = tick;
                 n->fan_changed = 1;
             }
+            n->fan_confirmed = 0;
             set(d, DEC_AUTO_HALT, R_ESTOP, 0, ACT_HALT);
             return;
         }
@@ -548,14 +633,14 @@ void decide(const struct pol_state *s, const struct pol_event *ev, struct pol_st
 static const char *const code_names[DEC_COUNT] = {
     "NONE", "ALLOW", "DENY_CAP", "DENY_RULE", "DENY_ARG", "DENY_FAULT", "DENY_LIMIT", "DENY_INTERLOCK",
     "DENY_STALE", "DENY_ESTOP", "CONFIRM_PENDING", "CONFIRM_YES", "CONFIRM_NO", "FRAME_DROP", "PROC_FAULT",
-    "LIMIT", "AUTO_HALT",
+    "LIMIT", "AUTO_HALT", "BOARD_BOOT",
 };
 static const char *const reason_names[R_COUNT] = {
     "none", "exec_start", "exec_end", "arg_range", "uaccess", "no_cap", "obj_rule", "obj_confirm", "taint",
     "first_fan", "fan_range", "fan_step", "fan_rate", "servo_range", "servo_step", "servo_rate",
     "no_telemetry", "stale", "presence", "no_echo", "estop", "estop_button", "estop_reset", "not_latched",
     "answer", "timeout", "no_pending", "pending", "action_quota", "request_quota", "nosys", "no_request",
-    "halt", "bad_frame", "permissive", "action_cap", "flushed",
+    "halt", "bad_frame", "permissive", "action_cap", "flushed", "board_boot", "old_frame",
 };
 static const char *const syscall_names[SYS_COUNT] = {
     "exit", "cons_write", "obj_list", "obj_read", "obj_write", "cell_status", "cell_fan", "cell_servo",

@@ -113,6 +113,20 @@
 #define LINK_AUDF_PERMISSIVE 0x01
 #define LINK_AUDF_MASK 0x01
 
+/* ---- cell_status (syscall 5) record, 16 B: the output bytes of a cell_status OBSERVATION (T-04) ---------- */
+#define LINK_CELLST_LEN 16
+#define LINK_CELLST_OFF_DIST 0       /* u16 distance_mm the board reports, 0xFFFF = no echo (not clear)     */
+#define LINK_CELLST_OFF_FAN 2        /* u8  fan duty the board reports (%)                                  */
+#define LINK_CELLST_OFF_SERVO 3      /* u8  servo angle the board reports (degrees)                         */
+#define LINK_CELLST_OFF_ESTOP 4      /* u8  1 = E-stop button pressed now                                   */
+#define LINK_CELLST_OFF_FLAGS 5      /* u8  the board's STATE.flags (firmware/ring3cell/protocol.h CELL_F_*) */
+#define LINK_CELLST_OFF_FRESH 6      /* u8  1 = the kernel holds fresh telemetry (motion can be allowed)     */
+#define LINK_CELLST_OFF_LATCHED 7    /* u8  1 = the kernel's E-stop latch is set (console reset needed)      */
+#define LINK_CELLST_OFF_AGE_MS 8     /* u32 age of the last accepted frame in ms, 0xFFFFFFFF = none yet      */
+#define LINK_CELLST_OFF_SEQ 12       /* u16 the board's seq of that frame                                   */
+#define LINK_CELLST_OFF_CMD_FAN 14   /* u8  fan duty the kernel last commanded (policy state)               */
+#define LINK_CELLST_OFF_CMD_SERVO 15 /* u8  servo angle the kernel last commanded                           */
+
 /* ---- EVENT (K->B, 28 B): one inbound policy event, byte for byte struct pol_event (policy.h) ------------ */
 #define LINK_EV_OFF_KIND 0          /* u8  EV_*                                                */
 #define LINK_EV_OFF_SUB 1           /* u8                                                      */

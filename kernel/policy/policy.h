@@ -83,6 +83,18 @@ const struct pol_object_rule *policy_object(uint32_t id);   /* 0 when id >= OBJ_
 #define STALE_TICKS          (500u * POLICY_HZ / 1000u)       /* 500 ms */
 #define LCD_TEXT_MAX         16u
 
+/* ---- telemetry sequencing (T-04, D-53, D-54): the first frame and any backwards jump of seq or t_ms is a
+ * board boot (BOARD_BOOT: commanded duty 0, servo at the park angle, telemetry stale); TELE_SYNC_FRAMES
+ * consecutive monotonic frames make it fresh. A frame a little behind with t_ms not ahead is one the USB path
+ * delivered again (D-54) and is ignored without a state change. */
+#define TELE_SYNC_FRAMES     3u
+#define TELE_OLD_WINDOW      64u                              /* seq at most this far behind ... */
+#define TELE_OLD_MS          4000u                            /* ... and t_ms at most this far back */
+#define TELE_GAP_MAX         1024u                            /* seq further ahead than this = not this boot */
+#define TELE_OLD_MAX         24u      /* more consecutive "old" frames than this = the board rebooted while its
+                                         previous boot was young (seq still inside the window): rebase */
+#define PEND_ESTOP_RESET     0xFFFFu   /* pend_nr while the console E-stop reset awaits its answer (no syscall) */
+
 /* ---- agent bounds (INV-07, D-53, D-58): ACTION frames per request (the 9th ends the executor with LIMIT);
  * the per-action tick quota counts ring-3 ticks only (paused in agent_recv and in a confirmation), the
  * per-request quota is wall clock. */
@@ -95,10 +107,11 @@ enum pol_event_kind {
                             a2 = confirmation timeout ticks */
     EV_EXEC_END = 2,     /* sub = END_*, a0 = exit code / fault vector / ticks used */
     EV_SYSCALL = 3,      /* nr = syscall number, a0..a3 = arguments, flags = EVF_* */
-    EV_CONSOLE = 4,      /* sub = CONSOLE_* */
+    EV_CONSOLE = 4,      /* sub = CONSOLE_*; CONSOLE_ESTOP_RESET: a0 = confirmation timeout ticks (T-04) */
     EV_CONFIRM = 5,      /* sub = ANSWER_* (a timeout is a tick event, not an answer) */
     EV_TICK = 6,         /* timer tick */
-    EV_TELEMETRY = 7,    /* flags = EVF_TELE_VALID, a0 = distance_mm, a1 = estop pressed */
+    EV_TELEMETRY = 7,    /* flags = EVF_TELE_VALID [| EVF_TELE_SEQ], a0 = distance_mm, a1 = estop pressed (bit 0),
+                            a2 = seq, a3 = t_ms; an invalid frame: flags 0, sub = decoder error, a0 = length */
     EV_ACTION_BOUNDARY = 8, /* agent_recv returned to the executor: the action quota restarts (R2) */
     EV_ACTION = 9,       /* a valid ACTION frame arrived on the link (D-53): counted per request, quota
                             restarts; a0 = link frame seq (header, not body: the kernel never parses bodies) */
@@ -115,6 +128,11 @@ enum { ANSWER_NO = 0, ANSWER_YES = 1 };
 #define EVF_UACCESS_OK  0x01u   /* syscall: every user pointer passed uaccess (R3) */
 #define EVF_STR_BAD     0x02u   /* syscall: a NUL-terminated input was unterminated or not printable (R6) */
 #define EVF_TELE_VALID  0x01u   /* telemetry: frame decoded and CRC-checked */
+#define EVF_TELE_SEQ    0x02u   /* telemetry from a real COM3 frame (T-04): a2 = device seq (u16), a3 = device
+                                   t_ms (u32), a1 = estop (bit 0) | fan << 8 | servo << 16 | flags << 24 (the
+                                   kernel puts the whole STATE on the tape; the policy reads bit 0 only). Without
+                                   it (a test-image injection) the sample is valid at once: no boot or sequence
+                                   logic runs. */
 
 struct pol_event {
     uint8_t kind, sub, flags, pad;
@@ -145,23 +163,26 @@ struct pol_state {
     uint8_t fan_duty, servo_deg, servo_moved, fan_changed;
     uint32_t fan_change_tick, servo_tick;
     /* latest telemetry + E-stop latch (kept across requests) */
-    uint8_t tele_valid, estop_pressed, estop_latched, pad2;
+    uint8_t tele_valid, estop_pressed, estop_latched;
+    uint8_t tele_run;                  /* monotonic frames since the boot baseline, 0 = none yet (T-04) */
     uint32_t tele_tick;
-    uint16_t distance_mm, pad3;
+    uint16_t distance_mm, tele_seq;    /* tele_seq / tele_tms: the last accepted sequenced frame */
+    uint32_t tele_tms;
+    uint8_t tele_old_run, pad2[3];     /* consecutive frames classified as re-delivered */
 };
 
 /* ---- decisions ---- */
 enum pol_code {
     DEC_NONE = 0, DEC_ALLOW, DEC_DENY_CAP, DEC_DENY_RULE, DEC_DENY_ARG, DEC_DENY_FAULT, DEC_DENY_LIMIT,
     DEC_DENY_INTERLOCK, DEC_DENY_STALE, DEC_DENY_ESTOP, DEC_CONFIRM_PENDING, DEC_CONFIRM_YES, DEC_CONFIRM_NO,
-    DEC_FRAME_DROP, DEC_PROC_FAULT, DEC_LIMIT, DEC_AUTO_HALT, DEC_COUNT
+    DEC_FRAME_DROP, DEC_PROC_FAULT, DEC_LIMIT, DEC_AUTO_HALT, DEC_BOARD_BOOT, DEC_COUNT
 };
 enum pol_reason {
     R_NONE = 0, R_EXEC_START, R_EXEC_END, R_ARG, R_UACCESS, R_CAP, R_OBJ_RULE, R_OBJ_CONFIRM, R_TAINT,
     R_FIRST_FAN, R_FAN_RANGE, R_FAN_STEP, R_FAN_RATE, R_SERVO_RANGE, R_SERVO_STEP, R_SERVO_RATE,
     R_NO_TELEMETRY, R_STALE, R_PRESENCE, R_NO_ECHO, R_ESTOP, R_ESTOP_BUTTON, R_ESTOP_RESET, R_NOT_LATCHED,
     R_ANSWER, R_TIMEOUT, R_NO_PENDING, R_PENDING, R_ACTION_QUOTA, R_REQUEST_QUOTA, R_NOSYS, R_NO_REQUEST,
-    R_HALT, R_BAD_FRAME, R_PERMISSIVE, R_ACTION_CAP, R_FLUSHED, R_COUNT
+    R_HALT, R_BAD_FRAME, R_PERMISSIVE, R_ACTION_CAP, R_FLUSHED, R_BOARD_BOOT, R_OLD_FRAME, R_COUNT
 };
 enum pol_action { ACT_NONE = 0, ACT_EXEC = 1, ACT_PROMPT = 2, ACT_KILL = 3, ACT_HALT = 4 };
 
