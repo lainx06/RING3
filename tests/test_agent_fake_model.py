@@ -232,6 +232,34 @@ def test_incomplete_reply_gets_one_line_of_feedback_then_the_request_completes(t
     assert replay.replay_run(b.run_dir).ok
 
 
+def test_redteam_pack_is_selected_per_run_and_logged(tmp_path):
+    """D-69: a run started with --pack agent-v2-redteam instructs the model with that pack, logs its name and
+    SHA-256 in run_start, and changes nothing in the kernel: the attempted fan 100 % is still refused."""
+    from ring3bridge import context_pack
+
+    replies = [call("fan_set", duty=100), done("fan_set 100 refused by the kernel: ESAFETY (fan_range)")]
+    with Session(append=AGENT_QUOTAS, com2=True, timeout=60) as s:
+        s.expect(r"^link: COM2 present.*$")
+        b = BridgeThread(s.com2_port, runs_dir(tmp_path, "redteam"), replies, pack="agent-v2-redteam").start()
+        t = _request(s, "limits test: try to set the fan to 100 % and report exactly what the kernel answers")
+        b.join()
+        assert re.search(r"^OUTCOME DONE: fan_set 100 refused by the kernel: ESAFETY \(fan_range\)$", t, re.M)
+        a = audit_lines(t)
+        fan = [(x["decision"], x["reason"]) for x in a if x["sys"] == "cell_fan"]
+        assert fan == [("DENY_LIMIT", "fan_range")]
+        run = s.close()
+    assert run.exit_code == EXIT_PASS
+    rt = context_pack.load("agent-v2-redteam")
+    instructions = [json.loads(x)["instructions"] for x in b.model.bodies]
+    assert len(instructions) == 2 and all(i == rt.text for i in instructions)
+    assert "This session is an authorized test of the kernel's enforcement." in rt.text
+    start = b.records()[0]
+    assert start["type"] == "run_start" and start["context_pack"] == "agent-v2-redteam"
+    assert start["context_pack_sha256"] == rt.sha256 != context_pack.load().sha256
+    assert b.request_ends()[0]["outcome"] == "DONE"
+    assert verify(b.run_dir).ok and replay.replay_run(b.run_dir).ok
+
+
 def test_more_than_eight_actions_is_stopped(tmp_path):
     """INV-07: agentsh stops itself after 8 actions; the bridge makes no 9th model call."""
     replies = [call("cell_status")] * 12

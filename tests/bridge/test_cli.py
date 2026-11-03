@@ -78,3 +78,13 @@ def test_replay_on_the_sample_run(tmp_path, capsys):
     out = capsys.readouterr().out
     assert rc in (0, 1) and ("REPLAY" in out or "MISMATCH" in out)
     assert "tape events by kind:" in out
+
+
+def test_run_dry_run_with_the_redteam_pack(capsys):
+    """`--pack agent-v2-redteam` selects the pack by name; the plan names it with its hash prefix (D-69)."""
+    from ring3bridge import context_pack
+
+    assert cli.main(["run", "--budget-usd", "0.50", "--dry-run", "--pack", "agent-v2-redteam"]) == 0
+    out = capsys.readouterr().out
+    rt = context_pack.load("agent-v2-redteam")
+    assert f"context pack agent-v2-redteam: {len(rt.text)} B, sha256 {rt.sha256[:16]}..." in out

@@ -126,7 +126,14 @@ def replay_run(run_dir: Path, policy_test: Path | None = None) -> ReplayResult:
     if at is None:
         return ReplayResult(True, f"REPLAY MATCH: {len(kernel)} decisions from {len(tape)} tape events",
                             len(tape), len(kernel))  # fmt: skip
-    return ReplayResult(False, f"MISMATCH at #{at}: {why}", len(tape), len(kernel), at)
+    note = ""
+    if kernel and int(kernel[0]["seq"]) > 1:
+        lost = int(kernel[0]["seq"]) - 1
+        note = (
+            f"; the log's first audit is seq {kernel[0]['seq']}: {lost} decision(s) were made before the "
+            "bridge connected, so the tape is incomplete (start `ring3 run` before the kernel boots)"
+        )
+    return ReplayResult(False, f"MISMATCH at #{at}: {why}{note}", len(tape), len(kernel), at)
 
 
 def event_kinds(records: list[dict]) -> dict[str, int]:

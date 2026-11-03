@@ -98,14 +98,20 @@ class BridgeThread:
     """The real run loop in a thread, serving `requests` requests from the kernel at `port`."""
 
     def __init__(
-        self, port: int, run_dir: Path, replies: list[str], requests: int = 1, budget: int = 1_000_000
+        self,
+        port: int,
+        run_dir: Path,
+        replies: list[str],
+        requests: int = 1,
+        budget: int = 1_000_000,
+        pack: str = context_pack.CURRENT,
     ):
         self.model = ScriptedModel(replies)
         self.log = EventLog(run_dir)
         self.run_dir = run_dir
         self.ledger = Ledger(30_000_000, run_dir.parent / "ledger.jsonl")
         self.client = MuseSparkClient(CFG, self.model, self.ledger, self.log, run_dir.name, budget)
-        self.pack = context_pack.load()
+        self.pack = context_pack.load(pack)
         start_run(self.log, run_dir.name, KERNEL_TEST, self.pack, CFG.id, SEED, budget)
         self.link = Link("127.0.0.1", port)
         self.timeline: list[str] = []
