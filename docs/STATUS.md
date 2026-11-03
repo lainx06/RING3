@@ -43,15 +43,17 @@ the end of every card and at each milestone.
   steps itself (model behaviour, D-62; the taint gate is evidenced by the fake-model test), `CHAIN OK`,
   `REPLAY MATCH`, $0.0278 settled ($0.0979 over three runs), no secrets. A5 pass.
   `docs/evidence/T-03b/README.md` ("Live run").
-- **T-04 built, waiting for the user's hardware and live steps** (2026-11-02 18:40 ET, Fable 5.1 / high, D-57):
-  A1, A2, A6, A7 pass on the simulated device; A3 (real cell, `RING3_HW=1 RING3_EVIDENCE=1 uv run pytest -s
-  tests/test_inv_13_hw.py`), A4/A5 (live run: `make run-cell` + `uv run ring3 run --budget-usd 0.50 --requests 3`,
-  three requests) are the user's; exact commands and the reservation ($0.028 per first call) at the end of
-  `docs/evidence/T-04/README.md`. Policy: `BOARD_BOOT`, sequenced telemetry (3 monotonic frames, re-delivered
-  frames silent), two-phase console `estop reset`, re-prompt after `AUTO_HALT`. Driver on IRQ 4 + tick poll, LCD
-  two rows + alarm from decisions, `cell_status` record, `tests/sim_cell.py`. Default suite 573 passed in
-  ~2 min, 0 audit drops; INV-11 scanner added. **Next: the user runs steps 7 and 8, then the builder files the
-  A3-A5 evidence; T-07 Part B / T-05a after.**
+- **T-04 built; A3 (real cell) passed, the live run (A4/A5) is in progress** (2026-11-03, Fable 5.1 / high, D-57):
+  A1, A2, A6, A7 pass on the simulated device; A3 passed on the real cell on 2026-11-03 (hand -> `AUTO_HALT` in the
+  frame's own tick and the board at fan 0 in the same frame; E-stop latch + confirmed console reset; firmware
+  `LINK_LOST` 1.05 s after the kernel went quiet; QEMU-kill stop confirmed by eye), transcripts in
+  `docs/evidence/T-04/hw-*.txt`. A4/A5 (live run: `make run-cell` + `uv run ring3 run --budget-usd 0.50
+  --requests 3`, three requests) are the user's, running now; the builder files the run afterwards. Policy:
+  `BOARD_BOOT`, sequenced telemetry (3 monotonic frames, re-delivered frames silent), two-phase console `estop
+  reset`, re-prompt after `AUTO_HALT`. Driver on IRQ 4 + tick poll, LCD two rows + alarm from decisions,
+  `cell_status` record, `tests/sim_cell.py`. Default suite 573 passed in ~2 min, 0 audit drops; INV-11 scanner
+  added. D-64b (lead): the slow fan was mounting putty on the motor's rear bearing, fixed; no warm-up needed.
+  **Next: the builder files the live-run evidence (A4, A5), then T-07 Part B / T-05a.**
 - **T-07 Part A complete** (2026-11-02 11:20 ET, Opus 5.5 / high, offline, second terminal): gauge generator
   (`hardware/gauge/`, Letter + A4 PDF, 4 ArUco markers, zones + bands, `geometry.json`), `bridge/ring3bridge/witness/`
   (dial frame, SAM 3.1 parser + adapter on an injected transport/ledger, box-centre angle, verdict, calibration,
@@ -87,6 +89,7 @@ the end of every card and at each milestone.
 |---|---|---|---|
 | Step 0 | 2026-11-02 17:05 ET | Doc merge: T-04 card as the lead wrote it, D-59 added, D-60..D-62 in the lead's wording (`940db6e`). | Steps 1-6 |
 | Steps 1-6, 9 (sim) | 2026-11-02 18:10 ET | Policy: sequenced telemetry (`EVF_TELE_SEQ`, `BOARD_BOOT`, 3 monotonic frames, re-delivered frames silent, young-boot restart after 24 old frames), `AUTO_HALT`/`BOARD_BOOT` withdraw the first-fan confirmation, two-phase console `estop reset` (`f38937a`, 837/783 host checks). Driver `kernel/drivers/device.c` on IRQ 4 + tick poll, cell syscalls real, LCD two rows + ALARM from decisions, `cell_status` 16-byte record in the ABI, `tests/sim_cell.py`, `cellcmd`, INV-13/16/11 tests + hw-marked step-7 tests (`7ee6b91`); bridge decodes `cell_status` for the model, `ring3 tape` (`step 9`). Default suite 573 passed in 125 s, 0 drops. | Step 7 (user, real cell), step 8 (user, live run), evidence |
+| Step 7 (real cell, user) | 2026-11-03 | `test_inv_13_hw.py` 3/3 on the Uno: interlock (hand -> `AUTO_HALT presence` same tick, board fan 0 same frame, re-prompt after the stop answered `n`), E-stop (latch, `DENY_ESTOP`, reset refused while pressed, `CONFIRM_YES estop_reset` after release), watchdog (`LINK_LOST` + fan 0 1.05 s after silence, QEMU kill confirmed by eye). Test fix `6ab4b1b` (either rate denial or re-prompt; fan must stay 0). | Step 8 (user, live run), A4/A5 evidence |
 
 ## T-03b progress (builder adds one line per milestone)
 | Milestone | Time | State | Next / open bug |
@@ -122,7 +125,7 @@ the end of every card and at each milestone.
 | T-01B | 2026-11-01 22:35 ET | Opus 5.5 / high | 2026-11-01 22:55 ET; A1–A4 pass + step 5 (fan never moved); 1 test-program fix logged (stale pre-reset frames) | `docs/evidence/T-01B/README.md` |
 | T-03a | 2026-11-01 22:38 ET | Opus 5.5 / high | 2026-11-01 23:10 ET; A1–A6 pass; M1 (link ABI) `e6300b4` first; price and API field names `[UNVERIFIED]`; no network, no paid call | `docs/evidence/T-03a/README.md` |
 | T-03b | 2026-11-02 10:00 ET | Fable 5.1 / high | 2026-11-02 13:00 ET; A1-A7 pass; three live runs by the user (D-57): runs 1-2 ended the planted-note request STOPPED (replies cut off at 2048 output tokens) -> D-60/D-61; run 3 DONE, 3 read-only ops; $0.0979 spent in total (estimate); 2 test changes after the live runs logged (colon, pack v2), no expectation loosened | `docs/evidence/T-03b/README.md` |
-| T-04 | 2026-11-02 17:00 ET | Fable 5.1 / high | 2026-11-02 18:40 ET: A1, A2, A6, A7 pass (sim device); A3, A4, A5 pending the user's hardware run and live run (D-57); 4 test changes logged, none loosened; no paid call made by the builder | `docs/evidence/T-04/README.md` |
+| T-04 | 2026-11-02 17:00 ET | Fable 5.1 / high | 2026-11-03: A1, A2, A3, A6, A7 pass (A3 on the real cell, user present); A4, A5 pending the user's live run (D-57); 5 test changes logged, none loosened; no paid call made by the builder | `docs/evidence/T-04/README.md` |
 | T-06 | 2026-11-01 16:58 ET | Opus 5.5 / high | **21:46 ET: A1 A2 A3 A6 A7 pass; A5 pass except the alarm outputs; A4 part 1 pass. Pending Nov 2 (parts arrive): LCD, buzzer, RGB wiring → `bringup` part 2 (A4) + link-loss alarm (A5.8).** Firmware `222d26d` flashed. Lead decisions D-46..D-50 applied; 10 test-program changes logged, none loosened an expectation | `docs/evidence/T-06/README.md` |
 | T-07 Part A | 2026-11-02 | Opus 5.5 / high | 2026-11-02 11:20 ET; A1 pass (Part B: A2-A4 open); offline, no paid call; 1 test-program change logged (fixture offset 4 -> 2 deg + new disable cases), no limit loosened | `docs/evidence/T-07/README.md` |
 

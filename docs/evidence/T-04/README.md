@@ -10,7 +10,7 @@ Steps 1-6, 9 (converter) and the simulated-device half of A7 are done here; step
 |---|---|---|---|
 | A1 | Build zero warnings; default `uv run pytest` (sim device, no hardware, no network) passes; suite < 240 s | **PASS**: 0 diagnostics in every image (`-Wall -Wextra -Werror`), host build clean; full default suite 573 passed, 6 skipped (4 hw + 2 witness) in 125 s | `build.txt`, `pytest.txt`, `ktest.txt` (20/20), `policy-host.txt` (837 + 783 checks) |
 | A2 | Every `test_inv_13_*` and `test_inv_16_*` passes against the simulated device; `dropped == 0` in every run | **PASS**: `test_inv_13_limits` (+ boot resync, previous-boot frames, re-delivery, corrupt frame, host replay of the sim run), `test_inv_13_interlock_and_stale` (+ firmware restart, hazards during a pending prompt, AUTO_HALT then fan 50 tainted), `test_inv_13_estop_latch`, `test_inv_16_halt_always`, `test_inv_16_tick_lease_autohalt`; `audit: dropped=0` on every exit (the harness fails any run with a drop) | `sim-device.txt`, `sim-*.txt` |
-| A3 | Hardware scripted run (step 7): interlock stop, E-stop latch + console reset, QEMU-kill -> firmware stop within 1.5 s; transcript + telemetry timestamps saved | **PENDING (user, D-57)**: `RING3_HW=1 RING3_EVIDENCE=1 uv run pytest -s tests/test_inv_13_hw.py` with the cell attached (commands below) | `hw-interlock.txt`, `hw-estop.txt`, `hw-watchdog.txt` (written by the tests) |
+| A3 | Hardware scripted run (step 7): interlock stop, E-stop latch + console reset, QEMU-kill -> firmware stop within 1.5 s; transcript + telemetry timestamps saved | **PASS** (user, 2026-11-03, real cell on `/dev/ttyACM0`): hand -> `AUTO_HALT presence` in the same tick as the frame, board fan 0 in the same 50 ms frame; E-stop -> `AUTO_HALT estop` + latch, reset refused while pressed, `CONFIRM_YES estop_reset` once released; link silent 1 s -> firmware `LINK_LOST` + fan 0, QEMU killed with the fan running -> stop confirmed by eye; 0 drops in the E-stop and watchdog runs, 2 resync drops at boot in the interlock run (T-01B, expected) | `hw-interlock.txt`, `hw-estop.txt`, `hw-watchdog.txt` (hardware table below) |
 | A4 | Live Muse Spark run (step 8): self-test `DONE` with executed ops; 100 % refused; taint prompts; `CHAIN OK`; spend <= budget; no secrets over the live run directory | **PENDING (user, D-57)**: three requests in one `ring3 run --budget-usd 0.50 --requests 3` (commands below) | `live-run/` |
 | A5 | Host replay of the live tape reproduces every decision | **PENDING (live tape)**; the mechanism is shown twice on this card: `ring3 replay`-style match of a simulated-device run (`REPLAY MATCH: 103 decisions, 153 tape events`, BOARD_BOOT included) and the scripted T-02 run with the two-phase reset (`REPLAY MATCH: 279 decisions, 291 tape events`) | `sim-limits-replay-host.txt`, `sim-device.txt`, `../T-02/replay-match.txt` |
 | A6 | Commits: real `Builder:` trailer | **PASS**: every T-04 commit carries `Builder: Fable 5.1/high` | `git log` |
@@ -72,6 +72,17 @@ Steps 1-6, 9 (converter) and the simulated-device half of A7 are done here; step
 | Board silent -> `AUTO_HALT stale` + `FAN 0` | 479 ms after the last frame | 500 ms stale limit |
 | Boot with 13 bytes of a cut frame + 18 whole previous-boot frames (6 x 3) first | 13 resync bytes, 18 `prev_boot`, 0 drops, 1 `BOARD_BOOT` | not drops |
 
+## Measured on the real cell (user, 2026-11-03; board t_ms from the tape, kernel tick 10 ms)
+| What | Measured | Limit |
+|---|---|---|
+| Hand in front of the sensor while the fan runs -> `AUTO_HALT presence` | same tick as the frame that showed it (tick 417, t_ms 3366) | within one tick |
+| ... -> board reports fan 0 | the same frame (t_ms 3366, flags `PRESENCE_FAULT`): the firmware's own cutoff and the kernel's `FAN 0` coincide | 150 ms |
+| Next `fan 60` after the hazard stop | 12 s later (hand removed, program ended): the first-fan question again (D-53), answered `n`, `CONFIRM_NO`, no FAN > 0 frame on the board afterwards | nothing moves |
+| E-stop pressed while the fan runs -> `AUTO_HALT estop`, board fan 0 | same tick (562), same frame (t_ms 3666, flags `ESTOP_LATCHED`) | one tick |
+| Under the latch | `cell_fan(60)` and `cell_servo(100)` -> `DENY_ESTOP`; console `estop reset` while still pressed -> `CONFIRM_PENDING` then `DENY_ESTOP estop_button`; after release -> `CONFIRM_YES estop_reset`, `ESTOP_RESET` sent, fan allowed again after the first-fan prompt | latch outranks everything |
+| Kernel muted (`cellmute 250`, telemetry still read) -> firmware `LINK_LOST` + fan 0 | 1,050 ms after the last frame that still showed the fan on (t_ms 2416 -> 2466); link restored, fan re-asked and allowed | 1.5 s |
+| QEMU killed with the fan at 60 % | fan stopped, user-confirmed by eye (the kernel cannot timestamp its own death) | 1.5 s |
+
 ## Test-program changes (none loosened an expectation)
 | # | Test | What was wrong / why | Change | Expectation |
 |---|---|---|---|---|
@@ -79,6 +90,7 @@ Steps 1-6, 9 (converter) and the simulated-device half of A7 are done here; step
 | 2 | `tests/qemu.py` `Session.prompt()` | COM3 telemetry puts AUDIT/TAPE lines on COM1 after the prompt; a test that had read past such a line waited forever for a second prompt | `prompt()` accepts a prompt printed any time after the last line sent | Unchanged for every earlier test (their prompt always follows the sent line) |
 | 3 | `tests/host/policy_test.c` `t_estop`, `t_tick_autohalt` | Two-phase reset; re-prompt after a hazard stop | Follow the new decisions (`CONFIRM_PENDING`/`CONFIRM_YES estop_reset`, `R_FIRST_FAN` again after `AUTO_HALT`) | Stricter |
 | 4 | `tests/test_inv_13_*` (new, during this card) | First drafts asserted the sim's applied fan before its next 50 ms pass, compared whole audit lists (plumbing included), forgot that the latch outlives the button, and expected `DENY_STALE` in the same tick as a halt (the rate rule runs first, R5) | Waits for the frame, device-path filter, a console reset in the sequence, `wait 110` before the stale check | Same device rules; nothing in `decide()` or the driver changed for a test |
+| 5 | `tests/test_inv_13_hw.py` `test_inv_13_hw_interlock_stop` | On the real cell more than 1 s passes between the halt and the next `cellcmd fan 60` (hand removal, program end), so the kernel re-asks the first-fan question (D-53) instead of `DENY_LIMIT fan_rate`; the sim-timed draft expected only the rate denial | Accepts either path: `DENY_LIMIT fan_rate` (-200) or the prompt answered `n` (`CONFIRM_NO`, -125); in both cases asserts no telemetry frame after the cut reports fan > 0 (`6ab4b1b`) | Stricter on the board (fan must stay 0); kernel unchanged |
 
 ## Findings
 1. **A restart within the first ~3 s of a boot is ambiguous** from (seq, t_ms) alone: its first frames look
@@ -92,9 +104,13 @@ Steps 1-6, 9 (converter) and the simulated-device half of A7 are done here; step
    is lost; a tail without one merges with the next frame up to its delimiter (one `FRAME_DROP`, as T-01B saw
    with the real board: 1-4 per boot, expected).
 4. **The console line limit** (120) would have truncated the card's self-test request; raised to 240.
-5. Left for the user to observe on the real cell: the QEMU-kill case cannot be timestamped by the kernel
+5. Left for the user to observe on the real cell (done 2026-11-03, see the hardware table): the QEMU-kill case cannot be timestamped by the kernel
    (it is dead) nor from the host (opening the port resets the board), so the test measures the watchdog with
    the kernel muted (`cellmute`, telemetry keeps flowing) and records the kill as user-reported.
+
+6. **Hardware run notes (user).** One earlier interlock run ended in `DENY_INTERLOCK presence` at the start
+   because something was within 10 cm of the sensor: correct. D-64b (lead): the slow fan seen earlier was the
+   mounting putty pressing on the motor's rear bearing, now fixed; no warm-up is needed.
 
 `[UNVERIFIED]`: nothing new; the T-01B items stand (cause of the 18.9 vs 20 Hz rate, where the re-delivered
 blocks come from).
@@ -108,7 +124,7 @@ blocks come from).
 | `sim-device.txt` | A2/A7: the T-04 QEMU tests with the measured times |
 | `sim-limits.txt`, `sim-limits-replay-host.txt` | limits run on the sim + its host replay |
 | `sim-boot-resync.txt`, `sim-interlock-stale.txt`, `sim-restart.txt`, `sim-prompt-hazard.txt`, `sim-autohalt-taint.txt`, `sim-estop-latch.txt`, `sim-halt-always.txt`, `sim-tick-lease.txt` | transcripts (COM1) of each test |
-| `hw-*.txt` | A3 (user) |
+| `hw-interlock.txt`, `hw-estop.txt`, `hw-watchdog.txt` | A3: COM1 transcripts of the three hardware tests (each starts with its QEMU command line) |
 | `live-run/` | A4, A5 (user): `com1-transcript.txt`, `bridge-timeline.txt`, `verify.txt`, `replay.txt`, `spend.txt`, `no-secrets.txt` + `scan_run_secrets.py` |
 
 ## Step 7: the real cell (user)

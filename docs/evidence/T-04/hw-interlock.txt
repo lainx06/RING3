@@ -1,0 +1,461 @@
+$ qemu-system-i386 -kernel build/kernel-test.elf -m 64 -display none -serial stdio -serial null -serial /dev/ttyACM0 -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -append 'taction=100 trequest=6000 tconfirm=3000'
+# exit code 33, 16.6 s
+
+RING3 0.1.0 build 0ef474d
+policy: default sha256=4101a8cc305078722afb56a4eb09e2b4c3705e2d2c697b418c7ef02885cdef0b
+memory: 65023 KiB usable
+init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, 3713 frames free
+link: COM2 present (bridge link, HELLO sent)
+cell: COM3 present (work cell, IRQ 4 + tick poll)
+TIMER t0=1
+TIMER t1=26
+test image: quotas action=100 request=6000 confirm=3000 ticks
+TAPE k=7 s=2 f=0 t=1 nr=0 a0=26 a1=0 a2=0 a3=0
+AUDIT seq=1 tick=1 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+ring3> 
+TAPE k=7 s=2 f=0 t=52 nr=0 a0=26 a1=0 a2=0 a3=0
+AUDIT seq=2 tick=52 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+TAPE k=7 s=0 f=3 t=58 nr=0 a0=247 a1=5898240 a2=1 a3=66
+AUDIT seq=3 tick=58 sys=telemetry target=0 decision=BOARD_BOOT reason=board_boot result=0 tainted=0
+TAPE k=7 s=0 f=3 t=64 nr=0 a0=255 a1=5898240 a2=2 a3=116
+TAPE k=7 s=0 f=3 t=69 nr=0 a0=246 a1=5898240 a2=3 a3=166
+TAPE k=7 s=0 f=3 t=74 nr=0 a0=246 a1=5898240 a2=4 a3=216
+TAPE k=7 s=0 f=3 t=80 nr=0 a0=256 a1=5898240 a2=5 a3=266
+TAPE k=7 s=0 f=3 t=85 nr=0 a0=256 a1=5898240 a2=6 a3=316
+TAPE k=7 s=0 f=3 t=91 nr=0 a0=247 a1=5898240 a2=7 a3=366
+TAPE k=7 s=0 f=3 t=96 nr=0 a0=246 a1=5898240 a2=8 a3=416
+TAPE k=7 s=0 f=3 t=101 nr=0 a0=247 a1=5898240 a2=9 a3=466
+TAPE k=7 s=0 f=3 t=107 nr=0 a0=246 a1=5898240 a2=10 a3=516
+status
+status: fan=0 servo=90 estop_latched=0 tele_valid=1 distance=246 in_request=0 tainted=0 pending=0 seq=3 dropped=0 uptime=111
+link: com2=1 connected=0 rx_frames=0 frames_dropped=0 queued=0 tx_frames=17 tx_dropped=0 stalled=0
+cell: com3=1 synced=1 frames=10 prev_boot=0 old=0 frame_drops=2 resync_bytes=13 lsr_err=0 tx=5 tx_failed=0 pings=2 halts=1
+cell: last seq=10 t_ms=516 fan=0 servo=90 dist=246 estop=0 flags=0x0 ack=4 age_ticks=4
+ring3> run cellcmd fan 60; wait 1500
+TAPE k=1 s=4 f=0 t=112 nr=63 a0=100 a1=6000 a2=3000 a3=0
+AUDIT seq=4 tick=112 sys=exec_start target=4 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=1 name=cellcmd prog=4 caps=0x3f uptime=112
+SYSCALL pid=1 nr=6 cpl=3
+TAPE k=3 s=0 f=1 t=112 nr=6 a0=60 a1=0 a2=0 a3=0
+AUDIT seq=5 tick=112 sys=cell_fan target=60 decision=CONFIRM_PENDING reason=first_fan result=0 tainted=0
+TAPE k=7 s=0 f=3 t=113 nr=0 a0=247 a1=5898240 a2=11 a3=566
+CONFIRM: cellcmd wants cell_fan(60). Allow? [y/N] y
+TAPE k=5 s=1 f=0 t=115 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=6 tick=115 sys=confirm target=60 decision=CONFIRM_YES reason=first_fan result=0 tainted=0
+cellcmd: fan 60 -> 0
+TAPE k=3 s=0 f=1 t=116 nr=1 a0=1073746452 a1=13 a2=0 a3=0
+AUDIT seq=7 tick=116 sys=cons_write target=1073746452 decision=ALLOW reason=none result=13 tainted=0
+TAPE k=3 s=0 f=1 t=116 nr=1 a0=2147478444 a1=2 a2=0 a3=0
+AUDIT seq=8 tick=116 sys=cons_write target=2147478444 decision=ALLOW reason=none result=2 tainted=0
+TAPE k=3 s=0 f=1 t=116 nr=1 a0=1073746425 a1=4 a2=0 a3=0
+AUDIT seq=9 tick=116 sys=cons_write target=1073746425 decision=ALLOW reason=none result=4 tainted=0
+TAPE k=3 s=0 f=1 t=116 nr=1 a0=2147478444 a1=1 a2=0 a3=0
+AUDIT seq=10 tick=116 sys=cons_write target=2147478444 decision=ALLOW reason=none result=1 tainted=0
+TAPE k=3 s=0 f=1 t=116 nr=1 a0=1073746438 a1=1 a2=0 a3=0
+AUDIT seq=11 tick=116 sys=cons_write target=1073746438 decision=ALLOW reason=none result=1 tainted=0
+TAPE k=7 s=0 f=3 t=118 nr=0 a0=246 a1=5913600 a2=12 a3=619
+TAPE k=7 s=0 f=3 t=123 nr=0 a0=247 a1=5913600 a2=13 a3=666
+TAPE k=7 s=0 f=3 t=129 nr=0 a0=244 a1=5913600 a2=14 a3=716
+TAPE k=7 s=0 f=3 t=134 nr=0 a0=244 a1=5913600 a2=15 a3=766
+TAPE k=8 s=0 f=0 t=137 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=139 nr=0 a0=244 a1=5913600 a2=16 a3=816
+TAPE k=7 s=0 f=3 t=145 nr=0 a0=244 a1=5913600 a2=17 a3=866
+TAPE k=7 s=0 f=3 t=150 nr=0 a0=244 a1=5913600 a2=18 a3=916
+TAPE k=7 s=0 f=3 t=156 nr=0 a0=244 a1=5913600 a2=19 a3=966
+TAPE k=8 s=0 f=0 t=157 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=161 nr=0 a0=244 a1=5913600 a2=20 a3=1016
+TAPE k=7 s=0 f=3 t=166 nr=0 a0=244 a1=5913600 a2=21 a3=1067
+TAPE k=7 s=0 f=3 t=172 nr=0 a0=244 a1=5913600 a2=22 a3=1116
+TAPE k=8 s=0 f=0 t=177 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=178 nr=0 a0=244 a1=5913600 a2=23 a3=1166
+TAPE k=7 s=0 f=3 t=183 nr=0 a0=244 a1=5913600 a2=24 a3=1216
+TAPE k=7 s=0 f=3 t=188 nr=0 a0=244 a1=5913600 a2=25 a3=1266
+TAPE k=7 s=0 f=3 t=194 nr=0 a0=244 a1=5913600 a2=26 a3=1316
+TAPE k=8 s=0 f=0 t=197 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=199 nr=0 a0=244 a1=5913600 a2=27 a3=1366
+TAPE k=7 s=0 f=3 t=205 nr=0 a0=244 a1=5913600 a2=28 a3=1416
+TAPE k=7 s=0 f=3 t=210 nr=0 a0=244 a1=5913600 a2=29 a3=1466
+TAPE k=7 s=0 f=3 t=216 nr=0 a0=244 a1=5913600 a2=30 a3=1516
+TAPE k=8 s=0 f=0 t=217 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=221 nr=0 a0=244 a1=5913600 a2=31 a3=1566
+TAPE k=7 s=0 f=3 t=226 nr=0 a0=244 a1=5913600 a2=32 a3=1616
+TAPE k=7 s=0 f=3 t=232 nr=0 a0=244 a1=5913600 a2=33 a3=1666
+TAPE k=8 s=0 f=0 t=237 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=237 nr=0 a0=244 a1=5913600 a2=34 a3=1716
+TAPE k=7 s=0 f=3 t=243 nr=0 a0=244 a1=5913600 a2=35 a3=1766
+TAPE k=7 s=0 f=3 t=248 nr=0 a0=244 a1=5913600 a2=36 a3=1816
+TAPE k=7 s=0 f=3 t=253 nr=0 a0=244 a1=5913600 a2=37 a3=1866
+TAPE k=8 s=0 f=0 t=257 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=259 nr=0 a0=244 a1=5913600 a2=38 a3=1916
+TAPE k=7 s=0 f=3 t=265 nr=0 a0=244 a1=5913600 a2=39 a3=1966
+TAPE k=7 s=0 f=3 t=270 nr=0 a0=244 a1=5913600 a2=40 a3=2016
+TAPE k=7 s=0 f=3 t=275 nr=0 a0=253 a1=5913600 a2=41 a3=2066
+TAPE k=8 s=0 f=0 t=277 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=281 nr=0 a0=253 a1=5913600 a2=42 a3=2116
+TAPE k=7 s=0 f=3 t=286 nr=0 a0=244 a1=5913600 a2=43 a3=2166
+TAPE k=7 s=0 f=3 t=292 nr=0 a0=244 a1=5913600 a2=44 a3=2216
+TAPE k=8 s=0 f=0 t=297 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=297 nr=0 a0=244 a1=5913600 a2=45 a3=2266
+TAPE k=7 s=0 f=3 t=303 nr=0 a0=244 a1=5913600 a2=46 a3=2316
+TAPE k=7 s=0 f=3 t=308 nr=0 a0=244 a1=5913600 a2=47 a3=2366
+TAPE k=7 s=0 f=3 t=313 nr=0 a0=244 a1=5913600 a2=48 a3=2416
+TAPE k=8 s=0 f=0 t=317 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=319 nr=0 a0=244 a1=5913600 a2=49 a3=2466
+TAPE k=7 s=0 f=3 t=324 nr=0 a0=244 a1=5913600 a2=50 a3=2516
+TAPE k=7 s=0 f=3 t=330 nr=0 a0=244 a1=5913600 a2=51 a3=2566
+TAPE k=7 s=0 f=3 t=335 nr=0 a0=244 a1=5913600 a2=52 a3=2616
+TAPE k=8 s=0 f=0 t=337 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=340 nr=0 a0=244 a1=5913600 a2=53 a3=2666
+TAPE k=7 s=0 f=3 t=346 nr=0 a0=246 a1=5913600 a2=54 a3=2716
+TAPE k=7 s=0 f=3 t=352 nr=0 a0=244 a1=5913600 a2=55 a3=2766
+TAPE k=8 s=0 f=0 t=357 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=357 nr=0 a0=244 a1=5913600 a2=56 a3=2816
+TAPE k=7 s=0 f=3 t=362 nr=0 a0=244 a1=5913600 a2=57 a3=2866
+TAPE k=7 s=0 f=3 t=368 nr=0 a0=244 a1=5913600 a2=58 a3=2916
+TAPE k=7 s=0 f=3 t=373 nr=0 a0=244 a1=5913600 a2=59 a3=2966
+TAPE k=8 s=0 f=0 t=377 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=379 nr=0 a0=244 a1=5913600 a2=60 a3=3016
+TAPE k=7 s=0 f=3 t=384 nr=0 a0=244 a1=5913600 a2=61 a3=3066
+TAPE k=7 s=0 f=3 t=390 nr=0 a0=244 a1=5913600 a2=62 a3=3116
+TAPE k=7 s=0 f=3 t=395 nr=0 a0=244 a1=5913600 a2=63 a3=3166
+TAPE k=8 s=0 f=0 t=397 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=400 nr=0 a0=244 a1=5913600 a2=64 a3=3216
+TAPE k=7 s=0 f=3 t=406 nr=0 a0=244 a1=5913600 a2=65 a3=3266
+TAPE k=7 s=0 f=3 t=411 nr=0 a0=244 a1=5913600 a2=66 a3=3316
+TAPE k=8 s=0 f=0 t=417 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=417 nr=0 a0=45 a1=274333696 a2=67 a3=3366
+AUDIT seq=12 tick=417 sys=telemetry target=60 decision=AUTO_HALT reason=presence result=0 tainted=0
+TAPE k=7 s=0 f=3 t=421 nr=0 a0=48 a1=274333696 a2=68 a3=3416
+TAPE k=7 s=0 f=3 t=426 nr=0 a0=52 a1=274333696 a2=69 a3=3466
+TAPE k=7 s=0 f=3 t=432 nr=0 a0=26 a1=274333696 a2=70 a3=3516
+TAPE k=8 s=0 f=0 t=437 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=438 nr=0 a0=35 a1=274333696 a2=71 a3=3566
+TAPE k=7 s=0 f=3 t=443 nr=0 a0=38 a1=274333696 a2=72 a3=3616
+TAPE k=7 s=0 f=3 t=449 nr=0 a0=38 a1=274333696 a2=73 a3=3666
+TAPE k=7 s=0 f=3 t=454 nr=0 a0=35 a1=274333696 a2=74 a3=3716
+TAPE k=8 s=0 f=0 t=457 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=459 nr=0 a0=38 a1=274333696 a2=75 a3=3766
+TAPE k=7 s=0 f=3 t=465 nr=0 a0=299 a1=274333696 a2=76 a3=3816
+TAPE k=7 s=0 f=3 t=470 nr=0 a0=247 a1=274333696 a2=77 a3=3866
+TAPE k=7 s=0 f=3 t=476 nr=0 a0=238 a1=274333696 a2=78 a3=3916
+TAPE k=8 s=0 f=0 t=477 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=481 nr=0 a0=246 a1=274333696 a2=79 a3=3966
+TAPE k=7 s=0 f=3 t=486 nr=0 a0=247 a1=274333696 a2=80 a3=4016
+TAPE k=7 s=0 f=3 t=492 nr=0 a0=247 a1=274333696 a2=81 a3=4066
+TAPE k=8 s=0 f=0 t=497 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=497 nr=0 a0=247 a1=274333696 a2=82 a3=4116
+TAPE k=7 s=0 f=3 t=503 nr=0 a0=247 a1=274333696 a2=83 a3=4166
+TAPE k=7 s=0 f=3 t=508 nr=0 a0=247 a1=274333696 a2=84 a3=4216
+TAPE k=7 s=0 f=3 t=514 nr=0 a0=247 a1=274333696 a2=85 a3=4267
+TAPE k=8 s=0 f=0 t=517 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=519 nr=0 a0=246 a1=274333696 a2=86 a3=4316
+TAPE k=7 s=0 f=3 t=525 nr=0 a0=246 a1=274333696 a2=87 a3=4366
+TAPE k=7 s=0 f=3 t=530 nr=0 a0=247 a1=274333696 a2=88 a3=4416
+TAPE k=7 s=0 f=3 t=535 nr=0 a0=247 a1=274333696 a2=89 a3=4466
+TAPE k=8 s=0 f=0 t=537 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=541 nr=0 a0=247 a1=274333696 a2=90 a3=4516
+TAPE k=7 s=0 f=3 t=546 nr=0 a0=246 a1=274333696 a2=91 a3=4566
+TAPE k=7 s=0 f=3 t=552 nr=0 a0=247 a1=274333696 a2=92 a3=4616
+TAPE k=8 s=0 f=0 t=557 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=557 nr=0 a0=247 a1=274333696 a2=93 a3=4666
+TAPE k=7 s=0 f=3 t=563 nr=0 a0=246 a1=274333696 a2=94 a3=4716
+TAPE k=7 s=0 f=3 t=568 nr=0 a0=246 a1=274333696 a2=95 a3=4766
+TAPE k=7 s=0 f=3 t=573 nr=0 a0=247 a1=274333696 a2=96 a3=4816
+TAPE k=8 s=0 f=0 t=577 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=579 nr=0 a0=247 a1=274333696 a2=97 a3=4866
+TAPE k=7 s=0 f=3 t=584 nr=0 a0=247 a1=274333696 a2=98 a3=4916
+TAPE k=7 s=0 f=3 t=590 nr=0 a0=247 a1=274333696 a2=99 a3=4966
+TAPE k=7 s=0 f=3 t=595 nr=0 a0=247 a1=274333696 a2=100 a3=5016
+TAPE k=8 s=0 f=0 t=597 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=601 nr=0 a0=246 a1=274333696 a2=101 a3=5066
+TAPE k=7 s=0 f=3 t=606 nr=0 a0=247 a1=274333696 a2=102 a3=5116
+TAPE k=7 s=0 f=3 t=611 nr=0 a0=247 a1=274333696 a2=103 a3=5166
+TAPE k=8 s=0 f=0 t=617 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=617 nr=0 a0=247 a1=274333696 a2=104 a3=5216
+TAPE k=7 s=0 f=3 t=622 nr=0 a0=246 a1=274333696 a2=105 a3=5266
+TAPE k=7 s=0 f=3 t=628 nr=0 a0=247 a1=274333696 a2=106 a3=5316
+TAPE k=7 s=0 f=3 t=633 nr=0 a0=246 a1=274333696 a2=107 a3=5366
+TAPE k=8 s=0 f=0 t=637 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=639 nr=0 a0=247 a1=274333696 a2=108 a3=5416
+TAPE k=7 s=0 f=3 t=644 nr=0 a0=247 a1=274333696 a2=109 a3=5466
+TAPE k=7 s=0 f=3 t=650 nr=0 a0=247 a1=274333696 a2=110 a3=5516
+TAPE k=7 s=0 f=3 t=655 nr=0 a0=247 a1=274333696 a2=111 a3=5566
+TAPE k=8 s=0 f=0 t=657 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=660 nr=0 a0=247 a1=274333696 a2=112 a3=5616
+TAPE k=7 s=0 f=3 t=666 nr=0 a0=246 a1=274333696 a2=113 a3=5666
+TAPE k=7 s=0 f=3 t=671 nr=0 a0=255 a1=274333696 a2=114 a3=5716
+TAPE k=8 s=0 f=0 t=677 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=677 nr=0 a0=255 a1=274333696 a2=115 a3=5766
+TAPE k=7 s=0 f=3 t=682 nr=0 a0=255 a1=274333696 a2=116 a3=5816
+TAPE k=7 s=0 f=3 t=688 nr=0 a0=246 a1=274333696 a2=117 a3=5866
+TAPE k=7 s=0 f=3 t=693 nr=0 a0=246 a1=274333696 a2=118 a3=5916
+TAPE k=8 s=0 f=0 t=697 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=698 nr=0 a0=246 a1=274333696 a2=119 a3=5966
+TAPE k=7 s=0 f=3 t=704 nr=0 a0=247 a1=274333696 a2=120 a3=6016
+TAPE k=7 s=0 f=3 t=709 nr=0 a0=247 a1=274333696 a2=121 a3=6066
+TAPE k=7 s=0 f=3 t=715 nr=0 a0=246 a1=274333696 a2=122 a3=6116
+TAPE k=8 s=0 f=0 t=717 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=720 nr=0 a0=246 a1=274333696 a2=123 a3=6166
+TAPE k=7 s=0 f=3 t=726 nr=0 a0=246 a1=274333696 a2=124 a3=6216
+TAPE k=7 s=0 f=3 t=731 nr=0 a0=247 a1=274333696 a2=125 a3=6266
+TAPE k=7 s=0 f=3 t=737 nr=0 a0=247 a1=274333696 a2=126 a3=6316
+TAPE k=8 s=0 f=0 t=737 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=742 nr=0 a0=246 a1=274333696 a2=127 a3=6366
+TAPE k=7 s=0 f=3 t=747 nr=0 a0=247 a1=274333696 a2=128 a3=6416
+TAPE k=7 s=0 f=3 t=753 nr=0 a0=246 a1=274333696 a2=129 a3=6466
+TAPE k=8 s=0 f=0 t=757 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=758 nr=0 a0=247 a1=274333696 a2=130 a3=6516
+TAPE k=7 s=0 f=3 t=764 nr=0 a0=247 a1=274333696 a2=131 a3=6566
+TAPE k=7 s=0 f=3 t=769 nr=0 a0=247 a1=274333696 a2=132 a3=6616
+TAPE k=7 s=0 f=3 t=774 nr=0 a0=246 a1=274333696 a2=133 a3=6666
+TAPE k=8 s=0 f=0 t=777 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=780 nr=0 a0=247 a1=274333696 a2=134 a3=6716
+TAPE k=7 s=0 f=3 t=785 nr=0 a0=246 a1=274333696 a2=135 a3=6766
+TAPE k=7 s=0 f=3 t=791 nr=0 a0=247 a1=274333696 a2=136 a3=6816
+TAPE k=7 s=0 f=3 t=797 nr=0 a0=247 a1=274333696 a2=137 a3=6866
+TAPE k=8 s=0 f=0 t=797 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=802 nr=0 a0=247 a1=274333696 a2=138 a3=6916
+TAPE k=7 s=0 f=3 t=807 nr=0 a0=247 a1=274333696 a2=139 a3=6966
+TAPE k=7 s=0 f=3 t=813 nr=0 a0=247 a1=274333696 a2=140 a3=7016
+TAPE k=8 s=0 f=0 t=817 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=818 nr=0 a0=246 a1=274333696 a2=141 a3=7066
+TAPE k=7 s=0 f=3 t=824 nr=0 a0=247 a1=274333696 a2=142 a3=7116
+TAPE k=7 s=0 f=3 t=829 nr=0 a0=247 a1=274333696 a2=143 a3=7166
+TAPE k=7 s=0 f=3 t=834 nr=0 a0=247 a1=274333696 a2=144 a3=7216
+TAPE k=8 s=0 f=0 t=837 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=840 nr=0 a0=247 a1=274333696 a2=145 a3=7266
+TAPE k=7 s=0 f=3 t=845 nr=0 a0=239 a1=274333696 a2=146 a3=7316
+TAPE k=7 s=0 f=3 t=851 nr=0 a0=238 a1=274333696 a2=147 a3=7366
+TAPE k=7 s=0 f=3 t=856 nr=0 a0=238 a1=274333696 a2=148 a3=7416
+TAPE k=8 s=0 f=0 t=857 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=862 nr=0 a0=246 a1=274333696 a2=149 a3=7467
+TAPE k=7 s=0 f=3 t=867 nr=0 a0=246 a1=274333696 a2=150 a3=7516
+TAPE k=7 s=0 f=3 t=872 nr=0 a0=246 a1=274333696 a2=151 a3=7566
+TAPE k=8 s=0 f=0 t=877 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=878 nr=0 a0=246 a1=274333696 a2=152 a3=7616
+TAPE k=7 s=0 f=3 t=883 nr=0 a0=246 a1=274333696 a2=153 a3=7666
+TAPE k=7 s=0 f=3 t=889 nr=0 a0=246 a1=274333696 a2=154 a3=7716
+TAPE k=7 s=0 f=3 t=894 nr=0 a0=247 a1=274333696 a2=155 a3=7766
+TAPE k=8 s=0 f=0 t=897 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=899 nr=0 a0=247 a1=274333696 a2=156 a3=7816
+TAPE k=7 s=0 f=3 t=905 nr=0 a0=246 a1=274333696 a2=157 a3=7866
+TAPE k=7 s=0 f=3 t=911 nr=0 a0=247 a1=274333696 a2=158 a3=7916
+TAPE k=7 s=0 f=3 t=916 nr=0 a0=247 a1=274333696 a2=159 a3=7966
+TAPE k=8 s=0 f=0 t=917 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=921 nr=0 a0=247 a1=274333696 a2=160 a3=8016
+TAPE k=7 s=0 f=3 t=927 nr=0 a0=247 a1=274333696 a2=161 a3=8066
+TAPE k=7 s=0 f=3 t=932 nr=0 a0=247 a1=274333696 a2=162 a3=8116
+TAPE k=8 s=0 f=0 t=937 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=938 nr=0 a0=247 a1=274333696 a2=163 a3=8166
+TAPE k=7 s=0 f=3 t=943 nr=0 a0=246 a1=274333696 a2=164 a3=8216
+TAPE k=7 s=0 f=3 t=949 nr=0 a0=246 a1=274333696 a2=165 a3=8266
+TAPE k=7 s=0 f=3 t=954 nr=0 a0=246 a1=274333696 a2=166 a3=8316
+TAPE k=8 s=0 f=0 t=957 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=959 nr=0 a0=246 a1=274333696 a2=167 a3=8366
+TAPE k=7 s=0 f=3 t=965 nr=0 a0=246 a1=274333696 a2=168 a3=8416
+TAPE k=7 s=0 f=3 t=970 nr=0 a0=247 a1=274333696 a2=169 a3=8466
+TAPE k=7 s=0 f=3 t=976 nr=0 a0=247 a1=274333696 a2=170 a3=8516
+TAPE k=8 s=0 f=0 t=977 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=981 nr=0 a0=247 a1=274333696 a2=171 a3=8566
+TAPE k=7 s=0 f=3 t=987 nr=0 a0=246 a1=274333696 a2=172 a3=8616
+TAPE k=7 s=0 f=3 t=992 nr=0 a0=247 a1=274333696 a2=173 a3=8666
+TAPE k=8 s=0 f=0 t=997 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=998 nr=0 a0=247 a1=274333696 a2=174 a3=8716
+TAPE k=7 s=0 f=3 t=1003 nr=0 a0=247 a1=274333696 a2=175 a3=8766
+TAPE k=7 s=0 f=3 t=1008 nr=0 a0=247 a1=274333696 a2=176 a3=8816
+TAPE k=7 s=0 f=3 t=1014 nr=0 a0=247 a1=274333696 a2=177 a3=8866
+TAPE k=8 s=0 f=0 t=1017 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1019 nr=0 a0=246 a1=274333696 a2=178 a3=8916
+TAPE k=7 s=0 f=3 t=1025 nr=0 a0=247 a1=274333696 a2=179 a3=8966
+TAPE k=7 s=0 f=3 t=1030 nr=0 a0=247 a1=274333696 a2=180 a3=9016
+TAPE k=7 s=0 f=3 t=1036 nr=0 a0=246 a1=274333696 a2=181 a3=9066
+TAPE k=8 s=0 f=0 t=1037 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1041 nr=0 a0=247 a1=274333696 a2=182 a3=9116
+TAPE k=7 s=0 f=3 t=1046 nr=0 a0=247 a1=274333696 a2=183 a3=9166
+TAPE k=7 s=0 f=3 t=1052 nr=0 a0=247 a1=274333696 a2=184 a3=9216
+TAPE k=8 s=0 f=0 t=1057 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1057 nr=0 a0=246 a1=274333696 a2=185 a3=9266
+TAPE k=7 s=0 f=3 t=1063 nr=0 a0=247 a1=274333696 a2=186 a3=9316
+TAPE k=7 s=0 f=3 t=1068 nr=0 a0=256 a1=274333696 a2=187 a3=9366
+TAPE k=7 s=0 f=3 t=1073 nr=0 a0=256 a1=274333696 a2=188 a3=9416
+TAPE k=8 s=0 f=0 t=1077 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1079 nr=0 a0=247 a1=274333696 a2=189 a3=9466
+TAPE k=7 s=0 f=3 t=1085 nr=0 a0=256 a1=274333696 a2=190 a3=9516
+TAPE k=7 s=0 f=3 t=1090 nr=0 a0=256 a1=274333696 a2=191 a3=9566
+TAPE k=7 s=0 f=3 t=1095 nr=0 a0=247 a1=274333696 a2=192 a3=9616
+TAPE k=8 s=0 f=0 t=1097 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1101 nr=0 a0=255 a1=274333696 a2=193 a3=9666
+TAPE k=7 s=0 f=3 t=1106 nr=0 a0=256 a1=274333696 a2=194 a3=9716
+TAPE k=7 s=0 f=3 t=1112 nr=0 a0=255 a1=274333696 a2=195 a3=9766
+TAPE k=8 s=0 f=0 t=1117 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1117 nr=0 a0=256 a1=274333696 a2=196 a3=9816
+TAPE k=7 s=0 f=3 t=1123 nr=0 a0=255 a1=274333696 a2=197 a3=9866
+TAPE k=7 s=0 f=3 t=1128 nr=0 a0=255 a1=274333696 a2=198 a3=9916
+TAPE k=7 s=0 f=3 t=1133 nr=0 a0=255 a1=274333696 a2=199 a3=9966
+TAPE k=8 s=0 f=0 t=1137 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1139 nr=0 a0=255 a1=274333696 a2=200 a3=10016
+TAPE k=7 s=0 f=3 t=1144 nr=0 a0=256 a1=274333696 a2=201 a3=10066
+TAPE k=7 s=0 f=3 t=1150 nr=0 a0=256 a1=274333696 a2=202 a3=10116
+TAPE k=7 s=0 f=3 t=1155 nr=0 a0=255 a1=274333696 a2=203 a3=10166
+TAPE k=8 s=0 f=0 t=1157 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1160 nr=0 a0=255 a1=274333696 a2=204 a3=10216
+TAPE k=7 s=0 f=3 t=1166 nr=0 a0=256 a1=274333696 a2=205 a3=10266
+TAPE k=7 s=0 f=3 t=1172 nr=0 a0=247 a1=274333696 a2=206 a3=10316
+TAPE k=8 s=0 f=0 t=1177 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1177 nr=0 a0=256 a1=274333696 a2=207 a3=10366
+TAPE k=7 s=0 f=3 t=1182 nr=0 a0=256 a1=274333696 a2=208 a3=10416
+TAPE k=7 s=0 f=3 t=1188 nr=0 a0=256 a1=274333696 a2=209 a3=10466
+TAPE k=7 s=0 f=3 t=1193 nr=0 a0=255 a1=274333696 a2=210 a3=10516
+TAPE k=8 s=0 f=0 t=1197 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1199 nr=0 a0=256 a1=274333696 a2=211 a3=10566
+TAPE k=7 s=0 f=3 t=1204 nr=0 a0=255 a1=274333696 a2=212 a3=10616
+TAPE k=7 s=0 f=3 t=1210 nr=0 a0=255 a1=274333696 a2=213 a3=10667
+TAPE k=7 s=0 f=3 t=1215 nr=0 a0=255 a1=274333696 a2=214 a3=10716
+TAPE k=8 s=0 f=0 t=1217 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1220 nr=0 a0=255 a1=274333696 a2=215 a3=10766
+TAPE k=7 s=0 f=3 t=1226 nr=0 a0=255 a1=274333696 a2=216 a3=10816
+TAPE k=7 s=0 f=3 t=1231 nr=0 a0=255 a1=274333696 a2=217 a3=10866
+TAPE k=8 s=0 f=0 t=1237 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1237 nr=0 a0=256 a1=274333696 a2=218 a3=10916
+TAPE k=7 s=0 f=3 t=1242 nr=0 a0=247 a1=274333696 a2=219 a3=10966
+TAPE k=7 s=0 f=3 t=1247 nr=0 a0=246 a1=274333696 a2=220 a3=11016
+TAPE k=7 s=0 f=3 t=1253 nr=0 a0=247 a1=274333696 a2=221 a3=11066
+TAPE k=8 s=0 f=0 t=1257 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1258 nr=0 a0=246 a1=274333696 a2=222 a3=11116
+TAPE k=7 s=0 f=3 t=1264 nr=0 a0=247 a1=274333696 a2=223 a3=11166
+TAPE k=7 s=0 f=3 t=1270 nr=0 a0=238 a1=274333696 a2=224 a3=11216
+TAPE k=7 s=0 f=3 t=1275 nr=0 a0=247 a1=274333696 a2=225 a3=11266
+TAPE k=8 s=0 f=0 t=1277 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1280 nr=0 a0=247 a1=274333696 a2=226 a3=11316
+TAPE k=7 s=0 f=3 t=1286 nr=0 a0=247 a1=274333696 a2=227 a3=11366
+TAPE k=7 s=0 f=3 t=1291 nr=0 a0=246 a1=274333696 a2=228 a3=11416
+TAPE k=8 s=0 f=0 t=1297 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1297 nr=0 a0=247 a1=274333696 a2=229 a3=11466
+TAPE k=7 s=0 f=3 t=1302 nr=0 a0=246 a1=274333696 a2=230 a3=11516
+TAPE k=7 s=0 f=3 t=1307 nr=0 a0=246 a1=274333696 a2=231 a3=11566
+TAPE k=7 s=0 f=3 t=1313 nr=0 a0=247 a1=274333696 a2=232 a3=11616
+TAPE k=8 s=0 f=0 t=1317 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1318 nr=0 a0=247 a1=274333696 a2=233 a3=11666
+TAPE k=7 s=0 f=3 t=1324 nr=0 a0=247 a1=274333696 a2=234 a3=11716
+TAPE k=7 s=0 f=3 t=1329 nr=0 a0=247 a1=274333696 a2=235 a3=11766
+TAPE k=7 s=0 f=3 t=1335 nr=0 a0=246 a1=274333696 a2=236 a3=11816
+TAPE k=8 s=0 f=0 t=1337 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1340 nr=0 a0=255 a1=274333696 a2=237 a3=11866
+TAPE k=7 s=0 f=3 t=1345 nr=0 a0=247 a1=274333696 a2=238 a3=11916
+TAPE k=7 s=0 f=3 t=1351 nr=0 a0=247 a1=274333696 a2=239 a3=11966
+TAPE k=8 s=0 f=0 t=1357 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1357 nr=0 a0=246 a1=274333696 a2=240 a3=12016
+TAPE k=7 s=0 f=3 t=1362 nr=0 a0=246 a1=274333696 a2=241 a3=12066
+TAPE k=7 s=0 f=3 t=1367 nr=0 a0=247 a1=274333696 a2=242 a3=12116
+TAPE k=7 s=0 f=3 t=1373 nr=0 a0=246 a1=274333696 a2=243 a3=12166
+TAPE k=8 s=0 f=0 t=1377 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1378 nr=0 a0=246 a1=274333696 a2=244 a3=12216
+TAPE k=7 s=0 f=3 t=1384 nr=0 a0=246 a1=274333696 a2=245 a3=12266
+TAPE k=7 s=0 f=3 t=1389 nr=0 a0=246 a1=274333696 a2=246 a3=12316
+TAPE k=7 s=0 f=3 t=1394 nr=0 a0=247 a1=274333696 a2=247 a3=12366
+TAPE k=8 s=0 f=0 t=1397 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1400 nr=0 a0=247 a1=274333696 a2=248 a3=12416
+TAPE k=7 s=0 f=3 t=1405 nr=0 a0=247 a1=274333696 a2=249 a3=12466
+TAPE k=7 s=0 f=3 t=1411 nr=0 a0=247 a1=274333696 a2=250 a3=12516
+TAPE k=7 s=0 f=3 t=1416 nr=0 a0=246 a1=274333696 a2=251 a3=12566
+TAPE k=8 s=0 f=0 t=1417 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1422 nr=0 a0=247 a1=274333696 a2=252 a3=12616
+TAPE k=7 s=0 f=3 t=1427 nr=0 a0=255 a1=274333696 a2=253 a3=12666
+TAPE k=7 s=0 f=3 t=1432 nr=0 a0=255 a1=274333696 a2=254 a3=12716
+TAPE k=8 s=0 f=0 t=1437 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1438 nr=0 a0=255 a1=274333696 a2=255 a3=12766
+TAPE k=7 s=0 f=3 t=1444 nr=0 a0=246 a1=274333696 a2=256 a3=12816
+TAPE k=7 s=0 f=3 t=1449 nr=0 a0=247 a1=274333696 a2=257 a3=12866
+TAPE k=7 s=0 f=3 t=1454 nr=0 a0=246 a1=274333696 a2=258 a3=12916
+TAPE k=8 s=0 f=0 t=1457 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1460 nr=0 a0=247 a1=274333696 a2=259 a3=12966
+TAPE k=7 s=0 f=3 t=1465 nr=0 a0=247 a1=274333696 a2=260 a3=13016
+TAPE k=7 s=0 f=3 t=1471 nr=0 a0=247 a1=274333696 a2=261 a3=13066
+TAPE k=7 s=0 f=3 t=1476 nr=0 a0=238 a1=274333696 a2=262 a3=13116
+TAPE k=8 s=0 f=0 t=1477 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1481 nr=0 a0=247 a1=274333696 a2=263 a3=13166
+TAPE k=7 s=0 f=3 t=1487 nr=0 a0=247 a1=274333696 a2=264 a3=13216
+TAPE k=7 s=0 f=3 t=1492 nr=0 a0=247 a1=274333696 a2=265 a3=13266
+TAPE k=8 s=0 f=0 t=1497 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1498 nr=0 a0=247 a1=274333696 a2=266 a3=13316
+TAPE k=7 s=0 f=3 t=1503 nr=0 a0=246 a1=274333696 a2=267 a3=13366
+TAPE k=7 s=0 f=3 t=1509 nr=0 a0=247 a1=274333696 a2=268 a3=13416
+TAPE k=7 s=0 f=3 t=1514 nr=0 a0=246 a1=274333696 a2=269 a3=13466
+TAPE k=8 s=0 f=0 t=1517 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1519 nr=0 a0=247 a1=274333696 a2=270 a3=13516
+TAPE k=7 s=0 f=3 t=1525 nr=0 a0=247 a1=274333696 a2=271 a3=13566
+TAPE k=7 s=0 f=3 t=1531 nr=0 a0=247 a1=274333696 a2=272 a3=13616
+TAPE k=7 s=0 f=3 t=1536 nr=0 a0=247 a1=274333696 a2=273 a3=13666
+TAPE k=8 s=0 f=0 t=1537 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1541 nr=0 a0=255 a1=274333696 a2=274 a3=13716
+TAPE k=7 s=0 f=3 t=1547 nr=0 a0=247 a1=274333696 a2=275 a3=13766
+TAPE k=7 s=0 f=3 t=1552 nr=0 a0=247 a1=274333696 a2=276 a3=13816
+TAPE k=8 s=0 f=0 t=1557 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1558 nr=0 a0=247 a1=274333696 a2=277 a3=13867
+TAPE k=7 s=0 f=3 t=1563 nr=0 a0=247 a1=274333696 a2=278 a3=13916
+TAPE k=7 s=0 f=3 t=1568 nr=0 a0=247 a1=274333696 a2=279 a3=13966
+TAPE k=7 s=0 f=3 t=1574 nr=0 a0=247 a1=274333696 a2=280 a3=14016
+TAPE k=8 s=0 f=0 t=1577 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1579 nr=0 a0=247 a1=274333696 a2=281 a3=14066
+TAPE k=7 s=0 f=3 t=1585 nr=0 a0=247 a1=274333696 a2=282 a3=14116
+TAPE k=7 s=0 f=3 t=1590 nr=0 a0=246 a1=274333696 a2=283 a3=14166
+TAPE k=7 s=0 f=3 t=1596 nr=0 a0=247 a1=274333696 a2=284 a3=14216
+TAPE k=8 s=0 f=0 t=1597 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=7 s=0 f=3 t=1601 nr=0 a0=247 a1=274333696 a2=285 a3=14266
+TAPE k=7 s=0 f=3 t=1606 nr=0 a0=246 a1=274333696 a2=286 a3=14316
+TAPE k=7 s=0 f=3 t=1612 nr=0 a0=247 a1=274333696 a2=287 a3=14366
+cellcmd: wait 1500 -> 0
+TAPE k=3 s=0 f=1 t=1617 nr=1 a0=1073746291 a1=14 a2=0 a3=0
+AUDIT seq=13 tick=1617 sys=cons_write target=1073746291 decision=ALLOW reason=none result=14 tainted=0
+TAPE k=3 s=0 f=1 t=1617 nr=1 a0=2147478444 a1=4 a2=0 a3=0
+AUDIT seq=14 tick=1617 sys=cons_write target=2147478444 decision=ALLOW reason=none result=4 tainted=0
+TAPE k=3 s=0 f=1 t=1617 nr=1 a0=1073746425 a1=4 a2=0 a3=0
+AUDIT seq=15 tick=1617 sys=cons_write target=1073746425 decision=ALLOW reason=none result=4 tainted=0
+TAPE k=3 s=0 f=1 t=1617 nr=1 a0=2147478444 a1=1 a2=0 a3=0
+AUDIT seq=16 tick=1617 sys=cons_write target=2147478444 decision=ALLOW reason=none result=1 tainted=0
+cellcmd: done
+TAPE k=3 s=0 f=1 t=1617 nr=1 a0=1073746438 a1=1 a2=0 a3=0
+AUDIT seq=17 tick=1617 sys=cons_write target=1073746438 decision=ALLOW reason=none result=1 tainted=0
+TAPE k=3 s=0 f=1 t=1617 nr=1 a0=1073746366 a1=14 a2=0 a3=0
+AUDIT seq=18 tick=1617 sys=cons_write target=1073746366 decision=ALLOW reason=none result=14 tainted=0
+EXIT pid=1 code=0
+TAPE k=2 s=0 f=0 t=1617 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=19 tick=1617 sys=exec_end target=0 decision=ALLOW reason=exec_end result=0 tainted=0
+END pid=1 EXIT ticks=1505 uptime=1617
+ring3> 
+TAPE k=7 s=0 f=3 t=1617 nr=0 a0=247 a1=274333696 a2=288 a3=14416
+run cellcmd fan 60
+TAPE k=1 s=4 f=0 t=1619 nr=63 a0=100 a1=6000 a2=3000 a3=0
+AUDIT seq=20 tick=1619 sys=exec_start target=4 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=2 name=cellcmd prog=4 caps=0x3f uptime=1619
+SYSCALL pid=2 nr=6 cpl=3
+TAPE k=3 s=0 f=1 t=1619 nr=6 a0=60 a1=0 a2=0 a3=0
+AUDIT seq=21 tick=1619 sys=cell_fan target=60 decision=CONFIRM_PENDING reason=first_fan result=0 tainted=0
+CONFIRM: cellcmd wants cell_fan(60). Allow? [y/N] n
+TAPE k=5 s=0 f=0 t=1622 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=22 tick=1622 sys=confirm target=60 decision=CONFIRM_NO reason=answer result=-125 tainted=0
+TAPE k=7 s=0 f=3 t=1623 nr=0 a0=247 a1=274333696 a2=289 a3=14466
+cellcmd: fan 60 -> -125
+TAPE k=3 s=0 f=1 t=1623 nr=1 a0=1073746452 a1=13 a2=0 a3=0
+AUDIT seq=23 tick=1623 sys=cons_write target=1073746452 decision=ALLOW reason=none result=13 tainted=0
+TAPE k=3 s=0 f=1 t=1623 nr=1 a0=2147478444 a1=2 a2=0 a3=0
+AUDIT seq=24 tick=1623 sys=cons_write target=2147478444 decision=ALLOW reason=none result=2 tainted=0
+TAPE k=3 s=0 f=1 t=1623 nr=1 a0=1073746425 a1=4 a2=0 a3=0
+AUDIT seq=25 tick=1623 sys=cons_write target=1073746425 decision=ALLOW reason=none result=4 tainted=0
+TAPE k=3 s=0 f=1 t=1623 nr=1 a0=2147478444 a1=4 a2=0 a3=0
+AUDIT seq=26 tick=1623 sys=cons_write target=2147478444 decision=ALLOW reason=none result=4 tainted=0
+cellcmd: done
+TAPE k=3 s=0 f=1 t=1623 nr=1 a0=1073746438 a1=1 a2=0 a3=0
+AUDIT seq=27 tick=1623 sys=cons_write target=1073746438 decision=ALLOW reason=none result=1 tainted=0
+TAPE k=3 s=0 f=1 t=1623 nr=1 a0=1073746366 a1=14 a2=0 a3=0
+AUDIT seq=28 tick=1623 sys=cons_write target=1073746366 decision=ALLOW reason=none result=14 tainted=0
+EXIT pid=2 code=0
+TAPE k=2 s=0 f=0 t=1623 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=29 tick=1623 sys=exec_end target=0 decision=ALLOW reason=exec_end result=0 tainted=0
+END pid=2 EXIT ticks=4 uptime=1624
+ring3> 
+TAPE k=7 s=0 f=3 t=1628 nr=0 a0=247 a1=274333696 a2=290 a3=14516
+TAPE k=7 s=0 f=3 t=1633 nr=0 a0=248 a1=274333696 a2=291 a3=14566
+exit
+audit: dropped=0
+KERNEL ALIVE uptime=1637
