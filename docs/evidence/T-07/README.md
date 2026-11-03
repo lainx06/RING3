@@ -174,8 +174,8 @@ the STATUS line (731 passed, 6 skipped, 161 s).
    <= 7 moves and read the start from telemetry instead of a `cell_status` ACTION. A Muse request that wants
    to verify must also leave room: agent-v3 says witness counts as one of the 8 operations.
 5. Telemetry EVENT frames reach COM2 only while a request is open; `Runner.fresh_servo` waits for one.
-6. Not mine, noticed while editing `cli.py`: `ring3 tape` sets `func=` instead of `fn=`, so it raises
-   `AttributeError` when called (T-04 code; left unchanged).
+6. `ring3 tape` set `func=` instead of `fn=`, so it raised `AttributeError` (T-04 code). Fixed at the lead's
+   request (T-05a needs it) with the regression test `test_cli.py::test_tape_prints_tape_lines`.
 7. The witness record's `measured_zone` for a hand-held arm can be a real zone (MID) while the board says 50:
    that disagreement is the evidence.
 

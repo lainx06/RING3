@@ -88,3 +88,16 @@ def test_run_dry_run_with_the_redteam_pack(capsys):
     out = capsys.readouterr().out
     rt = context_pack.load("agent-v2-redteam")
     assert f"context pack agent-v2-redteam: {len(rt.text)} B, sha256 {rt.sha256[:16]}..." in out
+
+
+def test_tape_prints_tape_lines(tmp_path, capsys):
+    """Regression: `ring3 tape` was registered with `func=` while main() calls `a.fn`, so it raised
+    AttributeError. It must print the run's event records as TAPE lines (T-05a's replay table uses it)."""
+    from ring3bridge import replay
+
+    run = tmp_path / "r-tape"
+    write_sample_run(run)
+    assert cli.main(["tape", str(run)]) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert out == replay.tape_lines(replay.read_records(run))
+    assert out and all(line.startswith("TAPE ") for line in out)

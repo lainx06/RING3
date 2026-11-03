@@ -420,7 +420,7 @@ def main(argv: list[str] | None = None) -> int:
     r.set_defaults(fn=cmd_replay)
     t = sub.add_parser("tape", help="print a run's event tape as TAPE lines (input of policy_test --replay)")
     t.add_argument("run")
-    t.set_defaults(func=cmd_tape)
+    t.set_defaults(fn=cmd_tape)
     z = sub.add_parser("fuzz-link", help="send seeded malformed frames to a running kernel's COM2 (INV-02)")
     z.add_argument("--host", default="127.0.0.1")
     z.add_argument("--port", type=int, default=DEFAULT_PORT)
