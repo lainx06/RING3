@@ -1,0 +1,2 @@
+REPLAY MATCH: 21 decisions from 424 tape events
+tape events by kind: action=2, action_boundary=4, confirm=1, exec_end=1, exec_start=1, syscall=16, telemetry=399

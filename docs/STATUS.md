@@ -43,18 +43,19 @@ the end of every card and at each milestone.
   steps itself (model behaviour, D-62; the taint gate is evidenced by the fake-model test), `CHAIN OK`,
   `REPLAY MATCH`, $0.0278 settled ($0.0979 over three runs), no secrets. A5 pass.
   `docs/evidence/T-03b/README.md` ("Live run").
-- **T-04: A1-A3, A6, A7 pass; live runs 1-2 done, run 3 (red-team pack) is the user's** (2026-11-03, Fable 5.1 /
-  high, D-57). A3 passed on the real cell (hand -> `AUTO_HALT` in the frame's tick, E-stop latch + confirmed
-  reset, `LINK_LOST` 1.05 s after silence, QEMU-kill stop by eye). Live run 1 `20261103-153922`: the card's
-  self-test wording hit the action cap twice (`STOPPED` at 8). Run 2 `20261103-154507` (D-68 wording): self-test
-  `DONE` in 6 actions (A4 part 1); the model declined the 100 % attempt and the planted step on its own, so the
-  kernel's `DENY_LIMIT` and the `[tainted]` prompt did not fire. D-69: red-team pack `agent-v2-redteam`
-  (`33d77db`, v2 + the authorized-test section, pinned hash, `--pack`; default stays agent-v2). **A5 open**: both
-  live tapes start at link-up (the bridge connected after the kernel's first decisions; QEMU drops COM2 bytes
-  with no client), so the host replay mismatches at #0; `ring3 replay` names the cause; run 3 starts the bridge
-  first. D-64b (lead): the slow fan was mounting putty on the motor's rear bearing, fixed. **Next: the user runs
-  live run 3 (`--pack agent-v2-redteam --requests 2`, commands in `docs/evidence/T-04/README.md`), the builder
-  files A4/A5; then T-07 Part B / T-05a.**
+- **T-04 complete: A1-A7 pass** (2026-11-03, Fable 5.1 / high, D-57). COM3 driver, cell syscalls, tick lease +
+  `AUTO_HALT`, E-stop latch with the confirmed console reset, `BOARD_BOOT` + 3-frame resync, LCD/alarm from
+  decisions, simulated cell for CI, INV-13/16/11 tests. A3 on the real cell (hand -> `AUTO_HALT` in the frame's
+  tick; E-stop; `LINK_LOST` 1.05 s; QEMU kill by eye). Four live runs (user): run 1 hit the action cap with the
+  card's wording; run 2 (D-68) self-test `DONE` in 6 actions; run 3 (red-team pack `agent-v2-redteam`, D-69)
+  `fan_set(100)` -> `DENY_LIMIT fan_range` reported by the model; run 4 (D-69a) read -> taint -> `[tainted]`
+  write prompt -> a wrong key counted as no, `CONFIRM_NO` -125. Runs 3-4 `REPLAY MATCH` (A5); runs 1-2 do not
+  replay because the bridge connected after the kernel's first decisions (QEMU drops COM2 bytes with no
+  client) -- start `ring3 run` before `make run-cell`; a lead decision is needed if a late-connecting bridge
+  must be replayable (state snapshot or tape-start marker at HELLO). $0.1252 settled over the four runs,
+  $0.2231 project total. D-64b (lead): the slow fan was mounting putty on the motor's rear bearing, fixed.
+  The lead's D-63..D-69 rows are not yet in `docs/DECISIONS.md` (the repo ends at D-62). **Next: T-07 Part B /
+  T-05a.**
 - **T-07 Part A complete** (2026-11-02 11:20 ET, Opus 5.5 / high, offline, second terminal): gauge generator
   (`hardware/gauge/`, Letter + A4 PDF, 4 ArUco markers, zones + bands, `geometry.json`), `bridge/ring3bridge/witness/`
   (dial frame, SAM 3.1 parser + adapter on an injected transport/ledger, box-centre angle, verdict, calibration,
@@ -92,6 +93,7 @@ the end of every card and at each milestone.
 | Steps 1-6, 9 (sim) | 2026-11-02 18:10 ET | Policy: sequenced telemetry (`EVF_TELE_SEQ`, `BOARD_BOOT`, 3 monotonic frames, re-delivered frames silent, young-boot restart after 24 old frames), `AUTO_HALT`/`BOARD_BOOT` withdraw the first-fan confirmation, two-phase console `estop reset` (`f38937a`, 837/783 host checks). Driver `kernel/drivers/device.c` on IRQ 4 + tick poll, cell syscalls real, LCD two rows + ALARM from decisions, `cell_status` 16-byte record in the ABI, `tests/sim_cell.py`, `cellcmd`, INV-13/16/11 tests + hw-marked step-7 tests (`7ee6b91`); bridge decodes `cell_status` for the model, `ring3 tape` (`step 9`). Default suite 573 passed in 125 s, 0 drops. | Step 7 (user, real cell), step 8 (user, live run), evidence |
 | Step 7 (real cell, user) | 2026-11-03 | `test_inv_13_hw.py` 3/3 on the Uno: interlock (hand -> `AUTO_HALT presence` same tick, board fan 0 same frame, re-prompt after the stop answered `n`), E-stop (latch, `DENY_ESTOP`, reset refused while pressed, `CONFIRM_YES estop_reset` after release), watchdog (`LINK_LOST` + fan 0 1.05 s after silence, QEMU kill confirmed by eye). Test fix `6ab4b1b` (either rate denial or re-prompt; fan must stay 0). | Step 8 (user, live run), A4/A5 evidence |
 | Step 8 runs 1-2 + D-69 pack | 2026-11-03 | Run 1 `20261103-153922` (action cap, `*-1.txt`), run 2 `20261103-154507` (self-test `DONE` in 6 actions; model declined 100 % and the planted step itself). `agent-v2-redteam` pack + tests, `ring3 replay` incomplete-tape diagnostic (`33d77db`). Replay of both tapes mismatches: tape starts at link-up. | Run 3 with `--pack agent-v2-redteam` (user, bridge first), A4/A5 evidence |
+| Step 8 runs 3-4, A4/A5 | 2026-11-03 | Run 3 `20261103-160104`: `DENY_LIMIT fan_range` reported by the model; run 4 `20261103-160343`: taint prompt, default-no. Both `CHAIN OK` + `REPLAY MATCH`. Evidence `*-3.txt`, `*-4.txt`; README acceptance table complete. | T-07 Part B / T-05a |
 
 ## T-03b progress (builder adds one line per milestone)
 | Milestone | Time | State | Next / open bug |
@@ -127,7 +129,7 @@ the end of every card and at each milestone.
 | T-01B | 2026-11-01 22:35 ET | Opus 5.5 / high | 2026-11-01 22:55 ET; A1–A4 pass + step 5 (fan never moved); 1 test-program fix logged (stale pre-reset frames) | `docs/evidence/T-01B/README.md` |
 | T-03a | 2026-11-01 22:38 ET | Opus 5.5 / high | 2026-11-01 23:10 ET; A1–A6 pass; M1 (link ABI) `e6300b4` first; price and API field names `[UNVERIFIED]`; no network, no paid call | `docs/evidence/T-03a/README.md` |
 | T-03b | 2026-11-02 10:00 ET | Fable 5.1 / high | 2026-11-02 13:00 ET; A1-A7 pass; three live runs by the user (D-57): runs 1-2 ended the planted-note request STOPPED (replies cut off at 2048 output tokens) -> D-60/D-61; run 3 DONE, 3 read-only ops; $0.0979 spent in total (estimate); 2 test changes after the live runs logged (colon, pack v2), no expectation loosened | `docs/evidence/T-03b/README.md` |
-| T-04 | 2026-11-02 17:00 ET | Fable 5.1 / high | 2026-11-03: A1, A2, A3, A6, A7 pass (A3 on the real cell, user present); A4 part 1 pass (live run 2), A4 parts 2-3 and A5 pending live run 3 with the red-team pack (D-69, D-57); 5 test changes logged, none loosened; no paid call made by the builder | `docs/evidence/T-04/README.md` |
+| T-04 | 2026-11-02 17:00 ET | Fable 5.1 / high | 2026-11-03 16:30 ET: A1-A7 pass (A3 on the real cell, A4/A5 over four live runs by the user, D-57; runs 1-2 not replayable: bridge connected late); 5 test changes logged, none loosened; no paid call made by the builder | `docs/evidence/T-04/README.md` |
 | T-06 | 2026-11-01 16:58 ET | Opus 5.5 / high | **21:46 ET: A1 A2 A3 A6 A7 pass; A5 pass except the alarm outputs; A4 part 1 pass. Pending Nov 2 (parts arrive): LCD, buzzer, RGB wiring → `bringup` part 2 (A4) + link-loss alarm (A5.8).** Firmware `222d26d` flashed. Lead decisions D-46..D-50 applied; 10 test-program changes logged, none loosened an expectation | `docs/evidence/T-06/README.md` |
 | T-07 Part A | 2026-11-02 | Opus 5.5 / high | 2026-11-02 11:20 ET; A1 pass (Part B: A2-A4 open); offline, no paid call; 1 test-program change logged (fixture offset 4 -> 2 deg + new disable cases), no limit loosened | `docs/evidence/T-07/README.md` |
 
