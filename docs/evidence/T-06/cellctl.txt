@@ -274,3 +274,23 @@ $ uv run python tools/cellctl.py a5 /dev/ttyACM0 --only rate   (final firmware 2
 21:45:06   -> OK: 95 STATE, 19.1 Hz host clock, 20.0 Hz device clock, seq gaps 0, undecodable 0
 21:45:07 A5 SUMMARY
 21:45:07   rate         OK   95 STATE, 19.1 Hz host clock, 20.0 Hz device clock, seq gaps 0, undecodable 0
+
+== Part 2 (v2 two-board build, D-63/D-64/D-64b/D-65; buzzer, RGB and LCD wired), 2026-11-03 ==
+$ uv run python tools/cellctl.py a5 /dev/ttyACM0 --only link_loss   (ring3cell 222d26d binary; pins.h comment edits since build an identical .hex)
+16:45:32 opened /dev/ttyACM0 raw 115200 8N1; the Uno resets on open, waiting for the first STATE of the new boot
+16:45:34 first STATE of the new boot after 1581 ms (9 pre-reset frames discarded): STATE seq=0 t=16 ms fan=0% servo=90 dist=NO_ECHO estop=0 flags=- ack=0
+16:45:34   boot flags: WDT_RESET=False LINK_LOST=False
+16:45:34   undecodable bytes runs before sync (frames cut by the reset): 2
+16:45:35 [link_loss] fan 60 + servo 120, then silence -> fan 0, servo 90, LINK_LOST after 1 s
+16:45:37   LINK_LOST: STATE seq=61 t=3066 ms fan=0% servo=90 dist=287 mm estop=0 flags=LINK_LOST ack=10  (1056 ms after the last frame, host clock)
+16:45:37   -> OK: parked after 1056 ms, fan=0 servo=90, PING clears LINK_LOST=True, fan not auto-restarted=True
+16:45:38 A5 SUMMARY
+16:45:38   link_loss    OK   parked after 1056 ms, fan=0 servo=90, PING clears LINK_LOST=True, fan not auto-restarted=True
+
+What the user saw and heard (their words, summarised; not machine-checked):
+- Boot screen (HALTED / no kernel link) at the open: not noticed.
+- At LINK_LOST: beeps, "I think 2 or 3, not sure" (the firmware commands 3 x 100 ms); LCD showed LINK LOST - STOP;
+  the RGB was green during the run and turned red when the beeps came.
+- After the tool exited: the RGB kept blinking red (the alarm came back and stays on while nothing is sending).
+  Red rather than blue means closing the port did not reset the Uno (a fresh boot shows blue, waiting for the kernel).
+- Backstop now reads 287 mm.
