@@ -3,7 +3,9 @@
 A scripted model stands in for Muse Spark (no model call): it answers the kernel's REQUEST with ordinary
 actions through the normal bridge -> kernel -> agentsh path, so the kernel enforces and audits every move:
 
-  1. ``cell_status``: the kernel's commanded servo angle is the start (``commanded_servo_deg``);
+  1. the start is the board's current ``STATE`` servo angle (``servo_cmd``), from a telemetry frame read
+     after the request opened (``Runner.fresh_servo``; no ACTION needed: agentsh ends a request after its 8th
+     ACTION, and the worst plan already takes 7 moves);
   2. ``servo_set`` moves of at most ``STEP_MAX`` deg, at least ``MOVE_GAP_S`` apart, to each point of
      ``CAL_POINTS`` (D-72: 60/70/90/110/120, see below); every point is approached from the same side (a
      short pre-move past the first point when needed), so servo backlash is the same for all of them;
@@ -53,7 +55,7 @@ def _steps(a: int, b: int) -> list[int]:
 
 
 def plan(current: int, points: tuple[int, ...] = CAL_POINTS) -> list[tuple[int, bool]]:
-    """``(deg, measure)`` servo commands from the kernel's ``current`` angle. Every point is approached from
+    """``(deg, measure)`` servo commands from the ``current`` angle. Every point is approached from
     the same side (a pre-move PRE_MOVE_DEG past the first point when ``current`` is not already beyond it);
     ascending or descending, whichever needs fewer moves."""
     lo, hi = SERVO_RANGE
@@ -98,18 +100,18 @@ class CalibrationScript:
     points: tuple[int, ...] = CAL_POINTS
     move_gap_s: float = MOVE_GAP_S
     requests: int = 0  # replies given (the run loop's timeline reads this like a model client's)
-    runner: object = None  # bound after the Runner exists (reads the open request's last observation)
+    runner: object = None  # bound after the Runner exists (reads telemetry and the open request's results)
     pairs: list[tuple[int, int | None]] = field(default_factory=list)
     moves: list[tuple[int, bool]] = field(default_factory=list)
     start_deg: int | None = None
     note: str = ""  # why the script ended early ("" when every point was visited)
-    _step: int = -1  # -1: cell_status not sent yet; else index of the next move
+    _step: int = 0  # index of the next move
     _expect_point: int | None = None
     _measured: dict[int, int | None] = field(default_factory=dict)
 
     def max_actions(self) -> int:
-        """The bridge's turn bound for this request: the kernel's ACTION cap (cell_status + moves) plus one
-        witness per point (witness ops send no frame, so the kernel's cap does not count them)."""
+        """The bridge's turn bound for this request: the kernel's ACTION cap (the moves) plus one witness per
+        point (witness ops send no frame, so the kernel's cap does not count them)."""
         return abi.ACTIONS_PER_REQUEST + len(self.points)
 
     def measure(self, commanded_deg: int) -> Checked:
@@ -124,22 +126,19 @@ class CalibrationScript:
         self.requests += 1
         req = getattr(self.runner, "request", None)
         last = req.results[-1] if req is not None and req.results else None
-        if self._step == -1:
-            self._step = 0
-            return _call("cell_status")
         if self.start_deg is None:
-            obs = getattr(req, "observation", None)
-            if last is None or last[0] != "cell_status" or last[1] != abi.LINK_CELLST_LEN or obs is None:
-                self.note = f"cell_status not available ({last})"
+            start = self.runner.fresh_servo() if self.runner is not None else None
+            if start is None:
+                self.note = "no telemetry from the cell yet"
                 return self._done("calibration not started: " + self.note)
-            self.start_deg = abi.decode_cell_status(obs.output)["cmd_servo"]
+            self.start_deg = start
             try:
                 self.moves = plan(self.start_deg, self.points)
             except ValueError as e:
                 self.note = str(e)
                 return self._done("calibration not started: " + self.note)
-            if 1 + len(self.moves) > abi.ACTIONS_PER_REQUEST:  # cell_status is an ACTION frame too
-                self.note = f"{len(self.moves)} moves needed, more than the kernel's cap allows"
+            if len(self.moves) >= abi.ACTIONS_PER_REQUEST:  # agentsh ends the request after its 8th ACTION
+                self.note = f"{len(self.moves)} moves needed; at most {abi.ACTIONS_PER_REQUEST - 1} fit"
                 return self._done("calibration not started: " + self.note)
         elif last is not None and last[0] == "servo_set" and last[1] < 0:
             deg = self.moves[self._step - 1][0]

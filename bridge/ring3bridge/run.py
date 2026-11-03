@@ -429,6 +429,14 @@ class Runner:
         self.requests_done += 1
         self.request = None
 
+    def fresh_servo(self, timeout_s: float = 2.0) -> int | None:
+        """The board's STATE servo angle from a telemetry frame read after this call (the link is read while
+        waiting), or None within ``timeout_s``. The kernel forwards telemetry while a request is open."""
+        start = self.tele_frames
+        if not self._wait(lambda: self.tele_frames > start, timeout_s):
+            return None
+        return self.tele_servo
+
     def _settle(self, deg: int) -> str:
         """Waits for a telemetry frame that shows the servo at ``deg``, then ``settle_extra_s`` more, reading
         the link throughout. Returns "" when settled, else the NO_MOVE detail."""

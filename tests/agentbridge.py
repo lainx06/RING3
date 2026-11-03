@@ -105,18 +105,22 @@ class BridgeThread:
         requests: int = 1,
         budget: int = 1_000_000,
         pack: str = context_pack.CURRENT,
+        witness=None,  # T-07 Part B: the run loop's witness callable (deg -> Checked)
+        client=None,  # T-07 Part B: a model client in place of the scripted Muse Spark (ring3 calibrate's)
+        max_actions: int = abi.ACTIONS_PER_REQUEST,
     ):
         self.model = ScriptedModel(replies)
         self.log = EventLog(run_dir)
         self.run_dir = run_dir
         self.ledger = Ledger(30_000_000, run_dir.parent / "ledger.jsonl")
-        self.client = MuseSparkClient(CFG, self.model, self.ledger, self.log, run_dir.name, budget)
+        self.client = client or MuseSparkClient(CFG, self.model, self.ledger, self.log, run_dir.name, budget)
         self.pack = context_pack.load(pack)
         start_run(self.log, run_dir.name, KERNEL_TEST, self.pack, CFG.id, SEED, budget)
         self.link = Link("127.0.0.1", port)
         self.timeline: list[str] = []
         self.runner = Runner(self.link, self.client, self.log, self.pack, SEED, timeline=self.timeline.append,
-                             exec_end_wait_s=5.0, observation_wait_s=30.0)  # fmt: skip
+                             exec_end_wait_s=5.0, observation_wait_s=30.0, witness=witness,
+                             max_actions=max_actions)  # fmt: skip
         self.requests = requests
         self.error: BaseException | None = None
         self.thread = threading.Thread(target=self._run, daemon=True)

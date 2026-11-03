@@ -36,10 +36,10 @@ GEOM = load_geometry()
 @pytest.mark.parametrize("start", range(30, 151))
 def test_plan_steps_range_cap_and_one_approach_side(start):
     """D-58: every move <= 30 deg from the previous one (the first from the kernel's current angle), inside
-    30-150, never a zero-length move; every point measured once, all approached from the same side; with the
-    cell_status first, never more ACTION frames than the kernel's cap."""
+    30-150, never a zero-length move; every point measured once, all approached from the same side; fewer
+    moves than the 8 ACTIONs after which agentsh ends a request (so the last point's witness still runs)."""
     moves = plan(start)
-    assert 1 + len(moves) <= abi.ACTIONS_PER_REQUEST
+    assert len(moves) < abi.ACTIONS_PER_REQUEST
     prev, sides = start, set()
     for deg, measured in moves:
         assert 30 <= deg <= 150 and 0 < abs(deg - prev) <= 30, (start, moves)
@@ -86,19 +86,15 @@ def test_synthetic_calibration_on_the_part_b_points_is_under_the_limit(tmp_path)
 class _Req:
     def __init__(self) -> None:
         self.results: list[tuple[str, int]] = []
-        self.observation = None
 
 
-class _Obs:
-    def __init__(self, output: bytes) -> None:
-        self.output = output
+class _Runner:
+    def __init__(self, tele_servo: int | None) -> None:
+        self.request = _Req()
+        self.tele_servo = tele_servo
 
-
-def _cell_status(cmd_servo: int) -> bytes:
-    b = bytearray(abi.LINK_CELLST_LEN)
-    b[abi.LINK_CELLST_OFF_SERVO] = cmd_servo
-    b[abi.LINK_CELLST_OFF_CMD_SERVO] = cmd_servo
-    return bytes(b)
+    def fresh_servo(self) -> int | None:
+        return self.tele_servo
 
 
 class _FakeWitness:
@@ -119,8 +115,8 @@ class _FakeWitness:
 
 def _drive(script: CalibrationScript, start: int, deny_at: int | None = None, no_move_at: int | None = None):
     """Plays the run loop's part: answers each scripted call like the kernel and the bridge would."""
-    req = _Req()
-    script.runner = type("R", (), {"request": req})()
+    script.runner = _Runner(start)
+    req = script.runner.request
     calls = []
     for _ in range(40):
         v = validate(script.ask("", "").text)
@@ -128,10 +124,7 @@ def _drive(script: CalibrationScript, start: int, deny_at: int | None = None, no
             return calls, v.summary
         assert isinstance(v, Call)
         calls.append((v.op, dict(v.args)))
-        if v.op == "cell_status":
-            req.observation = _Obs(_cell_status(start))
-            req.results.append(("cell_status", abi.LINK_CELLST_LEN))
-        elif v.op == "servo_set":
+        if v.op == "servo_set":
             denied = deny_at is not None and v.args["deg"] == deny_at
             req.results.append(("servo_set", -abi.ERRNO["ESAFETY"] if denied else 0))
         elif v.op == "witness":
@@ -146,7 +139,7 @@ def test_script_reads_status_moves_measures_and_finishes():
     fw = _FakeWitness()
     s = CalibrationScript(fw, move_gap_s=0)  # type: ignore[arg-type]
     calls, summary = _drive(s, 90)
-    assert calls[0] == ("cell_status", {})
+    assert calls[0] == ("servo_set", {"deg": plan(90)[0][0]})
     servo = [a["deg"] for op, a in calls if op == "servo_set"]
     assert servo == [d for d, _ in plan(90)]
     # a witness op right after every measured move, and only there
@@ -180,14 +173,11 @@ def test_script_records_a_missing_point_when_the_bridge_answered_no_move():
     assert not cal.ok and "no measurement at commanded [60]" in cal.reason
 
 
-def test_script_does_not_start_without_cell_status():
+def test_script_does_not_start_without_telemetry():
     s = CalibrationScript(_FakeWitness(), move_gap_s=0)  # type: ignore[arg-type]
-    req = _Req()
-    s.runner = type("R", (), {"request": req})()
-    assert validate(s.ask("", "").text) == Call("cell_status", {})
-    req.results.append(("cell_status", -abi.ERRNO["EPERM"]))
+    s.runner = _Runner(None)
     v = validate(s.ask("", "").text)
-    assert isinstance(v, Done) and v.summary.startswith("calibration not started")
+    assert isinstance(v, Done) and v.summary == "calibration not started: no telemetry from the cell yet"
 
 
 # ---- calibration file ----

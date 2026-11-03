@@ -255,8 +255,9 @@ def cmd_calibrate(a: argparse.Namespace) -> int:
         print("ring3 calibrate --dry-run (no network, no key read)")
         print(f"  {sam_cfg.model_id} at {sam_cfg.endpoint}, {fmt_usd(per)} per image "
               f"({sam_cfg.price_source}, checked {sam_cfg.price_checked}), estimate")  # fmt: skip
-        print(f"  points {list(points)}; from a kernel servo angle of {a.dry_run_start}: "
-              f"{len(moves)} servo_set + 1 cell_status (kernel cap {abi.ACTIONS_PER_REQUEST})")  # fmt: skip
+        print(f"  points {list(points)}; from a servo angle of {a.dry_run_start} (STATE telemetry): "
+              f"{len(moves)} servo_set (at most {abi.ACTIONS_PER_REQUEST - 1}: agentsh ends a request after "
+              f"its {abi.ACTIONS_PER_REQUEST}th ACTION)")  # fmt: skip
         print("  moves: " + ", ".join(f"{d}{'*' if m else ''}" for d, m in moves) + "   (* = measured)")
         total = fmt_usd(len(points) * per)
         print(f"  reservation: {len(points)} images x {fmt_usd(per)} = {total}, one reserved before each "
