@@ -23,7 +23,7 @@ from ring3bridge.witness.dial import Geometry, find_dial
 S = 6.0  # px/mm of the scene canvas
 REGION = (-100.0, 100.0, -52.0, 108.0)
 CAM = (1280, 960)
-ARM_LEN = 18.0
+ARM_LEN = 13.0  # tip-circle centre; + tip r 2 mm = 15 mm to the outer end (the real horn, T-07 Part B)
 DESK = 90
 
 QUADS = {  # scene canvas corners TL, TR, BR, BL -> camera pixels
@@ -48,8 +48,9 @@ class Scene:
 
 
 def _draw_arm(c: make_gauge.Canvas, deg: float, color: int, scene: Scene, shadow: bool = False) -> None:
-    """SG90-like horn (hub r 3.5 mm, tip r 2 mm, 18 mm long) as the camera sees it: scaled by ``parallax_k``
-    about the camera axis (the horn is above the paper). A shadow falls on the paper, unscaled and offset."""
+    """SG90 kit horn (hub r 3.5 mm, tip r 2 mm, 15 mm shaft-to-tip) as the camera sees it: scaled by
+    ``parallax_k`` about the camera axis (the horn is above the paper). A shadow falls on the paper, unscaled
+    and offset."""
     a = math.radians(deg)
     ux, uy = math.cos(a), math.sin(a)
     nx, ny = -uy, ux
@@ -165,7 +166,7 @@ def envelope(text: str, status: str = "completed") -> bytes:
 # ---- running a scene through the real pipeline with a fake SAM ----
 
 OFFSET_DEG = 2.0  # residual mounting offset after aligning the paper by hand: dial angle = command + 2 deg
-CAL_CMDS = (60, 75, 90, 105, 120)
+CAL_CMDS = (60, 70, 90, 110, 120)  # D-72 (= ring3bridge.calibration.CAL_POINTS); was 60/75/90/105/120
 
 
 def line_for(frame: np.ndarray, labels: list[np.ndarray], geom: Geometry, conf: str = "0.91") -> str:
@@ -192,6 +193,7 @@ def run_check(
 
 def calibrate(geom: Geometry, tmp, offset_deg: float | None = None, **scene_kw):
     """Simulated calibration: 5 commands, arm at command + offset, each measured through the pipeline."""
+    from ring3bridge.witness import CantVerify
     from ring3bridge.witness.angle import ArmModel
     from ring3bridge.witness.calibrate import fit
     from ring3bridge.witness.pipeline import Evidence, measure
@@ -205,6 +207,8 @@ def calibrate(geom: Geometry, tmp, offset_deg: float | None = None, **scene_kw):
         d = tmp / f"cal{i}"
         d.mkdir()
         client, _, _ = make_client(d, ok(envelope(line_for(frame, labels, geom))))
-        r = measure(frame, geom, client, ArmModel(), DEFAULT_PROMPT, Evidence())
-        pairs.append((c, r.dial_mdeg))
+        try:  # like ring3 calibrate (pipeline.calibration_point): a CAN'T VERIFY point is a missing point
+            pairs.append((c, measure(frame, geom, client, ArmModel(), DEFAULT_PROMPT, Evidence()).dial_mdeg))
+        except CantVerify:
+            pairs.append((c, None))
     return fit(pairs), pairs

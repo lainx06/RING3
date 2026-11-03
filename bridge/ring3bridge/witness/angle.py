@@ -30,9 +30,10 @@ from ring3bridge.witness.sam import SamRecord
 
 @dataclass(frozen=True)
 class ArmModel:
-    """SG90 single long horn. Every value (prov.): measured on the real horn in Part B."""
+    """SG90 kit single-arm horn. ``length_mm`` measured by the user in Part B (shaft centre to the outer end
+    of the tip, 15 mm); every other value (prov.)."""
 
-    length_mm: float = 18.0  # pivot to tip
+    length_mm: float = 15.0  # shaft centre to the tip's outer end (measured, T-07 Part B)
     pivot_tol_mm: float = 3.0
     near_pivot_mm: float = 8.0
     len_lo: float = 0.7

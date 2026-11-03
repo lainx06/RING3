@@ -1,6 +1,7 @@
-"""One witness check, end to end (T-07 Part A).
+"""One witness check, end to end (T-07 Part A; ``calibration_point`` and the crop JPEG for the log: Part B).
 
-Part B adds capture, the ``witness`` log record and the run loop.
+Capture is the caller's (``service.Witness``); the ``witness`` log record and the wait for a settled move are
+the run loop's (``ring3bridge.run``), which is outside this package because it holds the link.
 
 Order (cheap and offline first, so a check that can't succeed spends nothing):
   commanded zone -> calibration enabled -> markers + crop -> SAM (one image reserved) -> arm angle
@@ -16,7 +17,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from ring3bridge.witness import CANT_VERIFY, CantVerify
+from ring3bridge.witness import CALIBRATION, CANT_VERIFY, CantVerify
 from ring3bridge.witness.angle import DEFAULT_ARM, ArmModel, ArmReading, arm_angle
 from ring3bridge.witness.calibrate import Calibration
 from ring3bridge.witness.dial import Geometry, encode_jpeg, find_dial
@@ -37,6 +38,7 @@ class WitnessResult:
     image_sha256: str  # cropped JPEG sent to SAM ("" when none was sent)
     sam_line: str  # raw SAM line ("" when none)
     spend_uusd: int
+    crop_jpeg: bytes = b""  # the cropped JPEG sent to SAM (b"" when none was sent), for the run's blobs
 
 
 @dataclass
@@ -44,6 +46,7 @@ class Evidence:
     """What a check gathered so far (kept for the log even when it ends in CAN'T VERIFY)."""
 
     image_sha256: str = ""
+    jpeg: bytes = b""
     sam_line: str = ""
     spend_uusd: int = 0
     reading: ArmReading | None = field(default=None)
@@ -55,7 +58,7 @@ def measure(
     """Markers -> crop -> SAM -> dial angle (no calibration; ``ring3 calibrate`` uses this in Part B)."""
     dial = find_dial(img, geom)
     jpeg = encode_jpeg(dial.crop_img)
-    ev.image_sha256 = hashlib.sha256(jpeg).hexdigest()
+    ev.image_sha256, ev.jpeg = hashlib.sha256(jpeg).hexdigest(), jpeg
     w, h = geom.crop.size
     res = sam.segment(jpeg, w, h, prompt)
     ev.sam_line, ev.spend_uusd = res.line, res.uusd
@@ -83,6 +86,30 @@ def check(
     except CantVerify as e:
         dial = ev.reading.dial_mdeg if ev.reading else None
         return WitnessResult(CANT_VERIFY, e.reason, e.detail, commanded_deg, cz, "", dial, None,
-                             ev.image_sha256, ev.sam_line, ev.spend_uusd)  # fmt: skip
+                             ev.image_sha256, ev.sam_line, ev.spend_uusd, ev.jpeg)  # fmt: skip
     return WitnessResult(j.verdict, j.reason, "", commanded_deg, j.commanded_zone, j.measured_zone,
-                         reading.dial_mdeg, cal, ev.image_sha256, ev.sam_line, ev.spend_uusd)  # fmt: skip
+                         reading.dial_mdeg, cal, ev.image_sha256, ev.sam_line, ev.spend_uusd,
+                         ev.jpeg)  # fmt: skip
+
+
+def calibration_point(
+    img: np.ndarray,
+    commanded_deg: int,
+    geom: Geometry,
+    sam: SamClient,
+    arm: ArmModel = DEFAULT_ARM,
+    prompt: str = DEFAULT_PROMPT,
+) -> WitnessResult:
+    """One ``ring3 calibrate`` measurement. There is no calibration yet, so no zone can be judged: the result
+    is always ``CAN'T VERIFY: CALIBRATION`` ("calibration point"), with ``dial_mdeg`` set when the markers,
+    SAM and the arm shape gave a reading; any other CAN'T VERIFY reason leaves ``dial_mdeg`` None (the fit
+    then disables the witness for a missing point)."""
+    ev = Evidence()
+    try:
+        reading = measure(img, geom, sam, arm, prompt, ev)
+    except CantVerify as e:
+        return WitnessResult(CANT_VERIFY, e.reason, e.detail, commanded_deg, "", "", None, None,
+                             ev.image_sha256, ev.sam_line, ev.spend_uusd, ev.jpeg)  # fmt: skip
+    return WitnessResult(CANT_VERIFY, CALIBRATION, "calibration point", commanded_deg, "", "",
+                         reading.dial_mdeg, None, ev.image_sha256, ev.sam_line, ev.spend_uusd,
+                         ev.jpeg)  # fmt: skip

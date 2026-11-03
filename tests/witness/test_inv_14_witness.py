@@ -47,7 +47,7 @@ CASES = [
     ("arm not found (no mask)", Scene([]), 90, GOOD_CAL, "0.91", None, NOT_FOUND, True),
     ("two candidates (two masks)", Scene([64.0, 124.0]), 90, GOOD_CAL, "0.91", None, AMBIGUOUS, True),
     ("two overlapping candidates", Scene([90.0, 100.0]), 90, GOOD_CAL, "0.91", None, AMBIGUOUS, True),
-    ("boundary band", Scene([74.0]), 50, GOOD_CAL, "0.91", None, BOUNDARY, True),
+    ("boundary band", Scene([69.0]), 50, GOOD_CAL, "0.91", None, BOUNDARY, True),
     ("bad calibration", Scene([94.0]), 90, BAD_CAL, "0.91", None, CALIBRATION, False),
     ("not calibrated", Scene([94.0]), 90, fit([]), "0.91", None, CALIBRATION, False),
     ("unparseable SAM line", Scene([94.0]), 90, GOOD_CAL, "0.91", "the arm points up", SAM_FORMAT, True),

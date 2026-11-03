@@ -21,7 +21,9 @@ ZERO_H = "0" * 64
 
 #: ARCHITECTURE §6 record names, plus ``event`` for decoded EVENT frames (D-52) and, from T-03b, ``frame``
 #: (every link frame in either direction, body as hex), ``frame_error`` (a K->B frame the bridge dropped),
-#: ``final_sent`` / ``stop_sent`` (the bridge's own end-of-request frames).
+#: ``final_sent`` / ``stop_sent`` (the bridge's own end-of-request frames), and from T-07 Part B ``witness``
+#: (one camera check, integer millidegrees, images and the SAM line as blobs) and ``calibration`` (the fit a
+#: run uses, or the one ``ring3 calibrate`` produced).
 RECORD_TYPES = frozenset(
     {
         "run_start",
@@ -40,6 +42,8 @@ RECORD_TYPES = frozenset(
         "observation",
         "request_end",
         "spend_settled",
+        "witness",
+        "calibration",
         "run_end",
     }
 )

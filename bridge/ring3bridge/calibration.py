@@ -1,0 +1,219 @@
+"""``ring3 calibrate`` (T-07 Part B step 2, D-56, D-58, D-72): calibration moves through the kernel.
+
+A scripted model stands in for Muse Spark (no model call): it answers the kernel's REQUEST with ordinary
+actions through the normal bridge -> kernel -> agentsh path, so the kernel enforces and audits every move:
+
+  1. ``cell_status``: the kernel's commanded servo angle is the start (``commanded_servo_deg``);
+  2. ``servo_set`` moves of at most ``STEP_MAX`` deg, at least ``MOVE_GAP_S`` apart, to each point of
+     ``CAL_POINTS`` (D-72: 60/70/90/110/120, see below); every point is approached from the same side (a
+     short pre-move past the first point when needed), so servo backlash is the same for all of them;
+  3. after each point, a ``witness`` op: the bridge waits for telemetry to show the angle + 500 ms, takes a
+     fresh frame, reserves one image, asks SAM, and records (commanded deg, dial millidegrees);
+  4. ``done``. A move the kernel refuses ends the script with ``done`` naming it (nothing is retried).
+
+The CLI then fits the points (``witness.calibrate.fit``), logs a ``calibration`` record and writes
+``calibration.json`` (integers only) next to the run's ``events.jsonl``. ``ring3 run --calibration <run>``
+re-reads the points and re-fits them with the current limits; a mismatch with the stored numbers is refused.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import time
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from ring3bridge import abi, eventlog
+from ring3bridge.models.muse_spark import STATUS_COMPLETED, ModelReply
+from ring3bridge.witness.calibrate import Calibration, fit
+from ring3bridge.witness.service import Checked, Witness
+
+# D-72 (lead, T-07 Part B), replacing D-59's "calibration points avoid 80-100 deg": on synthetic frames
+# (12 camera/light variants, 18 mm arm) the box-centre error steps by ~7 deg at 90 (+3 just below, -4..-5
+# just above); two-sided sets without 90 failed the 3.0 deg limit in most variants (45/60/75/105/120: 2 of
+# 12), every two-sided set with 90 passed 12 of 12; 60/70/90/110/120 had the widest margin (worst 1.83 deg).
+# The limit is unchanged. ``ring3 calibrate --points`` overrides the set.
+CAL_POINTS = (60, 70, 90, 110, 120)
+STEP_MAX = 30  # policy.h SERVO_STEP_MAX_DEG
+SERVO_RANGE = (30, 150)  # policy.h SERVO_MIN_DEG / SERVO_MAX_DEG
+PRE_MOVE_DEG = 10  # approach the first point from this far beyond it
+MOVE_GAP_S = 0.3  # policy: at least 200 ms between servo commands
+CAL_FILE = "calibration.json"
+
+
+def _steps(a: int, b: int) -> list[int]:
+    """Intermediate + final targets from ``a`` to ``b`` in steps of at most STEP_MAX (``[b]`` when a == b)."""
+    out, cur = [], a
+    while abs(b - cur) > STEP_MAX:
+        cur += STEP_MAX if b > cur else -STEP_MAX
+        out.append(cur)
+    out.append(b)
+    return out
+
+
+def plan(current: int, points: tuple[int, ...] = CAL_POINTS) -> list[tuple[int, bool]]:
+    """``(deg, measure)`` servo commands from the kernel's ``current`` angle. Every point is approached from
+    the same side (a pre-move PRE_MOVE_DEG past the first point when ``current`` is not already beyond it);
+    ascending or descending, whichever needs fewer moves."""
+    lo, hi = SERVO_RANGE
+    if not lo <= current <= hi:
+        raise ValueError(f"current servo {current} outside {lo}-{hi}")
+    pts = sorted(points)
+    if len(set(pts)) != len(pts) or pts[0] < lo or pts[-1] > hi:
+        raise ValueError("bad calibration points")
+
+    def route(order: list[int]) -> list[tuple[int, bool]]:
+        first, up = order[0], order[-1] > order[0]
+        moves: list[tuple[int, bool]] = []
+        cur = current
+        if (up and current >= first) or (not up and current <= first):  # equal: unknown approach side
+            pre = max(lo, first - PRE_MOVE_DEG) if up else min(hi, first + PRE_MOVE_DEG)
+            moves += [(d, False) for d in _steps(cur, pre)]
+            cur = pre
+        for p in order:
+            path = _steps(cur, p)
+            moves += [(d, False) for d in path[:-1]] + [(p, True)]
+            cur = p
+        return moves
+
+    up, down = route(pts), route(pts[::-1])
+    return up if len(up) <= len(down) else down
+
+
+def _reply(obj: dict) -> ModelReply:
+    text = json.dumps(obj, separators=(",", ":"))
+    return ModelReply(text, None, None, status=STATUS_COMPLETED, texts=1)
+
+
+def _call(op: str, **args: int) -> ModelReply:
+    return _reply({"action": "call", "op": op, "args": args})
+
+
+@dataclass
+class CalibrationScript:
+    """The scripted model (``ask``) and the witness callable (``measure``) for one calibration request."""
+
+    witness: Witness
+    points: tuple[int, ...] = CAL_POINTS
+    move_gap_s: float = MOVE_GAP_S
+    requests: int = 0  # replies given (the run loop's timeline reads this like a model client's)
+    runner: object = None  # bound after the Runner exists (reads the open request's last observation)
+    pairs: list[tuple[int, int | None]] = field(default_factory=list)
+    moves: list[tuple[int, bool]] = field(default_factory=list)
+    start_deg: int | None = None
+    note: str = ""  # why the script ended early ("" when every point was visited)
+    _step: int = -1  # -1: cell_status not sent yet; else index of the next move
+    _expect_point: int | None = None
+    _measured: dict[int, int | None] = field(default_factory=dict)
+
+    def max_actions(self) -> int:
+        """The bridge's turn bound for this request: the kernel's ACTION cap (cell_status + moves) plus one
+        witness per point (witness ops send no frame, so the kernel's cap does not count them)."""
+        return abi.ACTIONS_PER_REQUEST + len(self.points)
+
+    def measure(self, commanded_deg: int) -> Checked:
+        checked = self.witness.measure(commanded_deg)
+        self._measured[commanded_deg] = checked.result.dial_mdeg
+        return checked
+
+    def _done(self, summary: str) -> ModelReply:
+        return _reply({"action": "done", "summary": summary[:200]})
+
+    def ask(self, instructions: str, user_input: str) -> ModelReply:
+        self.requests += 1
+        req = getattr(self.runner, "request", None)
+        last = req.results[-1] if req is not None and req.results else None
+        if self._step == -1:
+            self._step = 0
+            return _call("cell_status")
+        if self.start_deg is None:
+            obs = getattr(req, "observation", None)
+            if last is None or last[0] != "cell_status" or last[1] != abi.LINK_CELLST_LEN or obs is None:
+                self.note = f"cell_status not available ({last})"
+                return self._done("calibration not started: " + self.note)
+            self.start_deg = abi.decode_cell_status(obs.output)["cmd_servo"]
+            try:
+                self.moves = plan(self.start_deg, self.points)
+            except ValueError as e:
+                self.note = str(e)
+                return self._done("calibration not started: " + self.note)
+            if 1 + len(self.moves) > abi.ACTIONS_PER_REQUEST:  # cell_status is an ACTION frame too
+                self.note = f"{len(self.moves)} moves needed, more than the kernel's cap allows"
+                return self._done("calibration not started: " + self.note)
+        elif last is not None and last[0] == "servo_set" and last[1] < 0:
+            deg = self.moves[self._step - 1][0]
+            self.note = f"servo_set {deg} refused by the kernel (result {last[1]})"
+            return self._done("calibration stopped: " + self.note)
+        if self._expect_point is not None:  # the witness op for this point has just been answered
+            p, self._expect_point = self._expect_point, None
+            self.pairs.append((p, self._measured.pop(p, None)))
+        elif self._step > 0 and self.moves[self._step - 1][1]:
+            self._expect_point = self.moves[self._step - 1][0]
+            return _call("witness")
+        if self._step >= len(self.moves):
+            got = sum(1 for _, m in self.pairs if m is not None)
+            return self._done(f"calibration moves done: {got} of {len(self.pairs)} points measured")
+        deg = self.moves[self._step][0]
+        self._step += 1
+        time.sleep(self.move_gap_s)
+        return _call("servo_set", deg=deg)
+
+
+# ---- the calibration file ----
+
+
+def calibration_doc(
+    run_id: str, pairs: list[tuple[int, int | None]], cal: Calibration, geom_sha: str
+) -> dict:
+    return {
+        "run_id": run_id,
+        "points": [[c, m] for c, m in pairs],
+        "ok": int(cal.ok),
+        "reason": cal.reason,
+        "slope_ppm": cal.slope_ppm,
+        "offset_mdeg": cal.offset_mdeg,
+        "residual_mdeg": cal.residual_mdeg,
+        "n": cal.n,
+        "geometry_sha256": geom_sha,
+    }
+
+
+def write_calibration(run_dir: Path, doc: dict) -> str:
+    data = (eventlog.canonical(doc) + "\n").encode("ascii")
+    (Path(run_dir) / CAL_FILE).write_bytes(data)
+    return hashlib.sha256(data).hexdigest()
+
+
+class CalibrationError(Exception):
+    pass
+
+
+def load_calibration(run_dir: Path, geom_sha: str) -> tuple[Calibration, dict, str]:
+    """-> (calibration re-fitted from the stored points, the stored document, its SHA-256). Refuses a run
+    whose chain does not verify, a file that is not the one the run logged, another gauge geometry, or stored
+    numbers that the current fit does not reproduce."""
+    run_dir = Path(run_dir)
+    v = eventlog.verify(run_dir)
+    if not v.ok:
+        raise CalibrationError(f"calibration run does not verify: {v.message}")
+    data = (run_dir / CAL_FILE).read_bytes()
+    sha = hashlib.sha256(data).hexdigest()
+    recs = [json.loads(x) for x in (run_dir / "events.jsonl").read_text().splitlines()]
+    logged = [r for r in recs if r.get("type") == "calibration"]
+    if not logged or logged[-1].get("file_sha256") != sha:
+        raise CalibrationError(f"{CAL_FILE} is not the file the calibration run logged")
+    doc = json.loads(data)
+    if doc.get("geometry_sha256") != geom_sha:
+        raise CalibrationError("calibrated on another gauge geometry")
+    pts = doc.get("points")
+    if type(pts) is not list or not all(
+        type(p) is list and len(p) == 2 and type(p[0]) is int and (p[1] is None or type(p[1]) is int)
+        for p in pts
+    ):
+        raise CalibrationError("bad points")
+    cal = fit([(c, m) for c, m in pts])
+    stored = (bool(doc.get("ok")), doc.get("slope_ppm"), doc.get("offset_mdeg"), doc.get("residual_mdeg"))
+    if cal.ok and stored != (cal.ok, cal.slope_ppm, cal.offset_mdeg, cal.residual_mdeg):
+        raise CalibrationError("stored fit differs from the re-fit of its points")
+    return cal, doc, sha

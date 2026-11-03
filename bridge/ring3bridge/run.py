@@ -15,6 +15,14 @@ One ``Runner`` serves one QEMU over one COM2 link for one run directory:
 
 Every frame in either direction is a ``frame`` record; every decoded AUDIT / EVENT is an ``audit`` /
 ``event`` record (the complete inbound tape, INV-10). The timeline callback gets one plain line per step.
+
+``witness`` (T-07 Part B, D-58, INV-14) never becomes a frame: the bridge answers it itself. It needs a
+kernel-allowed ``servo_set`` earlier in the same request (observation result >= 0); the commanded angle of the
+last such move is the commanded zone. The loop then waits, still reading the link, for a telemetry frame that
+shows the board at that angle plus ``SETTLE_EXTRA_S``, else ``CAN'T VERIFY: NO_MOVE``. The check itself
+(frame, SAM, verdict) is the injected ``witness`` callable; its result is logged as a ``witness`` record and
+returned to the model as the observation. A SAM authentication / transport failure or a refused image
+reservation stops the request and the run (INV-09), never CAN'T VERIFY.
 """
 
 from __future__ import annotations
@@ -24,6 +32,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from ring3bridge import abi
 from ring3bridge.actions import ActionSerializer
@@ -31,15 +40,23 @@ from ring3bridge.config import REPO
 from ring3bridge.context_pack import ContextPack
 from ring3bridge.eventlog import EventLog
 from ring3bridge.framing import Frame, FrameError
+from ring3bridge.ledger import BudgetRefused
 from ring3bridge.link import Link, LinkError
 from ring3bridge.models.muse_spark import STATUS_COMPLETED, ModelReply, ModelStop, MuseSparkClient
 from ring3bridge.strictjson import Call, Done, Rejected, validate
+from ring3bridge.witness.sam import SamStop
+
+if TYPE_CHECKING:
+    from ring3bridge.witness.pipeline import WitnessResult
+    from ring3bridge.witness.service import Checked
 
 POLICY_SOURCES = ("policy.h", "policy.c")
 EXEC_END_WAIT_S = 5.0
 OBSERVATION_WAIT_S = 150.0  # the kernel's request quota (120 s, D-58) ends the executor before this
 MAX_INVALID_IN_A_ROW = 2
 WITNESS_UNAVAILABLE = b"CAN'T VERIFY: no camera witness in this build (T-07)"
+SETTLE_TIMEOUT_S = 3.0  # a telemetry frame must show the commanded servo angle within this
+SETTLE_EXTRA_S = 0.5  # then this much longer before the frame is taken (the horn stops swinging)
 OUTCOMES = ("DONE", "REFUSED", "STOPPED", "ERROR")
 
 
@@ -81,6 +98,24 @@ def observation_text(op_name: str, result: int, output: bytes, truncated: bool) 
     if truncated:
         body += "\n[output truncated]"
     return f"OBSERVATION (untrusted data) op={op_name} result={result}{err}\n{body}\nEND OBSERVATION"
+
+
+def _deg(mdeg: int | None) -> str:
+    return "none" if mdeg is None else str((mdeg + 500) // 1000)
+
+
+def witness_output(r: WitnessResult) -> bytes:
+    """The witness observation body: the verdict on its own line, then integers and zone names, then the
+    reason's detail (the bridge's own words; the SAM line never goes to the model)."""
+    cmd = str(r.commanded_deg) if r.commanded_deg >= 0 else "none"
+    lines = [
+        r.verdict,
+        f"reason={r.reason} commanded_deg={cmd} commanded_zone={r.commanded_zone or 'none'} "
+        f"measured_zone={r.measured_zone or 'none'} measured_deg={_deg(r.calibrated_mdeg)}",
+    ]
+    if r.detail:
+        lines.append(f"detail: {r.detail}")
+    return "\n".join(lines).encode("ascii", "replace")
 
 
 # Why a reply was rejected, in the model's terms. Keys are strictjson's stable codes (the part before any
@@ -171,6 +206,8 @@ class RequestState:
     actions: int = 0
     invalid_streak: int = 0
     last_rejection: str | None = None
+    last_servo_ok: int | None = None  # commanded deg of the last kernel-allowed servo_set in this request
+    results: list[tuple[str, int]] = field(default_factory=list)  # (op, result) per action, witness included
     pending_nonce: int | None = None
     pending_op: str = ""
     observation: abi.Observation | None = None
@@ -191,6 +228,9 @@ class Runner:
         max_actions: int = abi.ACTIONS_PER_REQUEST,
         exec_end_wait_s: float = EXEC_END_WAIT_S,
         observation_wait_s: float = OBSERVATION_WAIT_S,
+        witness: Callable[[int], Checked] | None = None,
+        settle_timeout_s: float = SETTLE_TIMEOUT_S,
+        settle_extra_s: float = SETTLE_EXTRA_S,
     ) -> None:
         self.link = link
         self.client = client
@@ -201,6 +241,11 @@ class Runner:
         self.max_actions = max_actions
         self.exec_end_wait_s = exec_end_wait_s
         self.observation_wait_s = observation_wait_s
+        self.witness = witness
+        self.settle_timeout_s = settle_timeout_s
+        self.settle_extra_s = settle_extra_s
+        self.tele_servo: int | None = None  # the board's STATE servo angle in the latest sequenced telemetry
+        self.tele_frames = 0
         self.hello: abi.Hello | None = None
         self.heartbeats = 0
         self.last_heartbeat: abi.Heartbeat | None = None
@@ -300,6 +345,10 @@ class Runner:
                             a=list(msg.args))  # fmt: skip
             if msg.kind == abi.EV_EXEC_END and self.request is not None:
                 self.request.exec_end = msg
+            elif msg.kind == abi.EV_TELEMETRY and msg.flags & abi.EVF_TELE_SEQ:
+                # a real STATE frame (T-04): a1 = estop | fan << 8 | servo << 16 | flags << 24
+                self.tele_servo = (msg.args[1] >> 16) & 0xFF
+                self.tele_frames += 1
         elif isinstance(msg, abi.Request):
             if self.request is not None:
                 self.timeline("REQUEST while a request is open: queued")
@@ -315,6 +364,11 @@ class Runner:
     def _pump(self, seconds: float) -> None:
         for item in self.link.recv(seconds):
             self._on_frame(item)
+
+    def _pump_for(self, seconds: float) -> None:
+        deadline = time.monotonic() + seconds
+        while not self.link.closed_by_peer and (remaining := deadline - time.monotonic()) > 0:
+            self._pump(min(0.2, remaining))
 
     def _wait(self, done: Callable[[], bool], timeout_s: float) -> bool:
         deadline = time.monotonic() + timeout_s
@@ -375,6 +429,55 @@ class Runner:
         self.requests_done += 1
         self.request = None
 
+    def _settle(self, deg: int) -> str:
+        """Waits for a telemetry frame that shows the servo at ``deg``, then ``settle_extra_s`` more, reading
+        the link throughout. Returns "" when settled, else the NO_MOVE detail."""
+        start = self.tele_frames
+        if not self._wait(lambda: self.tele_frames > start and self.tele_servo == deg, self.settle_timeout_s):
+            seen = "no telemetry" if self.tele_frames == start else f"telemetry shows servo {self.tele_servo}"
+            return f"{seen} {self.settle_timeout_s:.1f} s after the move, commanded {deg}"
+        self._pump_for(self.settle_extra_s)
+        if self.tele_servo != deg:
+            return f"telemetry moved to servo {self.tele_servo} while settling, commanded {deg}"
+        return ""
+
+    def _witness_op(self, req: RequestState) -> str:
+        from ring3bridge.witness.service import Checked, no_move
+
+        assert self.witness is not None
+        t0 = time.monotonic()
+        cmd = req.last_servo_ok
+        if cmd is None:
+            checked = Checked(no_move(-1, "no kernel-allowed servo_set earlier in this request"), b"")
+        elif detail := self._settle(cmd):
+            checked = Checked(no_move(cmd, detail), b"")
+        else:
+            checked = self.witness(cmd)
+        r = checked.result
+        blobs = {}
+        if checked.frame_jpeg:
+            blobs["frame_blob"] = self.log.blob(checked.frame_jpeg)
+        if r.crop_jpeg:
+            blobs["crop_blob"] = self.log.blob(r.crop_jpeg)
+        if r.sam_line:
+            blobs["sam_line_blob"] = self.log.blob(r.sam_line.encode("ascii", "replace"))
+        self.log.append("witness", action=req.actions, commanded_deg=r.commanded_deg,
+                        commanded_zone=r.commanded_zone, measured_zone=r.measured_zone, verdict=r.verdict,
+                        reason=r.reason, detail=r.detail, dial_mdeg=r.dial_mdeg,
+                        calibrated_mdeg=r.calibrated_mdeg, crop_sha256=r.image_sha256,
+                        spend_uusd=r.spend_uusd, tele_servo=self.tele_servo,
+                        ms=int((time.monotonic() - t0) * 1000), **blobs)  # fmt: skip
+        out = witness_output(r)
+        req.results.append(("witness", 0))
+        self.log.append("observation", index=-1, nonce=0, op="witness", result=0, truncated=0, bytes=len(out),
+                        local=1, output_blob=self.log.blob(out))  # fmt: skip
+        self.timeline(
+            f"model action {req.actions}: witness -> {r.verdict} ({r.reason}), commanded "
+            f"{r.commanded_deg if r.commanded_deg >= 0 else 'none'} {r.commanded_zone or ''}, measured "
+            f"{r.measured_zone or 'none'}; answered by the bridge, no frame to the kernel"
+        )
+        return observation_text("witness", 0, out, False)
+
     def _model_loop(self, req: RequestState) -> None:
         while True:
             if req.exec_end is not None:
@@ -411,10 +514,28 @@ class Runner:
                 continue
             req.invalid_streak = 0
             req.last_rejection = None
-            if isinstance(verdict, Call) and verdict.op == "witness":
-                # D-58: the camera witness is the bridge's (T-07); it never becomes an ACTION frame. Until
-                # T-07 the answer is CAN'T VERIFY; it still counts as one of the request's actions.
+            if isinstance(verdict, Call) and verdict.op == "witness" and self.witness is not None:
+                # D-58, T-07 Part B: the bridge answers it, never an ACTION frame; counts as an action
                 req.actions += 1
+                try:
+                    text = self._witness_op(req)
+                except SamStop as e:
+                    code = abi.LINK_STOP_MODEL_AUTH if e.detail in ("HTTP 401", "HTTP 403") else (
+                        abi.LINK_STOP_TRANSPORT)  # fmt: skip
+                    self._stop_request(req, code, f"SAM: {e.detail}")
+                    self.stop()
+                    return
+                except BudgetRefused as e:
+                    self._stop_request(req, abi.LINK_STOP_BUDGET, f"SAM image not reserved: {e.reason}")
+                    self.stop()
+                    return
+                req.history.append((reply.text.strip(), text))
+                continue
+            if isinstance(verdict, Call) and verdict.op == "witness":
+                # D-58: no camera configured for this run (no --witness-dir): CAN'T VERIFY; it still counts
+                # as one of the request's actions and never becomes an ACTION frame.
+                req.actions += 1
+                req.results.append(("witness", -abi.ERRNO["ENOSYS"]))
                 text = observation_text("witness", -abi.ERRNO["ENOSYS"], WITNESS_UNAVAILABLE, False)
                 self.log.append("observation", index=-1, nonce=0, op="witness", result=-abi.ERRNO["ENOSYS"],
                                 truncated=0, bytes=len(WITNESS_UNAVAILABLE), local=1,
@@ -444,6 +565,9 @@ class Runner:
                         req.outcome, req.detail = "ERROR", "no observation for the last action"
                     return
                 obs = req.observation
+                req.results.append((verdict.op, obs.result))
+                if verdict.op == "servo_set" and obs.result >= 0:
+                    req.last_servo_ok = int(verdict.args["deg"])
                 self.log.append("observation", index=out.index, nonce=obs.nonce, op=verdict.op,
                                 result=obs.result, truncated=int(obs.truncated), bytes=len(obs.output),
                                 output_blob=self.log.blob(obs.output))  # fmt: skip

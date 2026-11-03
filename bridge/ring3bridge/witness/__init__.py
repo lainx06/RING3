@@ -30,6 +30,7 @@ CALIBRATION = "CALIBRATION"  # no calibration, or the witness is disabled for th
 STALE_FRAME = "STALE_FRAME"  # missing, old, mismatched or undecodable capture
 COMMAND_BOUNDARY = "COMMAND_BOUNDARY"  # the commanded angle itself is inside a boundary band
 COMMAND_RANGE = "COMMAND_RANGE"  # the commanded angle is outside 30-150 deg (the kernel would not allow it)
+NO_MOVE = "NO_MOVE"  # no kernel-allowed servo_set in this request, or telemetry never showed it settled
 
 # FAIL / PASS reasons
 WRONG_ZONE = "WRONG_ZONE"
@@ -38,7 +39,7 @@ ZONE_MATCH = "ZONE_MATCH"
 
 CANT_VERIFY_REASONS = frozenset(
     {MARKERS, SAM_FORMAT, NOT_FOUND, AMBIGUOUS, SHAPE, LOW_CONFIDENCE, BOUNDARY, CALIBRATION, STALE_FRAME,
-     COMMAND_BOUNDARY, COMMAND_RANGE}
+     COMMAND_BOUNDARY, COMMAND_RANGE, NO_MOVE}
 )  # fmt: skip
 
 
