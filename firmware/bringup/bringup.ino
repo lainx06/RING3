@@ -292,7 +292,8 @@ static void fan_set(uint8_t duty) {
 }
 
 static void check_fan() {
-  Serial.println(F("[4/7] FAN  (L293D EN1 on D5, motor on the MOTOR rail)"));
+  Serial.println(F("[4/7] FAN  (NPN switch: D5 -> 220 ohm -> PN2222 base, motor on the MOTOR rail)"));
+  Serial.println(F("  Warm the motor up first: ~30 s with its leads straight on the MOTOR rail (hardware/wiring.md, fan)."));
   pinMode(PIN_ESTOP, INPUT_PULLUP);
   if (digitalRead(PIN_ESTOP) == LOW) {
     Serial.println(F("  E-stop reads PRESSED: release it first."));
@@ -348,9 +349,9 @@ static void check_lcd() {
   lcd.clear();
   lcd.print(F("RING3 BRINGUP"));
   lcd.setCursor(0, 1);
-  lcd.print(F("line 2 0123456789"));
+  lcd.print(F("line 2 012345678"));
   Serial.println(F("  Turn the contrast knob slowly until the text is sharp (blocks = too much, blank = too little)."));
-  say_result(P_LCD, ask_yes(F("  Does line 1 read 'RING3 BRINGUP' and line 2 'line 2 0123456789'?")));
+  say_result(P_LCD, ask_yes(F("  Does line 1 read 'RING3 BRINGUP' and line 2 'line 2 012345678'?")));
 }
 
 static void check_buzzer() {

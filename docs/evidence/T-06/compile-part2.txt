@@ -1,0 +1,47 @@
+T-06 part 2 compile evidence (A3). Generated 2026-11-03 16:15 EST on the working tree after the part-2 edits (base commit 9e6158b).
+Home directory paths are shown as ~. Compiled only; nothing uploaded.
+
+== toolchain
+arduino-cli  Version: 1.5.1 Commit: 01f3d4f2b Date: 2026-06-05T10:22:17Z
+ID          Installed Latest Name
+arduino:avr 1.8.8     1.8.8  Arduino AVR Boards
+
+avr-gcc: 7.3.0-atmel3.6.1-arduino7
+
+== libraries
+Name          Installed Available    Location Description
+LiquidCrystal 1.0.7     -            user     -
+Servo         1.3.0     -            user     -
+
+
+== arduino-cli compile --clean --fqbn arduino:avr:uno --warnings all firmware/bringup
+exit 0
+warnings in our files (firmware/bringup/*): 0
+warnings in the arduino:avr core / libraries (not our code): 4  (all: new.cpp unused parameter 'tag')
+Sketch uses 10640 bytes (32%) of program storage space. Maximum is 32256 bytes.
+Global variables use 324 bytes (15%) of dynamic memory, leaving 1724 bytes for local variables. Maximum is 2048 bytes.
+
+== arduino-cli compile --clean --fqbn arduino:avr:uno --warnings all firmware/ring3cell
+exit 0
+warnings in our files (firmware/ring3cell/*): 0
+warnings in the arduino:avr core / libraries (not our code): 4  (all: new.cpp unused parameter 'tag')
+Sketch uses 8704 bytes (26%) of program storage space. Maximum is 32256 bytes.
+Global variables use 462 bytes (22%) of dynamic memory, leaving 1586 bytes for local variables. Maximum is 2048 bytes.
+
+== ring3cell: comment-only change (pins.h), binary compared with HEAD
+HEAD sources compiled from git show HEAD:firmware/ring3cell/* in a scratch directory, same flags.
+b52b4e7a2a0cf1bee9a69bc7fada1308e710301f7f14f94551cc2e1e1f6482bb  HEAD        ring3cell.ino.hex
+b52b4e7a2a0cf1bee9a69bc7fada1308e710301f7f14f94551cc2e1e1f6482bb  working tree ring3cell.ino.hex
+cmp: identical (no behaviour change)
+
+== bringup: LCD line 2 length
+352:  lcd.print(F("line 2 012345678"));
+len("line 2 012345678") = 16 (LCD1602: 16 columns)
+
+== make -C firmware test (pins.h copies, frame + rule checks)
+pins.h identical in bringup/ and ring3cell/
+ok    crc: incremental update matches one-shot
+121/121 checks passed, 0 failed
+19/19 rule checks passed, 0 failed
+../build/firmware/test_frame --vectors | diff -u test/link_vectors.txt - && echo "link_vectors.txt matches"
+link_vectors.txt matches

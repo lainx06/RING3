@@ -6,7 +6,7 @@
 #define PIN_ESTOP 2    // E-stop push button to GND, INPUT_PULLUP, pressed = LOW. INT0.
 #define PIN_ECHO 3     // HC-SR04 ECHO. INT1 (CHANGE). Timer2 PWM pin, PWM unused.
 #define PIN_TRIG 4     // HC-SR04 TRIG.
-#define PIN_FAN_EN 5   // L293D pin 1 (EN1,2). PWM on Timer0 (OC0B). IN1/IN2 hard-wired. 10k pull-down (D-48).
+#define PIN_FAN_EN 5   // Fan NPN switch (PN2222) base via 220 ohm, D-64. PWM on Timer0 (OC0B). HIGH = on. 10k base pull-down (D-48).
 #define PIN_BUZZER 7   // Active buzzer +, switched with digitalWrite (the tone function is not used).
 #define PIN_LCD_RS 8   // LCD1602 pin 4.
 #define PIN_SERVO 9    // SG90 signal. Servo library takes Timer1 (D9/D10 lose PWM).

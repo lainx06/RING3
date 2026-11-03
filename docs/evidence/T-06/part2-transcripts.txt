@@ -1,0 +1,255 @@
+# T-06 part 2 transcripts (2026-11-02, v2 two-board build, D-63/D-64). Pasted by the user to the lead; shell prompt lines removed.
+
+## bringup (before the fan fix: L293D build, sticky motor; LCD 'PROBLEM' = test text is 17 chars on a 16-char LCD, display showed 'line 2 012345678')
+cd ~/dev/RING3
+arduino-cli compile --fqbn arduino:avr:uno firmware/bringup && arduino-cli upload -p /dev/ttyACM0 --fqbn arduino:avr:uno firmware/bringup
+arduino-cli monitor -p /dev/ttyACM0 -c baudrate=115200
+Sketch uses 10508 bytes (32%) of program storage space. Maximum is 32256 bytes.
+Global variables use 324 bytes (15%) of dynamic memory, leaving 1724 bytes for local variables. Maximum is 2048 bytes.
+New upload port: /dev/ttyACM0 (serial)
+Monitor port settings:
+  baudrate=115200
+  bits=8
+  dtr=on
+  parity=none
+  rts=on
+  stop_bits=1
+
+Connecting to /dev/ttyACM0. Press CTRL-C to exit.
+D
+RING3 BRINGUP  boot #2 since power-on (a jump during a check = the Uno reset)
+Keys: e E-stop | s sensor | v servo | f fan | l LCD | b buzzer | r RGB | a all | ? summary
+e
+[1/7] E-STOP  (button on D2 to GND, INT0, pressed = LOW)
+  untouched: D2=HIGH (released)
+  Press and release the button 3 times (15 s).
+  PRESSED  (D2=LOW)
+  released (D2=HIGH)
+  PRESSED  (D2=LOW)
+  released (D2=HIGH)
+  PRESSED  (D2=LOW)
+  presses seen: 3, INT0 falling edges: 3
+  -> OK
+Keys: e E-stop | s sensor | v servo | f fan | l LCD | b buzzer | r RGB | a all | ? summary
+s
+[2/7] PRESENCE SENSOR  (HC-SR04: TRIG D4, ECHO D3 = INT1)
+  Point it at the backstop 20-40 cm away, keep hands clear, then press a key. (any key)
+l
+  220 mm
+  220 mm
+  220 mm
+  220 mm
+  221 mm
+  220 mm
+  220 mm
+  220 mm
+  217 mm
+  220 mm
+  220 mm
+  220 mm
+  220 mm
+  220 mm
+  220 mm
+  backstop: 217-221 mm (want 200-400, spread <= 30)
+  Now hold a hand about 5 cm in front of the sensor and keep it there, then press a key. (any key)
+b
+  35 mm
+  34 mm
+  35 mm
+  35 mm
+  35 mm
+  26 mm
+  35 mm
+  23 mm
+  22 mm
+  23 mm
+  hand readings < 100 mm: 10 of 10 (want >= 8)
+  -> OK
+Keys: e E-stop | s sensor | v servo | f fan | l LCD | b buzzer | r RGB | a all | ? summary
+v
+[3/7] SERVO  (SG90 signal D9, power from the MOTOR rail)
+  If this banner or 'RING3 BRINGUP' reprints during the sweep, the Uno reset: power problem.
+  -> 60
+  -> 120
+  -> 90
+  Did the horn turn to 60, then 120, then back to the middle (90)? [y/n] y
+y
+  -> OK
+Keys: e E-stop | s sensor | v servo | f fan | l LCD | b buzzer | r RGB | a all | ? summary
+f
+[4/7] FAN  (L293D EN1 on D5, motor on the MOTOR rail)
+  Ramp 30..100 % in 10 % steps, 1 s each. Press the E-stop to cut it at any time.
+  Watch for the step where the blade first starts turning.
+  Keep fingers away from the blade, then press a key to start. (any key)
+l
+  duty 30 %
+  duty 40 %
+  duty 50 %
+  duty 60 %
+  duty 70 %
+  duty 80 %
+  duty 90 %
+  duty 100 %
+  fan off
+  At which duty did it first spin? Type 30-100, or 0 if it never spun, then Enter: 0
+0
+  minimum spinning duty: never spun
+  Is the fan stopped now? [y/n] y
+y
+  -> PROBLEM (see hardware/wiring.md, this part's check line)
+Keys: e E-stop | s sensor | v servo | f fan | l LCD | b buzzer | r RGB | a all | ? summary
+l
+[5/7] LCD1602  (RS D8, E D10, D4-D7 on A0-A3, RW to GND)
+  Turn the contrast knob slowly until the text is sharp (blocks = too much, blank = too little).
+  Does line 1 read 'RING3 BRINGUP' and line 2 'line 2 0123456789'? [y/n] n
+n
+  -> PROBLEM (see hardware/wiring.md, this part's check line)
+Keys: e E-stop | s sensor | v servo | f fan | l LCD | b buzzer | r RGB | a all | ? summary
+b
+[6/7] BUZZER  (active buzzer + on D7, - to GND)
+  Did you hear two short beeps (not just clicks)? [y/n] y
+y
+  -> OK
+Keys: e E-stop | s sensor | v servo | f fan | l LCD | b buzzer | r RGB | a all | ? summary
+r
+[7/7] RGB LED  (R D11, G D12, B A4, each via 220 ohm; long leg to GND)
+  red
+  green
+  blue
+  Did it show red, then green, then blue, then go dark? [y/n] y
+y
+  -> OK
+Keys: e E-stop | s sensor | v servo | f fan | l LCD | b buzzer | r RGB | a all | ? summary
+a
+Is the E-stop wired? [y/n] y
+y
+[1/7] E-STOP  (button on D2 to GND, INT0, pressed = LOW)
+  untouched: D2=HIGH (released)
+  Press and release the button 3 times (15 s).
+  PRESSED  (D2=LOW)
+  released (D2=HIGH)
+  PRESSED  (D2=LOW)
+  released (D2=HIGH)
+  PRESSED  (D2=LOW)
+  presses seen: 3, INT0 falling edges: 3
+  -> OK
+Is the Sensor wired? [y/n] y
+y
+[2/7] PRESENCE SENSOR  (HC-SR04: TRIG D4, ECHO D3 = INT1)
+  Point it at the backstop 20-40 cm away, keep hands clear, then press a key. (any key)
+l
+  208 mm
+  207 mm
+  208 mm
+  207 mm
+  220 mm
+  220 mm
+  220 mm
+  208 mm
+  207 mm
+  220 mm
+  220 mm
+  207 mm
+  207 mm
+  207 mm
+  208 mm
+  backstop: 207-220 mm (want 200-400, spread <= 30)
+  Now hold a hand about 5 cm in front of the sensor and keep it there, then press a key. (any key)
+l
+  26 mm
+  38 mm
+  26 mm
+  26 mm
+  26 mm
+  26 mm
+  26 mm
+  26 mm
+  26 mm
+  26 mm
+  hand readings < 100 mm: 10 of 10 (want >= 8)
+  -> OK
+Is the Servo  wired? [y/n] y
+y
+[3/7] SERVO  (SG90 signal D9, power from the MOTOR rail)
+  If this banner or 'RING3 BRINGUP' reprints during the sweep, the Uno reset: power problem.
+  -> 60
+  -> 120
+  -> 90
+  Did the horn turn to 60, then 120, then back to the middle (90)? [y/n] y
+y
+  -> OK
+Is the Fan    wired? [y/n] y
+y
+[4/7] FAN  (L293D EN1 on D5, motor on the MOTOR rail)
+  Ramp 30..100 % in 10 % steps, 1 s each. Press the E-stop to cut it at any time.
+  Watch for the step where the blade first starts turning.
+  Keep fingers away from the blade, then press a key to start. (any key)
+j
+  duty 30 %
+  duty 40 %
+  duty 50 %
+  duty 60 %
+  duty 70 %
+  duty 80 %
+  duty 90 %
+  duty 100 %
+  fan off
+  At which duty did it first spin? Type 30-100, or 0 if it never spun, then Enter: 0
+0
+  minimum spinning duty: never spun
+  Is the fan stopped now? [y/n] y
+y
+  -> PROBLEM (see hardware/wiring.md, this part's check line)
+Is the LCD    wired? [y/n] y
+y
+[5/7] LCD1602  (RS D8, E D10, D4-D7 on A0-A3, RW to GND)
+  Turn the contrast knob slowly until the text is sharp (blocks = too much, blank = too little).
+  Does line 1 read 'RING3 BRINGUP' and line 2 'line 2 0123456789'? [y/n] n
+n
+  -> PROBLEM (see hardware/wiring.md, this part's check line)
+Is the Buzzer wired? [y/n] y
+y
+[6/7] BUZZER  (active buzzer + on D7, - to GND)
+  Did you hear two short beeps (not just clicks)? [y/n] y
+y
+  -> OK
+Is the RGB    wired? [y/n] y
+y
+[7/7] RGB LED  (R D11, G D12, B A4, each via 220 ohm; long leg to GND)
+  red
+  green
+  blue
+  Did it show red, then green, then blue, then go dark? [y/n] y
+y
+  -> OK
+SUMMARY (boot #2)
+  E-stop OK
+  Sensor OK  backstop 213 mm
+  Servo  OK
+  Fan    PROBLEM  min spinning duty none
+  LCD    PROBLEM
+  Buzzer OK
+  RGB    OK
+
+## cellctl noise, run 1 (sensor saw a wire at 63 mm -> PRESENCE; fan held off by the interlock, as designed)
+23:20:21 opened /dev/ttyACM0 raw 115200 8N1; the Uno resets on open, waiting for the first STATE of the new boot
+23:20:23 first STATE of the new boot after 1688 ms (8 pre-reset frames discarded): STATE seq=0 t=16 ms fan=0% servo=90 dist=NO_ECHO estop=0 flags=- ack=0
+23:20:23   boot flags: WDT_RESET=False LINK_LOST=False
+23:20:23   undecodable bytes runs before sync (frames cut by the reset): 2
+23:20:23   [boot idle] STATE seq=1 t=66 ms fan=0% servo=90 dist=63 mm estop=0 flags=- ack=1
+23:20:29   [FAN 60 trial 1] STATE seq=117 t=5866 ms fan=0% servo=90 dist=63 mm estop=0 flags=PRESENCE ack=29
+23:20:37 NOISE SUMMARY: latch set without a press in: none
+
+## cellctl noise, run 2 (beam cleared; NPN fan driver D-64, 330 ohm base; fan spun at 60 %)
+23:21:37 opened /dev/ttyACM0 raw 115200 8N1; the Uno resets on open, waiting for the first STATE of the new boot
+23:21:39 first STATE of the new boot after 1699 ms (7 pre-reset frames discarded): STATE seq=0 t=16 ms fan=0% servo=90 dist=NO_ECHO estop=0 flags=- ack=0
+23:21:39   boot flags: WDT_RESET=False LINK_LOST=False
+23:21:39   undecodable bytes runs before sync (frames cut by the reset): 2
+23:21:39   [boot idle] STATE seq=1 t=66 ms fan=0% servo=90 dist=217 mm estop=0 flags=- ack=1
+23:21:43   [servo 120] STATE seq=66 t=3316 ms fan=0% servo=120 dist=217 mm estop=0 flags=- ack=16
+23:21:44   [servo 90] STATE seq=85 t=4267 ms fan=0% servo=90 dist=217 mm estop=0 flags=- ack=20
+23:21:45   [FAN 60 trial 1] STATE seq=115 t=5766 ms fan=60% servo=90 dist=217 mm estop=0 flags=- ack=28
+23:21:47   [FAN 0 trial 1] STATE seq=152 t=7616 ms fan=0% servo=90 dist=218 mm estop=0 flags=- ack=37
+23:21:49   [FAN 60 trial 2] STATE seq=183 t=9166 ms fan=60% servo=90 dist=217 mm estop=0 flags=- ack=45
+23:21:49   [FAN 0 trial 2] STATE seq=220 t=11016 ms fan=0% servo=90 dist=218 mm estop=0 flags=- ack=53
+23:21:51 NOISE SUMMARY: latch set without a press in: none

@@ -1,14 +1,21 @@
 # T-06 evidence
 
-Status 2026-11-01 21:46 ET: **A1, A2, A3, A6, A7 pass; A5 passes except the alarm outputs; A4 part 1 passes,
-part 2 pending.** Pending items wait for the LCD, buzzer and RGB LED (parts arrive 2026-11-02).
+Status 2026-11-03 (part 2, v2 two-board build, D-63/D-64/D-64b): **A1, A2, A3, A6, A7 pass; A4 part 2: E-stop,
+sensor, servo, buzzer, RGB OK, LCD OK on the display (the PROBLEM was the test text), fan spinning on the NPN switch
+(noise run 2) but its minimum spinning duty not yet re-measured; A5 passes except the alarm outputs (link-loss
+recheck pending, see "Still open").** Earlier status (2026-11-01 21:46 ET): A4 part 1 pass, part 2 waiting for the
+LCD, buzzer and RGB LED.
 
 | # | Acceptance (card) | Result | Evidence |
 |---|---|---|---|
-| A1 | Pin table, no conflicts (D2 INT0 E-stop, D3 INT1 echo, servo D9, fan PWM D5/D6, L293D IN1/IN2 + LCD RW hard-wired, D0/D1 free), D-43 two-rail power, sensor backstop, every part with wiring + check, D-41f order | **PASS** (document). 15/18 pins, fan on D5 (Timer0); layout corrected to the real build (D-47, D-48, D-49). LCD/buzzer/RGB sections are written but not yet checked against hardware | `hardware/wiring.md` |
+| A1 | Pin table, no conflicts (D2 INT0 E-stop, D3 INT1 echo, servo D9, fan PWM D5/D6, L293D IN1/IN2 + LCD RW hard-wired, D0/D1 free), D-43 two-rail power, sensor backstop, every part with wiring + check, D-41f order | **PASS** (document). 15/18 pins, fan on D5 (Timer0). Rewritten 2026-11-03 for the v2 build: two boards, power module in the left end (red = +), sensor on board 2 H58–H61, fan on an NPN switch with a 220 Ω base (D-63, D-64, D-64b); the card's "L293D IN1/IN2 hard-wired" item no longer applies (D-64 removed the L293D); LCD RW still hard-wired. Power-order (D-48) and E-stop ground (D-49) rules kept. LCD/buzzer/RGB sections now match parts that passed their checks | `hardware/wiring.md`, `hardware/WIRING_V2_LAYOUT.md` |
 | A2 | `make -C firmware test` passes (CRC, COBS, rejection, clamps) | **PASS**: 121 frame checks + 19 rule checks (E-stop latching, FAN drop), vectors match, `frame.cpp` clean under avr-g++ `-Werror` | `host-tests.txt` |
-| A3 | Both sketches compile for `arduino:avr:uno`, no warnings from our code, RAM < 75 % | **PASS**: `ring3cell` 26 % flash / 22 % RAM, `bringup` 32 % / 15 %; 0 warnings in our files (1 core warning in `new.cpp`) | `compile.txt` |
-| A4 | Bring-up transcript: every wired part responds (after the 4 safety parts, then after the rest); unwired parts listed; min spinning duty recorded | **PARTIAL.** Part 1 PASS (E-stop, sensor 264–290 mm, servo, fan; min duty **50 %**; LCD/buzzer/RGB listed as not wired) — as reported by the user, not a verbatim transcript. **Part 2 PENDING** (LCD, buzzer, RGB) | `bringup.txt` |
+| A3 | Both sketches compile for `arduino:avr:uno`, no warnings from our code, RAM < 75 % | **PASS**: `ring3cell` 26 % flash / 22 % RAM, `bringup` 32 % / 15 %; 0 warnings in our files (1 core warning in `new.cpp`). Part 2 re-compile after the text/comment edits: same result; `ring3cell` .hex byte-identical to HEAD (comment-only change) | `compile.txt`, `compile-part2.txt` |
+| A4 | Bring-up transcript: every wired part responds (after the 4 safety parts, then after the rest); unwired parts listed; min spinning duty recorded | **PARTIAL.** Part 1 PASS (E-stop, sensor 264–290 mm, servo, fan; min duty **50 %** on the L293D; LCD/buzzer/RGB listed as not wired) — as reported by the user, not a verbatim transcript. **Part 2** (v2 build, verbatim transcript, 2026-11-02): see the A4.2 rows | `bringup.txt`, `part2-transcripts.txt` |
+| A4.2 E-stop, sensor, servo | single checks and `a` | **OK**: 3 presses / 3 INT0 edges (twice); backstop 217–221 mm and 207–220 mm, hand 10 of 10 < 100 mm (twice); servo 60 → 120 → 90 (twice) | `part2-transcripts.txt` |
+| A4.2 buzzer, RGB | single checks and `a` | **OK**: two beeps (active buzzer confirmed); red → green → blue → dark (common cathode confirmed) | `part2-transcripts.txt` |
+| A4.2 LCD | `l` | **OK on the display; the PROBLEM answer was the test text.** `bringup` wrote `line 2 0123456789` (17 characters) on a 16-character line, so the display correctly showed `line 2 012345678` and the user answered `n`. Test text shortened to `line 2 012345678` (16) and the question changed to match; the LCD wiring itself is fine. A re-run of `l` with the new text is optional | `part2-transcripts.txt`, `firmware/bringup/bringup.ino` |
+| A4.2 fan | `f`, `cellctl noise` | **Spins on the NPN switch; min duty not yet re-measured.** The `bringup` `f` runs in the transcript are from the L293D build before the fan fix: never spun (sticky motor, D-64a/D-64b). After the NPN switch (D-64, 330 Ω base then), `cellctl noise` run 2 drove FAN 60 twice: `STATE` reported `fan=60%` both times, the user saw it spin, and `latch set without a press in: none`. Now a 220 Ω base and a 30 s warm-up before runs (D-64b) | `part2-transcripts.txt` |
 | A5 | `ring3cell` + `cellctl.py` hardware checks | **PASS for every item below except the alarm outputs (PENDING)** | `cellctl.txt` |
 | A5.1 | `STATE` at 18–22 Hz | PASS: 19.1 Hz host / 20.0 Hz device, 0 seq gaps (21:45, final firmware) | |
 | A5.2 | `FAN 100` → 80 + clamp flag; `SERVO 170` → 165 | PASS (21:23, 21:30, 21:39) | |
@@ -17,22 +24,31 @@ part 2 pending.** Pending items wait for the LCD, buzzer and RGB LED (parts arri
 | A5.5 | Hand < 100 mm while the fan runs → fan 0, presence fault latched | PASS: cut in the first `STATE` reading < 100 mm (96 mm) (21:28) | |
 | A5.6 | ECHO unplugged while the fan runs → fan 0 within ~150 ms, fault latched | PASS: fan 0 100 ms (device clock) after the first no-echo `STATE`, i.e. ~100–150 ms after the wire left D3 (21:41) | |
 | A5.7 | E-stop during a tight `FAN` loop → fan stays 0 | PASS: 275 `FAN 60` frames, 0 `STATE` with fan > 0 after the press (21:43) | |
-| A5.8 | No frames for 1 s → safe state + alarm | **Safe state PASS**: `LINK_LOST`, fan 0, servo 90 after 1093 ms; PING clears it; no auto-restart (21:23). **Alarm PENDING**: the 3 beeps + red blink + LCD `LINK LOST - STOP` need the buzzer, RGB and LCD | |
-| A5+ | D-49 noise / D-50 F2 (lead additions) | PASS: `noise` → `none` (21:23); `discard_link` (21:39), `discard_estop` (21:43), `discard_presence` (21:40), all on the proven-acceptance check | |
+| A5.8 | No frames for 1 s → safe state + alarm | **Safe state PASS**: `LINK_LOST`, fan 0, servo 90 after 1093 ms; PING clears it; no auto-restart (21:23). **Alarm PENDING**: buzzer, RGB and LCD are now wired and checked (A4.2); the `link_loss` recheck for the 3 beeps + red blink + LCD `LINK LOST - STOP` is the next user step | |
+| A5+ | D-49 noise / D-50 F2 (lead additions) | PASS: `noise` → `none` (21:23); `discard_link` (21:39), `discard_estop` (21:43), `discard_presence` (21:40), all on the proven-acceptance check. v2 build (2026-11-02 23:20–23:21): `noise` run 1 `none` with the fan held at 0 by the presence cutoff (a wire in the beam at 63 mm, `PRESENCE` flag); run 2 with the beam cleared `none`, FAN 60 twice | `part2-transcripts.txt` |
 | A6 | No `delay(`, `pulseIn(`, `tone(`, `lcd.clear(`/`lcd.home(` outside `setup()` in `firmware/ring3cell/`; `wdt_enable` + `.init3` hook present | **PASS**: only `lcd.clear()` at line 592, inside `setup()`; both present | `compile.txt` |
 | A7 | Every commit has the `Builder:` trailer and touches only this card's paths | **PASS**: 28 commits, all with `Builder: Opus 5.5/high`; STATUS edits only the T-06 row. One commit outside the card's paths by explicit instruction: `f342248 docs: lead update D-43` (ARCHITECTURE, DECISIONS, INVARIANTS, T-06 card) | `git log` |
 
-**Pending for 2026-11-02 (LCD, buzzer, RGB):** wire §6–§8 of `hardware/wiring.md` (power order: Uno 5V jumper out
-first); flash `bringup`, run `a` with every part `y` → `bringup.txt` part 2 (re-checks the four safety parts on the
-final D-48/D-49 wiring too); re-flash `ring3cell`, re-run `link_loss` and watch for 3 beeps, red blinking and
-`LINK LOST - STOP` → closes A5.8; check the boot LCD shows `HALTED` / `no kernel link` (D-46). Also confirm on the
-parts: RGB common cathode, active buzzer, LCD header soldered (`[UNVERIFIED]` in the guide).
+**Still open (2026-11-03):**
+1. **A5.8 alarm:** `link_loss` recheck on `ring3cell` with the buzzer, RGB and LCD wired: 3 beeps, red blinking,
+   LCD `LINK LOST - STOP` / `fan 0, servo 90`. Command given to the user; result to be filed in `cellctl.txt`.
+2. **A4 fan minimum spinning duty on the NPN switch:** reflash `bringup`, warm the motor up (~30 s on the rails),
+   run `f`, record the duty; also the E-stop-mid-ramp cut on the new switch. Then reflash `ring3cell`.
+3. **D-46 boot screen on the real LCD:** `HALTED` / `no kernel link` after a `ring3cell` boot (seen in no transcript
+   yet).
+4. Optional: `bringup` `l` with the 16-character text (the display was already confirmed).
+5. Not this card's evidence but noted: the backstop read 207–221 mm, below the 25–35 cm in
+   `hardware/WIRING_V2_LAYOUT.md` (inside the check's 200–400 mm window, near its low edge).
+6. `docs/DECISIONS.md`: the lead's full copy (D-01..D-70) was not in the hand-off folder; the repo still ends at
+   D-62, so D-63..D-70 (incl. D-64b) are cited here but not yet in the repo file.
 
 | File | What |
 |---|---|
 | `compile.txt` | A3, A6: clean `arduino-cli compile` of both sketches, flash/RAM, toolchain + library versions, A6 grep |
 | `host-tests.txt` | A2: `make -C firmware test` (frame code 121 checks, E-stop / FAN rules 19 checks, vectors) |
-| `bringup.txt` | A4: bring-up part 1 (four safety parts, user-reported summary), D-48 hardware changes; part 2 pending |
+| `bringup.txt` | A4: bring-up part 1 (four safety parts, user-reported summary), D-48 hardware changes |
+| `part2-transcripts.txt` | A4 part 2 + noise on the v2 build (lead's file, verbatim from the user, 2026-11-02) |
+| `compile-part2.txt` | A3 after the part-2 edits: both sketches, `ring3cell` .hex identical to HEAD, LCD text length, host tests |
 | `cellctl.txt` | A5: `tools/cellctl.py` runs against `ring3cell` on the Uno |
 
 Board: genuine Arduino UNO, `/dev/ttyACM0` via usbipd (`--auto-attach`; after a drop the user runs
@@ -52,6 +68,9 @@ Details: `hardware/protocol.md`.
 | D-47 | 9 V DC adapter into the module's barrel jack; MOTOR = row-a side, LOGIC = row-j side | lead's build |
 | D-48a | 10 kΩ pull-down, L293D pin 1 (EN) → GND | fan blipped while the Uno reset (EN floating) |
 | D-48b | Power order: module on whenever the Uno feeds LOGIC | L293D back-feeds an unpowered MOTOR rail |
+| D-63 | Two boards with pre-cut wires; power module moved to the left end (its + now on the red rows); LCD, knob, buzzer, RGB and HC-SR04 on board 2; backstop = keyboard | neater build for the video; module + pins sat in the blue rows in the right end |
+| D-64 | L293D replaced by a PN2222 low-side switch (base resistor, 10 kΩ base pull-down, 1N4007 flyback, 100 nF kept); D5 HIGH = on, no firmware change; only comments and `bringup` text updated | the L293D build never spun the motor; cause later found to be mainly a sticky motor (D-64a) |
+| D-64b | 220 Ω base (was 330 Ω); ~30 s warm-up before runs; motor held with putty on the side of the can only | sluggish motor |
 | D-49 | E-stop ground moved MOTOR − → LOGIC −; 100 nF D2 → LOGIC −; 100 nF across the motor leads; motor leads twisted, kept away from the E-stop wires. L293D 4, 5, 7 on MOTOR − (guide corrected to the real layout) | running fan set the E-stop latch, 5/5 runs; after the fix `cellctl noise`: `none` (user, FAN 60 x2 + servo) |
 
 ## Firmware changes after the first flash (all in `ring3cell`, host-tested in `firmware/test/test_rules.cpp`)
