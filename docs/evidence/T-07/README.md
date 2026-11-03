@@ -1,4 +1,8 @@
-# T-07 evidence: camera witness, Part A (offline)
+# T-07 evidence: camera witness (Part A offline; Part B code + simulated cell done, live steps open)
+
+**Part B status (2026-11-03, Opus 5.5 / high, D-57):** everything up to the live steps is built and tested on
+the simulated cell; A2-A4 need the real camera and paid SAM calls, which are the user's (D-57). See
+"Part B" at the end. Part A text below is unchanged except where a Part B test change is logged.
 
 Builder: Opus 5.5 / high, auto mode (D-57) · 2026-11-02, finished 11:20 ET, second terminal (T-03b ran in the
 other one on disjoint paths; scoped test runs only). **Offline only:** fake transport, no camera, no paid call,
@@ -9,7 +13,9 @@ no `MODEL_API_KEY`, no network except the package install. No change to `kernel/
 | A | Check | Result | Evidence |
 |---|---|---|---|
 | A1 | Gauge PDF + geometry generated; INV-14 tests and the synthetic-fixture tests pass; parser rejects malformed SAM lines; ledger reserves one image before every SAM call (fake transport) | **PASS.** `hardware/gauge/make_gauge.py` writes `ring3_gauge.pdf` (Letter), `ring3_gauge_a4.pdf`, `ring3_gauge.png` (300 dpi) and `geometry.json`, deterministically; tests check geometry.json is in sync, markers are detected in the PNG **and in the PDF's own raster** within 0.3 mm of geometry.json, and the true page size. `test_inv_14_cant_verify_cases` (13 cases) + `test_inv_14_never_upgraded` + `test_inv_14_not_in_decision_path` pass. Fixtures: 10 verdict cases × 3 camera/light variants, 12 accuracy variants, dead-zone and off-axis cases. Parser: **48 malformed lines + 8 malformed envelopes rejected** (`SAM_FORMAT`), 16 accepted. Spend: the fake transport re-reads the ledger file **at post time** and fails the test unless exactly one image (2500 µUSD) is reserved and unsettled; no price / no budget / run cap / project cap → nothing sent. **witness 253 passed, 2 skipped by design; + INV-01 (29) = 282 passed, ~10 s.** 15/15 mutations caught. | `pytest.txt`, `fixtures.md`, `gauge.png`, `mutation.txt` |
-| A2–A4 | Part B | not started | |
+| A2 | Calibration residual reported and under the limit, or the witness disables itself | **open (user, live)**. `ring3 calibrate` built and run end to end on the simulated cell: 5 of 5 points, every move ALLOWed by the kernel, fit under the unchanged 3.0 deg limit; a missing point / refused move / bad fit disables the witness with the message | `sim-calibrate.txt`, `tests/test_witness_loop.py`, `tests/witness/test_part_b.py` |
+| A3 | Blocked arm and unplugged signal never PASS; covered marker CAN'T VERIFY; PASS rate over 10 moves | **open (user, live)**. Simulated: held arm -> `FAIL WRONG_ZONE` (board says 50, camera says MID) and the scripted model halts; `ring3 calibrate --checks` normal round 3/3 PASS, held round 50 and 130 FAIL; covered marker -> `MARKERS` (Part A) | `sim-witness-held.txt`, `sim-checks.txt` |
+| A4 | Live closed loop: the model receives the witness result and reacts to FAIL; `CHAIN OK`; spend <= budget | **open (user, live)**. Simulated with a scripted model: witness observation in the prompt (`PASS` / `FAIL` / `CAN'T VERIFY` + reason), `halt` after `FAIL`, SAM 401 -> STOP `model_auth`, run ends; `CHAIN OK` | `sim-witness-loop.txt`, `sim-witness-held.txt` |
 | A5 | Commits: real `Builder:` trailer, only this card's paths | PASS for Part A: see `git log` (card + DECISIONS merge first, then deps/config, gauge, witness + tests + helper, evidence + STATUS) | `git log` |
 
 `test_inv_14_never_upgraded` is skipped for `boundary band` and `command on a boundary`: the test replaces the
@@ -100,3 +106,87 @@ helper needs `py -m pip install opencv-python` on the Windows side (Part B).
 - Add `uv run ring3 calibrate` to the settings deny list (user edit, D-57).
 - First real SAM line: compare with the grammar (card stop rule), check `c`, the box convention and the mask
   encoding; replace the *(prov.)* arm numbers with measured ones.
+
+
+# Part B (2026-11-03, Opus 5.5 / high, auto mode under D-57)
+
+No paid call, no key read, no network by the builder. `uv run ring3 run` and `uv run ring3 calibrate` are denied
+to builder sessions in `.claude/settings.json` (`aea614c`, lead's item 3); `calibrate --dry-run` is therefore
+exercised through `cli.main([...])` in pytest only, the way `test_cli.py` covers `run --dry-run`.
+
+## Lead decisions applied in this session
+| Decision | Applied as |
+|---|---|
+| D-60 note: 8 ruff long-line errors in the witness files | `9e6158b`: strings rewrapped in `tests/witness/make_fixtures_md.py`; regenerated `fixtures.md` byte-identical |
+| D-70: live and filmed runs start `ring3 run` first, then `make run-cell` | in the live steps below (and `ring3 calibrate` the same way: it waits 30 s for COM2) |
+| agent-v2 and agent-v2-redteam stay pinned; witness guidance in a new pack | `agent-v3` = agent-v2 + "Camera witness (this pack)" before "How to work", heading v3, nothing else; SHA-256 `c98d2955...` pinned in `test_context_pack.py`; logged in `run_start` like every pack; `--pack agent-v3` (`70514fc`) |
+| Deny `uv run ring3 calibrate` (+ ` *`) | `.claude/settings.json`, separate commit `aea614c` |
+| D-63 / D-64 / D-64b: rebuilt cell; servo on the main board's motor rail; gauge on the desk, servo on it, putty only on the servo's sides | setup text below; no code depends on it |
+| D-72: default calibration points 60/70/90/110/120 (replaces D-59's "avoid 80-100"); limit stays 3.0 deg | `calibration.CAL_POINTS`; `--points` overrides; `synth.CAL_CMDS` follows (test change 2) |
+| Measured horn: 15 mm shaft centre to tip | `ArmModel.length_mm = 15.0`; synthetic horn tip centre 13 mm + tip r 2 mm (test change 5) |
+
+## What was built
+| Piece | Files | Notes |
+|---|---|---|
+| `witness` op in the run loop | `bridge/ring3bridge/run.py` | Intercepted before ACTION encoding: **zero COM2 frames** (asserted on the frame log). Needs a kernel-allowed `servo_set` earlier in the same request (observation result >= 0); the last one's angle is the command. Then a telemetry frame read after the op began must show the board's `STATE` servo at that angle within 3 s, + 500 ms more, else `CAN'T VERIFY: NO_MOVE`. Then `Witness.check` (cheap checks, fresh frame, one image reserved, SAM, verdict). `witness` record: commanded deg/zone, measured zone, verdict, reason, detail, dial and calibrated angle in integer mdeg, crop SHA-256, spend, board servo, ms; frame, crop and SAM line as blobs. Observation for the model: verdict line, `reason= commanded_deg= commanded_zone= measured_zone= measured_deg=`, detail; the SAM line never goes to the model. Counts as one of the request's actions. SAM non-200/transport error -> STOP (`model_auth` for 401/403, else `transport`), budget refusal -> STOP `budget`; both end the run (INV-09). Without `--witness-dir` the old `ENOSYS` answer stays. |
+| Witness service | `witness/service.py` | `Witness.check` / `.measure`, `FolderCamera` (the helper protocol), `frame_report` (setup check). Inside the INV-14 static scan (no link, no key, no writes). |
+| `ring3 calibrate` | `bridge/ring3bridge/calibration.py`, `cli.py` | Scripted model (no Muse call) through the normal bridge -> kernel -> agentsh path. Start = the board's `STATE` servo in a fresh telemetry frame (`Runner.fresh_servo`). Plan: steps <= 30 deg, >= 300 ms apart, every point approached from the same side (pre-move 10 deg past the first point when needed), <= 7 moves (agentsh ends a request after its 8th ACTION), never a zero-length move; from 90: `60, 50, 60*, 70*, 90*, 110*, 120*`. A witness op after each point (`calibration_point`: dial angle, no verdict). A refused move ends the script and names it. Fit -> `calibration` record + `calibration.json` (integers). `ring3 run --calibration <run>` re-verifies the chain, checks the file hash against the logged record and the geometry hash, and **re-fits the stored points with the current limits**. |
+| `ring3 calibrate --checks` | same | Card step 4 without Muse spend: per console request, routes to `--targets` (default 50, 90, 130) and runs a real witness check after each, with `--calibration`; prints a table (request text = condition label, verdict, reason, measured zone, crop hash) and totals. Under the `calibrate` deny rule. |
+| `ring3 witness-frame` | `cli.py` | Free setup check: one frame through the helper, markers + fit, the gauge point under the image centre (camera axis vs pivot, <= 5 mm *(prov.)*), frame + crop saved under `runs/`. No SAM, no key, no network. |
+| `ring3 run --witness-dir --calibration` | `cli.py` | The witness for a Muse run; the loaded calibration is logged as a `calibration` record; dry run names the witness and the per-image reservation. |
+| Event log | `eventlog.py` | record types `witness`, `calibration`. |
+
+## Tests
+`tests/witness/test_part_b.py` (offline): plan for every start 30-150 (step, range, one approach side, < 8
+moves), the script (moves, a witness after each point only, refusal stops it, NO_MOVE -> missing point, no
+telemetry -> not started, checks mode), calibration file round trip / tampering / other geometry / disabled stays
+disabled, disabled calibration and stale frame spend nothing, PASS observation text, CLI dry runs.
+`tests/test_witness_loop.py` (QEMU + simulated cell, real run loop and kernel): witness before a move -> NO_MOVE
+with no frame and no spend; LOW in two moves -> PASS; a refused move -> NO_MOVE; frame log has exactly one ACTION
+per servo_set; held arm -> FAIL and the model's halt executes; SAM 401 -> STOP and no second request;
+calibration through the kernel 5 of 5, all ALLOW; scripted checks normal + held.
+At `6edd716` in a clean worktree: witness + pack + e2e 414 passed, 2 skipped by design; full default suite in
+the STATUS line (731 passed, 6 skipped, 161 s).
+
+## Test-program changes (logging rule: cause, diff, unchanged expectation; no limit changed)
+| # | Test | Why the *test* had to change | Change | Expectation |
+|---|---|---|---|---|
+| 2 | `tests/witness/synth.py` `CAL_CMDS` | The fixture calibrates on the points the setup uses; D-72 changed them. With the real 15 mm horn the old set fails the 3.0 deg limit in 10 of 12 synthetic variants. | `(60, 75, 90, 105, 120)` -> `(60, 70, 90, 110, 120)` | calibration ok under 3.0 deg (unchanged; residual now 2.04 deg in `fixtures.md`) |
+| 3 | `tests/witness/synth.py` `calibrate()` | The helper called `measure()` and let a `CantVerify` escape; the real calibration (`pipeline.calibration_point`) records it as a missing point, which disables the witness. Surfaced by `test_off_axis_camera_never_passes_a_wrong_zone` (camera 35 mm off-axis -> SHAPE at a point). | `try: ... except CantVerify: pairs.append((c, None))` | the off-axis test's own expectation, unchanged: "disabled, or never PASS a wrong zone" |
+| 4 | `test_inv_14_witness.py` case "boundary band" | The case must put the *reading* in the 70 band. With the 15 mm horn an arm at 74 deg reads ~78.5 (clear MID; commanded LOW -> a truthful FAIL), so it no longer tested the band. | `Scene([74.0])` -> `Scene([69.0])` (reads 70.2) | `CAN'T VERIFY: BOUNDARY` (unchanged) |
+| 5 | `tests/witness/synth.py` `ARM_LEN` | The synthetic horn must be the real one (user: 15 mm shaft centre to tip). | `18.0` -> `13.0` (tip-circle centre; + tip r 2 mm = 15 mm outer end) | every verdict expectation unchanged |
+
+## Findings (the lead should read these)
+1. **D-59's "avoid 80-100" made calibration worse; D-72 fixes it.** The box-centre error is a step at 90, not a
+   smooth curve: with the 15 mm horn +5..+6 deg just below 90 and -5..-7 just above (12 synthetic variants).
+   Two-sided sets without 90 fail most variants (45/60/75/105/120: 0 of 12 with 15 mm); 60/70/90/110/120
+   passes 12 of 12, worst residual 2.08 deg. One-sided sets fit tightly but would extrapolate ~10 deg wrong into
+   the other half, so they were rejected. Real data decides (D-72).
+2. **15 mm horn and the arm-shape filter.** On-axis: box centre >= 5.72 mm from the pivot (filter 4.0 mm), far
+   side 16.9 mm (window 10.5-25.75 mm), box ~85 x 73 px in the 920 x 570 crop: fits. 22 mm off-axis still fits
+   (>= 4.35 mm); 35 mm off-axis (camera over the dial centre) -> 3.5 mm -> `SHAPE` (refused; conservative). So
+   the camera-over-pivot setup matters more with the short horn; `ring3 witness-frame` reports it for free.
+3. Raw error up to ~7 deg near 95 with 15 mm (5 deg with the old 18 mm). Zone checks at the centres keep a
+   >= 15 deg margin to the bands; a wrong-zone PASS needs a reading > 10 deg off. The 3.0 deg residual is only
+   checked at the 5 points.
+4. **agentsh ends a request after its 8th ACTION** (it does not wait for a FINAL), so the last move of a
+   request cannot be followed by a witness op if it is the 8th ACTION. Calibration and checks therefore plan
+   <= 7 moves and read the start from telemetry instead of a `cell_status` ACTION. A Muse request that wants
+   to verify must also leave room: agent-v3 says witness counts as one of the 8 operations.
+5. Telemetry EVENT frames reach COM2 only while a request is open; `Runner.fresh_servo` waits for one.
+6. Not mine, noticed while editing `cli.py`: `ring3 tape` sets `func=` instead of `fn=`, so it raises
+   `AttributeError` when called (T-04 code; left unchanged).
+7. The witness record's `measured_zone` for a hand-held arm can be a real zone (MID) while the board says 50:
+   that disagreement is the evidence.
+
+## `[UNVERIFIED]` (still)
+Everything in Part A's list (real SAM line grammar, `c`, box convention, mask encoding, envelope), the
+Windows helper on Windows, and the 5 mm camera-axis advice *(prov.)*.
+
+## Live steps (the user's, D-57) — commands in the session report and in STATUS
+1. Windows: OpenCV + the helper, `ring3 witness-frame` until markers 4/4 and the axis is <= 5 mm off.
+2. `ring3 calibrate` (5 images, ~$0.0125) -> `calibration.txt`.
+3. `ring3 calibrate --checks` rounds: normal x2, held, unplugged (signal wire), marker covered, camera nudged
+   -> `checks.md` (table + image hashes; images showing a hand stay in `runs/`).
+4. `ring3 run --pack agent-v3 --witness-dir ... --calibration ...` with `--budget-usd 0.50`: "move the gauge
+   to LOW and confirm it really moved", then the same to MID with the arm held at LOW -> FAIL -> halt.

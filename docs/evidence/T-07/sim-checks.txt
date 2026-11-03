@@ -1,0 +1,457 @@
+$ qemu-system-i386 -kernel build/kernel-test.elf -m 64 -display none -serial stdio -serial tcp:127.0.0.1:46967,server=on,wait=off -serial tcp:127.0.0.1:41235,server=on,wait=off -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -append 'taction=200 trequest=3000 tconfirm=500'
+# exit code 33, 10.3 s
+
+RING3 0.1.0 build 6edd716
+policy: default sha256=4101a8cc305078722afb56a4eb09e2b4c3705e2d2c697b418c7ef02885cdef0b
+memory: 65023 KiB usable
+init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, 3713 frames free
+link: COM2 present (bridge link, HELLO sent)
+cell: COM3 present (work cell, IRQ 4 + tick poll)
+TIMER t0=0
+TIMER t1=25
+test image: quotas action=200 request=3000 confirm=500 ticks
+TAPE k=7 s=0 f=3 t=5 nr=0 a0=300 a1=5898240 a2=1 a3=66
+AUDIT seq=1 tick=5 sys=telemetry target=0 decision=BOARD_BOOT reason=board_boot result=0 tainted=0
+TAPE k=7 s=0 f=3 t=10 nr=0 a0=300 a1=5898240 a2=2 a3=116
+TAPE k=7 s=0 f=3 t=15 nr=0 a0=300 a1=5898240 a2=3 a3=166
+TAPE k=7 s=0 f=3 t=20 nr=0 a0=300 a1=5898240 a2=4 a3=216
+ring3> 
+TAPE k=7 s=0 f=3 t=25 nr=0 a0=300 a1=5898240 a2=5 a3=266
+status
+status: fan=0 servo=90 estop_latched=0 tele_valid=1 distance=300 in_request=0 tainted=0 pending=0 seq=1 dropped=0 uptime=26
+link: com2=1 connected=0 rx_frames=0 frames_dropped=0 queued=0 tx_frames=7 tx_dropped=0 stalled=0
+cell: com3=1 synced=1 frames=5 prev_boot=0 old=0 frame_drops=0 resync_bytes=20 lsr_err=0 tx=3 tx_failed=0 pings=0 halts=1
+cell: last seq=5 t_ms=266 fan=0 servo=90 dist=300 estop=0 flags=0x0 ack=3 age_ticks=1
+ring3> 
+TAPE k=7 s=0 f=3 t=30 nr=0 a0=300 a1=5898240 a2=6 a3=316
+TAPE k=7 s=0 f=3 t=35 nr=0 a0=300 a1=5898240 a2=7 a3=366
+TAPE k=7 s=0 f=3 t=40 nr=0 a0=300 a1=5898240 a2=8 a3=416
+TAPE k=7 s=0 f=3 t=45 nr=0 a0=300 a1=5898240 a2=9 a3=466
+TAPE k=7 s=0 f=3 t=50 nr=0 a0=300 a1=5898240 a2=10 a3=516
+checks normal
+REQUEST checks normal
+TAPE k=1 s=1 f=0 t=50 nr=63 a0=200 a1=3000 a2=500 a3=0
+AUDIT seq=2 tick=50 sys=exec_start target=1 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=1 name=agentsh prog=1 caps=0x3f uptime=50
+SYSCALL pid=1 nr=1 cpl=3
+agentsh: request "checks normal"
+TAPE k=3 s=0 f=1 t=50 nr=1 a0=1073754408 a1=33 a2=0 a3=0
+AUDIT seq=3 tick=50 sys=cons_write target=1073754408 decision=ALLOW reason=none result=33 tainted=0
+TAPE k=3 s=0 f=1 t=51 nr=11 a0=2147478528 a1=13 a2=17 a3=0
+AUDIT seq=4 tick=51 sys=agent_send target=2147478528 decision=ALLOW reason=none result=13 tainted=0
+TAPE k=3 s=0 f=1 t=51 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=5 tick=51 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=7 s=0 f=3 t=55 nr=0 a0=300 a1=5898240 a2=11 a3=566
+TAPE k=7 s=0 f=3 t=60 nr=0 a0=300 a1=5898240 a2=12 a3=616
+TAPE k=7 s=0 f=3 t=65 nr=0 a0=300 a1=5898240 a2=13 a3=666
+TAPE k=7 s=0 f=3 t=70 nr=0 a0=300 a1=5898240 a2=14 a3=716
+TAPE k=7 s=0 f=3 t=75 nr=0 a0=300 a1=5898240 a2=15 a3=766
+TAPE k=7 s=0 f=3 t=80 nr=0 a0=300 a1=5898240 a2=16 a3=816
+TAPE k=7 s=0 f=3 t=85 nr=0 a0=300 a1=5898240 a2=17 a3=866
+TAPE k=9 s=0 f=0 t=88 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=88 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=88 nr=7 a0=60 a1=0 a2=0 a3=0
+AUDIT seq=6 tick=88 sys=cell_servo target=60 decision=ALLOW reason=none result=0 tainted=0
+agentsh: action 1 servo_set(60) -> 0
+TAPE k=3 s=0 f=1 t=88 nr=1 a0=1073754408 a1=37 a2=0 a3=0
+AUDIT seq=7 tick=88 sys=cons_write target=1073754408 decision=ALLOW reason=none result=37 tainted=0
+TAPE k=3 s=0 f=1 t=88 nr=11 a0=1073756916 a1=12 a2=18 a3=0
+AUDIT seq=8 tick=88 sys=agent_send target=1073756916 decision=ALLOW reason=none result=12 tainted=0
+TAPE k=3 s=0 f=1 t=88 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=9 tick=88 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=7 s=0 f=3 t=90 nr=0 a0=300 a1=5898240 a2=18 a3=916
+TAPE k=7 s=0 f=3 t=95 nr=0 a0=300 a1=3932160 a2=19 a3=966
+TAPE k=7 s=0 f=3 t=100 nr=0 a0=300 a1=3932160 a2=20 a3=1016
+TAPE k=7 s=0 f=3 t=105 nr=0 a0=300 a1=3932160 a2=21 a3=1066
+TAPE k=7 s=0 f=3 t=110 nr=0 a0=300 a1=3932160 a2=22 a3=1116
+TAPE k=7 s=0 f=3 t=115 nr=0 a0=300 a1=3932160 a2=23 a3=1166
+TAPE k=7 s=0 f=3 t=120 nr=0 a0=300 a1=3932160 a2=24 a3=1216
+TAPE k=7 s=0 f=3 t=125 nr=0 a0=300 a1=3932160 a2=25 a3=1266
+TAPE k=7 s=0 f=3 t=130 nr=0 a0=300 a1=3932160 a2=26 a3=1316
+TAPE k=9 s=0 f=0 t=131 nr=0 a0=1 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=131 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=131 nr=7 a0=50 a1=0 a2=0 a3=0
+AUDIT seq=10 tick=131 sys=cell_servo target=50 decision=ALLOW reason=none result=0 tainted=0
+agentsh: action 2 servo_set(50) -> 0
+TAPE k=3 s=0 f=1 t=131 nr=1 a0=1073754408 a1=37 a2=0 a3=0
+AUDIT seq=11 tick=131 sys=cons_write target=1073754408 decision=ALLOW reason=none result=37 tainted=0
+TAPE k=3 s=0 f=1 t=131 nr=11 a0=1073756916 a1=12 a2=18 a3=0
+AUDIT seq=12 tick=131 sys=agent_send target=1073756916 decision=ALLOW reason=none result=12 tainted=0
+TAPE k=3 s=0 f=1 t=131 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=13 tick=131 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=7 s=0 f=3 t=135 nr=0 a0=300 a1=3932160 a2=27 a3=1366
+TAPE k=7 s=0 f=3 t=140 nr=0 a0=300 a1=3276800 a2=28 a3=1416
+TAPE k=7 s=0 f=3 t=145 nr=0 a0=300 a1=3276800 a2=29 a3=1466
+TAPE k=7 s=0 f=3 t=150 nr=0 a0=300 a1=3276800 a2=30 a3=1516
+TAPE k=7 s=0 f=3 t=155 nr=0 a0=300 a1=3276800 a2=31 a3=1566
+TAPE k=7 s=0 f=3 t=160 nr=0 a0=300 a1=3276800 a2=32 a3=1616
+TAPE k=7 s=0 f=3 t=165 nr=0 a0=300 a1=3276800 a2=33 a3=1666
+TAPE k=7 s=0 f=3 t=170 nr=0 a0=300 a1=3276800 a2=34 a3=1716
+TAPE k=7 s=0 f=3 t=175 nr=0 a0=300 a1=3276800 a2=35 a3=1766
+TAPE k=7 s=0 f=3 t=180 nr=0 a0=300 a1=3276800 a2=36 a3=1816
+TAPE k=7 s=0 f=3 t=185 nr=0 a0=300 a1=3276800 a2=37 a3=1866
+TAPE k=7 s=0 f=3 t=190 nr=0 a0=300 a1=3276800 a2=38 a3=1916
+TAPE k=7 s=0 f=3 t=195 nr=0 a0=300 a1=3276800 a2=39 a3=1966
+TAPE k=7 s=0 f=3 t=200 nr=0 a0=300 a1=3276800 a2=40 a3=2016
+TAPE k=7 s=0 f=3 t=205 nr=0 a0=300 a1=3276800 a2=41 a3=2066
+TAPE k=7 s=0 f=3 t=210 nr=0 a0=300 a1=3276800 a2=42 a3=2116
+TAPE k=7 s=0 f=3 t=215 nr=0 a0=300 a1=3276800 a2=43 a3=2166
+TAPE k=7 s=0 f=3 t=220 nr=0 a0=300 a1=3276800 a2=44 a3=2216
+TAPE k=7 s=0 f=3 t=225 nr=0 a0=300 a1=3276800 a2=45 a3=2266
+TAPE k=7 s=0 f=3 t=230 nr=0 a0=300 a1=3276800 a2=46 a3=2316
+TAPE k=9 s=0 f=0 t=234 nr=0 a0=2 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=234 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=234 nr=7 a0=80 a1=0 a2=0 a3=0
+AUDIT seq=14 tick=234 sys=cell_servo target=80 decision=ALLOW reason=none result=0 tainted=0
+agentsh: action 3 servo_set(80) -> 0
+TAPE k=3 s=0 f=1 t=234 nr=1 a0=1073754408 a1=37 a2=0 a3=0
+AUDIT seq=15 tick=234 sys=cons_write target=1073754408 decision=ALLOW reason=none result=37 tainted=0
+TAPE k=3 s=0 f=1 t=234 nr=11 a0=1073756916 a1=12 a2=18 a3=0
+AUDIT seq=16 tick=234 sys=agent_send target=1073756916 decision=ALLOW reason=none result=12 tainted=0
+TAPE k=3 s=0 f=1 t=234 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=17 tick=234 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=7 s=0 f=3 t=235 nr=0 a0=300 a1=5242880 a2=47 a3=2366
+TAPE k=7 s=0 f=3 t=240 nr=0 a0=300 a1=5242880 a2=48 a3=2416
+TAPE k=7 s=0 f=3 t=245 nr=0 a0=300 a1=5242880 a2=49 a3=2466
+TAPE k=7 s=0 f=3 t=250 nr=0 a0=300 a1=5242880 a2=50 a3=2516
+TAPE k=7 s=0 f=3 t=255 nr=0 a0=300 a1=5242880 a2=51 a3=2566
+TAPE k=7 s=0 f=3 t=260 nr=0 a0=300 a1=5242880 a2=52 a3=2616
+TAPE k=7 s=0 f=3 t=265 nr=0 a0=300 a1=5242880 a2=53 a3=2666
+TAPE k=7 s=0 f=3 t=270 nr=0 a0=300 a1=5242880 a2=54 a3=2716
+TAPE k=7 s=0 f=3 t=275 nr=0 a0=300 a1=5242880 a2=55 a3=2766
+TAPE k=9 s=0 f=0 t=278 nr=0 a0=3 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=278 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=278 nr=7 a0=90 a1=0 a2=0 a3=0
+AUDIT seq=18 tick=278 sys=cell_servo target=90 decision=ALLOW reason=none result=0 tainted=0
+agentsh: action 4 servo_set(90) -> 0
+TAPE k=3 s=0 f=1 t=278 nr=1 a0=1073754408 a1=37 a2=0 a3=0
+AUDIT seq=19 tick=278 sys=cons_write target=1073754408 decision=ALLOW reason=none result=37 tainted=0
+TAPE k=3 s=0 f=1 t=278 nr=11 a0=1073756916 a1=12 a2=18 a3=0
+AUDIT seq=20 tick=278 sys=agent_send target=1073756916 decision=ALLOW reason=none result=12 tainted=0
+TAPE k=3 s=0 f=1 t=278 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=21 tick=278 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=7 s=0 f=3 t=280 nr=0 a0=300 a1=5898240 a2=56 a3=2816
+TAPE k=7 s=0 f=3 t=285 nr=0 a0=300 a1=5898240 a2=57 a3=2866
+TAPE k=7 s=0 f=3 t=290 nr=0 a0=300 a1=5898240 a2=58 a3=2916
+TAPE k=7 s=0 f=3 t=295 nr=0 a0=300 a1=5898240 a2=59 a3=2966
+TAPE k=7 s=0 f=3 t=300 nr=0 a0=300 a1=5898240 a2=60 a3=3016
+TAPE k=7 s=0 f=3 t=305 nr=0 a0=300 a1=5898240 a2=61 a3=3066
+TAPE k=7 s=0 f=3 t=310 nr=0 a0=300 a1=5898240 a2=62 a3=3116
+TAPE k=7 s=0 f=3 t=315 nr=0 a0=300 a1=5898240 a2=63 a3=3166
+TAPE k=7 s=0 f=3 t=320 nr=0 a0=300 a1=5898240 a2=64 a3=3216
+TAPE k=7 s=0 f=3 t=325 nr=0 a0=300 a1=5898240 a2=65 a3=3266
+TAPE k=7 s=0 f=3 t=330 nr=0 a0=300 a1=5898240 a2=66 a3=3316
+TAPE k=7 s=0 f=3 t=335 nr=0 a0=300 a1=5898240 a2=67 a3=3366
+TAPE k=7 s=0 f=3 t=340 nr=0 a0=300 a1=5898240 a2=68 a3=3416
+TAPE k=7 s=0 f=3 t=345 nr=0 a0=300 a1=5898240 a2=69 a3=3466
+TAPE k=7 s=0 f=3 t=350 nr=0 a0=300 a1=5898240 a2=70 a3=3516
+TAPE k=7 s=0 f=3 t=355 nr=0 a0=300 a1=5898240 a2=71 a3=3566
+TAPE k=7 s=0 f=3 t=360 nr=0 a0=300 a1=5898240 a2=72 a3=3616
+TAPE k=7 s=0 f=3 t=365 nr=0 a0=300 a1=5898240 a2=73 a3=3666
+TAPE k=7 s=0 f=3 t=370 nr=0 a0=300 a1=5898240 a2=74 a3=3716
+TAPE k=7 s=0 f=3 t=375 nr=0 a0=300 a1=5898240 a2=75 a3=3766
+TAPE k=9 s=0 f=0 t=378 nr=0 a0=4 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=378 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=378 nr=7 a0=120 a1=0 a2=0 a3=0
+AUDIT seq=22 tick=378 sys=cell_servo target=120 decision=ALLOW reason=none result=0 tainted=0
+agentsh: action 5 servo_set(120) -> 0
+TAPE k=3 s=0 f=1 t=378 nr=1 a0=1073754408 a1=38 a2=0 a3=0
+AUDIT seq=23 tick=378 sys=cons_write target=1073754408 decision=ALLOW reason=none result=38 tainted=0
+TAPE k=3 s=0 f=1 t=378 nr=11 a0=1073756916 a1=12 a2=18 a3=0
+AUDIT seq=24 tick=378 sys=agent_send target=1073756916 decision=ALLOW reason=none result=12 tainted=0
+TAPE k=3 s=0 f=1 t=378 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=25 tick=378 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=7 s=0 f=3 t=380 nr=0 a0=300 a1=7864320 a2=76 a3=3816
+TAPE k=7 s=0 f=3 t=385 nr=0 a0=300 a1=7864320 a2=77 a3=3866
+TAPE k=7 s=0 f=3 t=390 nr=0 a0=300 a1=7864320 a2=78 a3=3916
+TAPE k=7 s=0 f=3 t=395 nr=0 a0=300 a1=7864320 a2=79 a3=3966
+TAPE k=7 s=0 f=3 t=400 nr=0 a0=300 a1=7864320 a2=80 a3=4016
+TAPE k=7 s=0 f=3 t=405 nr=0 a0=300 a1=7864320 a2=81 a3=4066
+TAPE k=7 s=0 f=3 t=410 nr=0 a0=300 a1=7864320 a2=82 a3=4116
+TAPE k=7 s=0 f=3 t=415 nr=0 a0=300 a1=7864320 a2=83 a3=4166
+TAPE k=7 s=0 f=3 t=420 nr=0 a0=300 a1=7864320 a2=84 a3=4216
+TAPE k=9 s=0 f=0 t=422 nr=0 a0=5 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=422 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=422 nr=7 a0=130 a1=0 a2=0 a3=0
+AUDIT seq=26 tick=422 sys=cell_servo target=130 decision=ALLOW reason=none result=0 tainted=0
+agentsh: action 6 servo_set(130) -> 0
+TAPE k=3 s=0 f=1 t=422 nr=1 a0=1073754408 a1=38 a2=0 a3=0
+AUDIT seq=27 tick=422 sys=cons_write target=1073754408 decision=ALLOW reason=none result=38 tainted=0
+TAPE k=3 s=0 f=1 t=422 nr=11 a0=1073756916 a1=12 a2=18 a3=0
+AUDIT seq=28 tick=422 sys=agent_send target=1073756916 decision=ALLOW reason=none result=12 tainted=0
+TAPE k=3 s=0 f=1 t=422 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=29 tick=422 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=7 s=0 f=3 t=425 nr=0 a0=300 a1=8519680 a2=85 a3=4266
+TAPE k=7 s=0 f=3 t=430 nr=0 a0=300 a1=8519680 a2=86 a3=4316
+TAPE k=7 s=0 f=3 t=435 nr=0 a0=300 a1=8519680 a2=87 a3=4366
+TAPE k=7 s=0 f=3 t=440 nr=0 a0=300 a1=8519680 a2=88 a3=4416
+TAPE k=7 s=0 f=3 t=445 nr=0 a0=300 a1=8519680 a2=89 a3=4466
+TAPE k=7 s=0 f=3 t=450 nr=0 a0=300 a1=8519680 a2=90 a3=4516
+TAPE k=7 s=0 f=3 t=455 nr=0 a0=300 a1=8519680 a2=91 a3=4566
+TAPE k=7 s=0 f=3 t=460 nr=0 a0=300 a1=8519680 a2=92 a3=4616
+TAPE k=7 s=0 f=3 t=465 nr=0 a0=300 a1=8519680 a2=93 a3=4666
+TAPE k=7 s=0 f=3 t=470 nr=0 a0=300 a1=8519680 a2=94 a3=4716
+TAPE k=7 s=0 f=3 t=475 nr=0 a0=300 a1=8519680 a2=95 a3=4766
+TAPE k=7 s=0 f=3 t=480 nr=0 a0=300 a1=8519680 a2=96 a3=4816
+TAPE k=7 s=0 f=3 t=485 nr=0 a0=300 a1=8519680 a2=97 a3=4866
+TAPE k=7 s=0 f=3 t=490 nr=0 a0=300 a1=8519680 a2=98 a3=4916
+TAPE k=8 s=0 f=0 t=493 nr=0 a0=0 a1=0 a2=0 a3=0
+OUTCOME DONE: checks done: 3 witness checks after kernel-allowed moves
+TAPE k=3 s=0 f=1 t=494 nr=1 a0=1073754408 a1=71 a2=0 a3=0
+AUDIT seq=30 tick=494 sys=cons_write target=1073754408 decision=ALLOW reason=none result=71 tainted=0
+EXECUTED 6 operation(s):
+TAPE k=3 s=0 f=1 t=494 nr=1 a0=1073754408 a1=25 a2=0 a3=0
+AUDIT seq=31 tick=494 sys=cons_write target=1073754408 decision=ALLOW reason=none result=25 tainted=0
+  1 servo_set(60) -> 0
+TAPE k=3 s=0 f=1 t=494 nr=1 a0=1073754408 a1=23 a2=0 a3=0
+AUDIT seq=32 tick=494 sys=cons_write target=1073754408 decision=ALLOW reason=none result=23 tainted=0
+  2 servo_set(50) -> 0
+TAPE k=3 s=0 f=1 t=494 nr=1 a0=1073754408 a1=23 a2=0 a3=0
+AUDIT seq=33 tick=494 sys=cons_write target=1073754408 decision=ALLOW reason=none result=23 tainted=0
+  3 servo_set(80) -> 0
+TAPE k=3 s=0 f=1 t=494 nr=1 a0=1073754408 a1=23 a2=0 a3=0
+AUDIT seq=34 tick=494 sys=cons_write target=1073754408 decision=ALLOW reason=none result=23 tainted=0
+  4 servo_set(90) -> 0
+TAPE k=3 s=0 f=1 t=494 nr=1 a0=1073754408 a1=23 a2=0 a3=0
+AUDIT seq=35 tick=494 sys=cons_write target=1073754408 decision=ALLOW reason=none result=23 tainted=0
+  5 servo_set(120) -> 0
+TAPE k=3 s=0 f=1 t=494 nr=1 a0=1073754408 a1=24 a2=0 a3=0
+AUDIT seq=36 tick=494 sys=cons_write target=1073754408 decision=ALLOW reason=none result=24 tainted=0
+  6 servo_set(130) -> 0
+TAPE k=3 s=0 f=1 t=494 nr=1 a0=1073754408 a1=24 a2=0 a3=0
+AUDIT seq=37 tick=494 sys=cons_write target=1073754408 decision=ALLOW reason=none result=24 tainted=0
+EXIT pid=1 code=0
+TAPE k=2 s=0 f=0 t=494 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=38 tick=494 sys=exec_end target=0 decision=ALLOW reason=exec_end result=0 tainted=0
+END pid=1 EXIT ticks=444 uptime=494
+ring3> checks held
+REQUEST checks held
+TAPE k=7 s=0 f=3 t=495 nr=0 a0=300 a1=8519680 a2=99 a3=4966
+TAPE k=1 s=1 f=0 t=495 nr=63 a0=200 a1=3000 a2=500 a3=0
+AUDIT seq=39 tick=495 sys=exec_start target=1 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=2 name=agentsh prog=1 caps=0x3f uptime=495
+SYSCALL pid=2 nr=1 cpl=3
+agentsh: request "checks held"
+TAPE k=3 s=0 f=1 t=496 nr=1 a0=1073754408 a1=31 a2=0 a3=0
+AUDIT seq=40 tick=496 sys=cons_write target=1073754408 decision=ALLOW reason=none result=31 tainted=0
+TAPE k=3 s=0 f=1 t=496 nr=11 a0=2147478528 a1=11 a2=17 a3=0
+AUDIT seq=41 tick=496 sys=agent_send target=2147478528 decision=ALLOW reason=none result=11 tainted=0
+TAPE k=3 s=0 f=1 t=496 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=42 tick=496 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=7 s=0 f=3 t=500 nr=0 a0=300 a1=8519680 a2=100 a3=5016
+TAPE k=7 s=0 f=3 t=505 nr=0 a0=300 a1=8519680 a2=101 a3=5066
+TAPE k=7 s=0 f=3 t=510 nr=0 a0=300 a1=8519680 a2=102 a3=5116
+TAPE k=7 s=0 f=3 t=515 nr=0 a0=300 a1=8519680 a2=103 a3=5166
+TAPE k=7 s=0 f=3 t=520 nr=0 a0=300 a1=8519680 a2=104 a3=5216
+TAPE k=7 s=0 f=3 t=525 nr=0 a0=300 a1=8519680 a2=105 a3=5266
+TAPE k=7 s=0 f=3 t=530 nr=0 a0=300 a1=8519680 a2=106 a3=5316
+TAPE k=7 s=0 f=3 t=535 nr=0 a0=300 a1=8519680 a2=107 a3=5366
+TAPE k=7 s=0 f=3 t=540 nr=0 a0=300 a1=8519680 a2=108 a3=5416
+TAPE k=7 s=0 f=3 t=545 nr=0 a0=300 a1=8519680 a2=109 a3=5466
+TAPE k=7 s=0 f=3 t=550 nr=0 a0=300 a1=8519680 a2=110 a3=5516
+TAPE k=9 s=0 f=0 t=550 nr=0 a0=7 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=550 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=550 nr=7 a0=100 a1=0 a2=0 a3=0
+AUDIT seq=43 tick=550 sys=cell_servo target=100 decision=ALLOW reason=none result=0 tainted=0
+agentsh: action 1 servo_set(100) -> 0
+TAPE k=3 s=0 f=1 t=551 nr=1 a0=1073754408 a1=38 a2=0 a3=0
+AUDIT seq=44 tick=551 sys=cons_write target=1073754408 decision=ALLOW reason=none result=38 tainted=0
+TAPE k=3 s=0 f=1 t=551 nr=11 a0=1073756916 a1=12 a2=18 a3=0
+AUDIT seq=45 tick=551 sys=agent_send target=1073756916 decision=ALLOW reason=none result=12 tainted=0
+TAPE k=3 s=0 f=1 t=551 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=46 tick=551 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=7 s=0 f=3 t=555 nr=0 a0=300 a1=6553600 a2=111 a3=5566
+TAPE k=7 s=0 f=3 t=560 nr=0 a0=300 a1=6553600 a2=112 a3=5616
+TAPE k=7 s=0 f=3 t=565 nr=0 a0=300 a1=6553600 a2=113 a3=5666
+TAPE k=7 s=0 f=3 t=570 nr=0 a0=300 a1=6553600 a2=114 a3=5716
+TAPE k=7 s=0 f=3 t=575 nr=0 a0=300 a1=6553600 a2=115 a3=5766
+TAPE k=7 s=0 f=3 t=580 nr=0 a0=300 a1=6553600 a2=116 a3=5816
+TAPE k=7 s=0 f=3 t=585 nr=0 a0=300 a1=6553600 a2=117 a3=5866
+TAPE k=7 s=0 f=3 t=590 nr=0 a0=300 a1=6553600 a2=118 a3=5916
+TAPE k=9 s=0 f=0 t=594 nr=0 a0=8 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=594 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=594 nr=7 a0=70 a1=0 a2=0 a3=0
+AUDIT seq=47 tick=594 sys=cell_servo target=70 decision=ALLOW reason=none result=0 tainted=0
+agentsh: action 2 servo_set(70) -> 0
+TAPE k=3 s=0 f=1 t=594 nr=1 a0=1073754408 a1=37 a2=0 a3=0
+AUDIT seq=48 tick=594 sys=cons_write target=1073754408 decision=ALLOW reason=none result=37 tainted=0
+TAPE k=3 s=0 f=1 t=594 nr=11 a0=1073756916 a1=12 a2=18 a3=0
+AUDIT seq=49 tick=594 sys=agent_send target=1073756916 decision=ALLOW reason=none result=12 tainted=0
+TAPE k=3 s=0 f=1 t=594 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=50 tick=594 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=7 s=0 f=3 t=595 nr=0 a0=300 a1=4587520 a2=119 a3=5966
+TAPE k=7 s=0 f=3 t=600 nr=0 a0=300 a1=4587520 a2=120 a3=6016
+TAPE k=7 s=0 f=3 t=605 nr=0 a0=300 a1=4587520 a2=121 a3=6066
+TAPE k=7 s=0 f=3 t=610 nr=0 a0=300 a1=4587520 a2=122 a3=6116
+TAPE k=7 s=0 f=3 t=615 nr=0 a0=300 a1=4587520 a2=123 a3=6166
+TAPE k=7 s=0 f=3 t=620 nr=0 a0=300 a1=4587520 a2=124 a3=6216
+TAPE k=7 s=0 f=3 t=625 nr=0 a0=300 a1=4587520 a2=125 a3=6266
+TAPE k=7 s=0 f=3 t=630 nr=0 a0=300 a1=4587520 a2=126 a3=6316
+TAPE k=7 s=0 f=3 t=635 nr=0 a0=300 a1=4587520 a2=127 a3=6366
+TAPE k=9 s=0 f=0 t=639 nr=0 a0=9 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=639 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=639 nr=7 a0=50 a1=0 a2=0 a3=0
+AUDIT seq=51 tick=639 sys=cell_servo target=50 decision=ALLOW reason=none result=0 tainted=0
+agentsh: action 3 servo_set(50) -> 0
+TAPE k=3 s=0 f=1 t=639 nr=1 a0=1073754408 a1=37 a2=0 a3=0
+AUDIT seq=52 tick=639 sys=cons_write target=1073754408 decision=ALLOW reason=none result=37 tainted=0
+TAPE k=3 s=0 f=1 t=639 nr=11 a0=1073756916 a1=12 a2=18 a3=0
+AUDIT seq=53 tick=639 sys=agent_send target=1073756916 decision=ALLOW reason=none result=12 tainted=0
+TAPE k=3 s=0 f=1 t=639 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=54 tick=639 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=7 s=0 f=3 t=640 nr=0 a0=300 a1=3276800 a2=128 a3=6416
+TAPE k=7 s=0 f=3 t=645 nr=0 a0=300 a1=3276800 a2=129 a3=6466
+TAPE k=7 s=0 f=3 t=650 nr=0 a0=300 a1=3276800 a2=130 a3=6516
+TAPE k=7 s=0 f=3 t=655 nr=0 a0=300 a1=3276800 a2=131 a3=6566
+TAPE k=7 s=0 f=3 t=660 nr=0 a0=300 a1=3276800 a2=132 a3=6616
+TAPE k=7 s=0 f=3 t=665 nr=0 a0=300 a1=3276800 a2=133 a3=6666
+TAPE k=7 s=0 f=3 t=670 nr=0 a0=300 a1=3276800 a2=134 a3=6716
+TAPE k=7 s=0 f=3 t=675 nr=0 a0=300 a1=3276800 a2=135 a3=6766
+TAPE k=7 s=0 f=3 t=680 nr=0 a0=300 a1=3276800 a2=136 a3=6816
+TAPE k=7 s=0 f=3 t=685 nr=0 a0=300 a1=3276800 a2=137 a3=6866
+TAPE k=7 s=0 f=3 t=690 nr=0 a0=300 a1=3276800 a2=138 a3=6916
+TAPE k=7 s=0 f=3 t=695 nr=0 a0=300 a1=3276800 a2=139 a3=6966
+TAPE k=7 s=0 f=3 t=700 nr=0 a0=300 a1=3276800 a2=140 a3=7016
+TAPE k=7 s=0 f=3 t=705 nr=0 a0=300 a1=3276800 a2=141 a3=7066
+TAPE k=7 s=0 f=3 t=710 nr=0 a0=300 a1=3276800 a2=142 a3=7116
+TAPE k=7 s=0 f=3 t=715 nr=0 a0=300 a1=3276800 a2=143 a3=7166
+TAPE k=7 s=0 f=3 t=720 nr=0 a0=300 a1=3276800 a2=144 a3=7216
+TAPE k=7 s=0 f=3 t=725 nr=0 a0=300 a1=3276800 a2=145 a3=7266
+TAPE k=7 s=0 f=3 t=730 nr=0 a0=300 a1=3276800 a2=146 a3=7316
+TAPE k=7 s=0 f=3 t=735 nr=0 a0=300 a1=3276800 a2=147 a3=7366
+TAPE k=9 s=0 f=0 t=740 nr=0 a0=10 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=740 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=740 nr=7 a0=80 a1=0 a2=0 a3=0
+AUDIT seq=55 tick=740 sys=cell_servo target=80 decision=ALLOW reason=none result=0 tainted=0
+agentsh: action 4 servo_set(80) -> 0
+TAPE k=3 s=0 f=1 t=740 nr=1 a0=1073754408 a1=37 a2=0 a3=0
+AUDIT seq=56 tick=740 sys=cons_write target=1073754408 decision=ALLOW reason=none result=37 tainted=0
+TAPE k=3 s=0 f=1 t=740 nr=11 a0=1073756916 a1=12 a2=18 a3=0
+AUDIT seq=57 tick=740 sys=agent_send target=1073756916 decision=ALLOW reason=none result=12 tainted=0
+TAPE k=3 s=0 f=1 t=740 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=58 tick=740 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=7 s=0 f=3 t=740 nr=0 a0=300 a1=5242880 a2=148 a3=7416
+TAPE k=7 s=0 f=3 t=745 nr=0 a0=300 a1=5242880 a2=149 a3=7466
+TAPE k=7 s=0 f=3 t=750 nr=0 a0=300 a1=5242880 a2=150 a3=7516
+TAPE k=7 s=0 f=3 t=755 nr=0 a0=300 a1=5242880 a2=151 a3=7566
+TAPE k=7 s=0 f=3 t=760 nr=0 a0=300 a1=5242880 a2=152 a3=7616
+TAPE k=7 s=0 f=3 t=765 nr=0 a0=300 a1=5242880 a2=153 a3=7666
+TAPE k=7 s=0 f=3 t=770 nr=0 a0=300 a1=5242880 a2=154 a3=7716
+TAPE k=7 s=0 f=3 t=775 nr=0 a0=300 a1=5242880 a2=155 a3=7766
+TAPE k=7 s=0 f=3 t=780 nr=0 a0=300 a1=5242880 a2=156 a3=7816
+TAPE k=9 s=0 f=0 t=783 nr=0 a0=11 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=783 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=783 nr=7 a0=90 a1=0 a2=0 a3=0
+AUDIT seq=59 tick=783 sys=cell_servo target=90 decision=ALLOW reason=none result=0 tainted=0
+agentsh: action 5 servo_set(90) -> 0
+TAPE k=3 s=0 f=1 t=783 nr=1 a0=1073754408 a1=37 a2=0 a3=0
+AUDIT seq=60 tick=783 sys=cons_write target=1073754408 decision=ALLOW reason=none result=37 tainted=0
+TAPE k=3 s=0 f=1 t=784 nr=11 a0=1073756916 a1=12 a2=18 a3=0
+AUDIT seq=61 tick=784 sys=agent_send target=1073756916 decision=ALLOW reason=none result=12 tainted=0
+TAPE k=3 s=0 f=1 t=784 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=62 tick=784 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=7 s=0 f=3 t=785 nr=0 a0=300 a1=5898240 a2=157 a3=7866
+TAPE k=7 s=0 f=3 t=790 nr=0 a0=300 a1=5898240 a2=158 a3=7916
+TAPE k=7 s=0 f=3 t=795 nr=0 a0=300 a1=5898240 a2=159 a3=7966
+TAPE k=7 s=0 f=3 t=800 nr=0 a0=300 a1=5898240 a2=160 a3=8016
+TAPE k=7 s=0 f=3 t=805 nr=0 a0=300 a1=5898240 a2=161 a3=8066
+TAPE k=7 s=0 f=3 t=810 nr=0 a0=300 a1=5898240 a2=162 a3=8116
+TAPE k=7 s=0 f=3 t=815 nr=0 a0=300 a1=5898240 a2=163 a3=8166
+TAPE k=7 s=0 f=3 t=820 nr=0 a0=300 a1=5898240 a2=164 a3=8216
+TAPE k=7 s=0 f=3 t=825 nr=0 a0=300 a1=5898240 a2=165 a3=8266
+TAPE k=7 s=0 f=3 t=830 nr=0 a0=300 a1=5898240 a2=166 a3=8316
+TAPE k=7 s=0 f=3 t=835 nr=0 a0=300 a1=5898240 a2=167 a3=8366
+TAPE k=7 s=0 f=3 t=840 nr=0 a0=300 a1=5898240 a2=168 a3=8416
+TAPE k=7 s=0 f=3 t=845 nr=0 a0=300 a1=5898240 a2=169 a3=8466
+TAPE k=7 s=0 f=3 t=850 nr=0 a0=300 a1=5898240 a2=170 a3=8516
+TAPE k=7 s=0 f=3 t=855 nr=0 a0=300 a1=5898240 a2=171 a3=8566
+TAPE k=7 s=0 f=3 t=860 nr=0 a0=300 a1=5898240 a2=172 a3=8616
+TAPE k=7 s=0 f=3 t=865 nr=0 a0=300 a1=5898240 a2=173 a3=8666
+TAPE k=7 s=0 f=3 t=870 nr=0 a0=300 a1=5898240 a2=174 a3=8716
+TAPE k=7 s=0 f=3 t=875 nr=0 a0=300 a1=5898240 a2=175 a3=8766
+TAPE k=7 s=0 f=3 t=880 nr=0 a0=300 a1=5898240 a2=176 a3=8816
+TAPE k=9 s=0 f=0 t=884 nr=0 a0=12 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=884 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=884 nr=7 a0=120 a1=0 a2=0 a3=0
+AUDIT seq=63 tick=884 sys=cell_servo target=120 decision=ALLOW reason=none result=0 tainted=0
+agentsh: action 6 servo_set(120) -> 0
+TAPE k=3 s=0 f=1 t=884 nr=1 a0=1073754408 a1=38 a2=0 a3=0
+AUDIT seq=64 tick=884 sys=cons_write target=1073754408 decision=ALLOW reason=none result=38 tainted=0
+TAPE k=3 s=0 f=1 t=884 nr=11 a0=1073756916 a1=12 a2=18 a3=0
+AUDIT seq=65 tick=884 sys=agent_send target=1073756916 decision=ALLOW reason=none result=12 tainted=0
+TAPE k=3 s=0 f=1 t=884 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=66 tick=884 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=7 s=0 f=3 t=885 nr=0 a0=300 a1=7864320 a2=177 a3=8866
+TAPE k=7 s=0 f=3 t=890 nr=0 a0=300 a1=7864320 a2=178 a3=8916
+TAPE k=7 s=0 f=3 t=895 nr=0 a0=300 a1=7864320 a2=179 a3=8966
+TAPE k=7 s=0 f=3 t=900 nr=0 a0=300 a1=7864320 a2=180 a3=9016
+TAPE k=7 s=0 f=3 t=905 nr=0 a0=300 a1=7864320 a2=181 a3=9066
+TAPE k=7 s=0 f=3 t=910 nr=0 a0=300 a1=7864320 a2=182 a3=9116
+TAPE k=7 s=0 f=3 t=915 nr=0 a0=300 a1=7864320 a2=183 a3=9166
+TAPE k=7 s=0 f=3 t=920 nr=0 a0=300 a1=7864320 a2=184 a3=9216
+TAPE k=7 s=0 f=3 t=925 nr=0 a0=300 a1=7864320 a2=185 a3=9266
+TAPE k=9 s=0 f=0 t=928 nr=0 a0=13 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=928 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=928 nr=7 a0=130 a1=0 a2=0 a3=0
+AUDIT seq=67 tick=928 sys=cell_servo target=130 decision=ALLOW reason=none result=0 tainted=0
+agentsh: action 7 servo_set(130) -> 0
+TAPE k=3 s=0 f=1 t=928 nr=1 a0=1073754408 a1=38 a2=0 a3=0
+AUDIT seq=68 tick=928 sys=cons_write target=1073754408 decision=ALLOW reason=none result=38 tainted=0
+TAPE k=3 s=0 f=1 t=928 nr=11 a0=1073756916 a1=12 a2=18 a3=0
+AUDIT seq=69 tick=928 sys=agent_send target=1073756916 decision=ALLOW reason=none result=12 tainted=0
+TAPE k=3 s=0 f=1 t=928 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=70 tick=928 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=7 s=0 f=3 t=930 nr=0 a0=300 a1=8519680 a2=186 a3=9316
+TAPE k=7 s=0 f=3 t=935 nr=0 a0=300 a1=8519680 a2=187 a3=9366
+TAPE k=7 s=0 f=3 t=940 nr=0 a0=300 a1=8519680 a2=188 a3=9416
+TAPE k=7 s=0 f=3 t=945 nr=0 a0=300 a1=8519680 a2=189 a3=9466
+TAPE k=7 s=0 f=3 t=950 nr=0 a0=300 a1=8519680 a2=190 a3=9516
+TAPE k=7 s=0 f=3 t=955 nr=0 a0=300 a1=8519680 a2=191 a3=9566
+TAPE k=7 s=0 f=3 t=960 nr=0 a0=300 a1=8519680 a2=192 a3=9616
+TAPE k=7 s=0 f=3 t=965 nr=0 a0=300 a1=8519680 a2=193 a3=9666
+TAPE k=7 s=0 f=3 t=970 nr=0 a0=300 a1=8519680 a2=194 a3=9716
+TAPE k=7 s=0 f=3 t=975 nr=0 a0=300 a1=8519680 a2=195 a3=9766
+TAPE k=7 s=0 f=3 t=980 nr=0 a0=300 a1=8519680 a2=196 a3=9816
+TAPE k=7 s=0 f=3 t=985 nr=0 a0=300 a1=8519680 a2=197 a3=9866
+TAPE k=7 s=0 f=3 t=990 nr=0 a0=300 a1=8519680 a2=198 a3=9916
+TAPE k=7 s=0 f=3 t=995 nr=0 a0=300 a1=8519680 a2=199 a3=9966
+TAPE k=8 s=0 f=0 t=998 nr=0 a0=0 a1=0 a2=0 a3=0
+OUTCOME DONE: checks done: 3 witness checks after kernel-allowed moves
+TAPE k=3 s=0 f=1 t=998 nr=1 a0=1073754408 a1=71 a2=0 a3=0
+AUDIT seq=71 tick=998 sys=cons_write target=1073754408 decision=ALLOW reason=none result=71 tainted=0
+EXECUTED 7 operation(s):
+TAPE k=3 s=0 f=1 t=998 nr=1 a0=1073754408 a1=25 a2=0 a3=0
+AUDIT seq=72 tick=998 sys=cons_write target=1073754408 decision=ALLOW reason=none result=25 tainted=0
+  1 servo_set(100) -> 0
+TAPE k=3 s=0 f=1 t=999 nr=1 a0=1073754408 a1=24 a2=0 a3=0
+AUDIT seq=73 tick=999 sys=cons_write target=1073754408 decision=ALLOW reason=none result=24 tainted=0
+  2 servo_set(70) -> 0
+TAPE k=3 s=0 f=1 t=999 nr=1 a0=1073754408 a1=23 a2=0 a3=0
+AUDIT seq=74 tick=999 sys=cons_write target=1073754408 decision=ALLOW reason=none result=23 tainted=0
+  3 servo_set(50) -> 0
+TAPE k=3 s=0 f=1 t=999 nr=1 a0=1073754408 a1=23 a2=0 a3=0
+AUDIT seq=75 tick=999 sys=cons_write target=1073754408 decision=ALLOW reason=none result=23 tainted=0
+  4 servo_set(80) -> 0
+TAPE k=3 s=0 f=1 t=999 nr=1 a0=1073754408 a1=23 a2=0 a3=0
+AUDIT seq=76 tick=999 sys=cons_write target=1073754408 decision=ALLOW reason=none result=23 tainted=0
+  5 servo_set(90) -> 0
+TAPE k=3 s=0 f=1 t=999 nr=1 a0=1073754408 a1=23 a2=0 a3=0
+AUDIT seq=77 tick=999 sys=cons_write target=1073754408 decision=ALLOW reason=none result=23 tainted=0
+  6 servo_set(120) -> 0
+TAPE k=3 s=0 f=1 t=999 nr=1 a0=1073754408 a1=24 a2=0 a3=0
+AUDIT seq=78 tick=999 sys=cons_write target=1073754408 decision=ALLOW reason=none result=24 tainted=0
+  7 servo_set(130) -> 0
+TAPE k=3 s=0 f=1 t=999 nr=1 a0=1073754408 a1=24 a2=0 a3=0
+AUDIT seq=79 tick=999 sys=cons_write target=1073754408 decision=ALLOW reason=none result=24 tainted=0
+EXIT pid=2 code=0
+TAPE k=2 s=0 f=0 t=999 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=80 tick=999 sys=exec_end target=0 decision=ALLOW reason=exec_end result=0 tainted=0
+END pid=2 EXIT ticks=503 uptime=999
+ring3> 
+TAPE k=7 s=0 f=3 t=1000 nr=0 a0=300 a1=8519680 a2=200 a3=10016
+TAPE k=7 s=0 f=3 t=1005 nr=0 a0=300 a1=8519680 a2=201 a3=10066
+TAPE k=7 s=0 f=3 t=1010 nr=0 a0=300 a1=8519680 a2=202 a3=10116
+TAPE k=7 s=0 f=3 t=1015 nr=0 a0=300 a1=8519680 a2=203 a3=10166
+exit
+audit: dropped=0
+KERNEL ALIVE uptime=1019

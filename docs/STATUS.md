@@ -64,6 +64,18 @@ the end of every card and at each milestone.
   D-58 box-centre angle sticks at 90 deg within ~5 deg (SG90 hub), so calibration passes only with the paper
   aligned to <= ~2 deg (else the witness disables itself, limit kept at 3 deg); camera axis must be over the
   pivot (parallax). `docs/evidence/T-07/README.md`.
+- **T-07 Part B: code + simulated cell done, live steps are the user's** (2026-11-03, Opus 5.5 / high, D-57;
+  no paid call, no key read by the builder). Ruff fix (`9e6158b`); `calibrate` deny rule (`aea614c`);
+  pack **agent-v3** = agent-v2 + witness section, pinned `c98d2955...` (`70514fc`); `witness` op in the run loop
+  (no COM2 frame, kernel-allowed `servo_set` + settled telemetry else `NO_MOVE`, `witness` record, SAM stop ends
+  the run), `ring3 calibrate` (scripted, through the kernel, D-72 points 60/70/90/110/120, <= 7 moves),
+  `calibrate --checks`, free `ring3 witness-frame`, `run --witness-dir/--calibration`; measured 15 mm horn
+  (`aaa5063`, `f121368`, `6edd716`). Simulated cell: PASS / NO_MOVE / held-arm FAIL + halt / SAM 401 stop /
+  calibration 5 of 5 / checks rounds. Full default suite at `6edd716` in a clean worktree: 731 passed, 6 skipped (hw + 2 by design), 161 s. 4 test-program changes logged
+  (none loosened). Findings: D-59 point set fails the limit on synthetic frames (-> D-72); 15 mm horn raw error
+  up to ~7 deg, shape filter fits on-axis, refuses 35 mm off-axis; agentsh ends a request after its 8th
+  ACTION. A2-A4 open: Windows helper + `witness-frame` -> `calibrate` -> `calibrate --checks` -> live
+  `ring3 run --pack agent-v3` (user). `docs/evidence/T-07/README.md` "Part B".
 - Second terminal Nov 1: **T-06** (Opus 5.5 / high) once T-01 has made its first commit (D-42).
 - User, while T-01 runs: `SETUP.md` step 8 (usbipd + Uno + arduino-cli in Ubuntu), then wiring per
   `hardware/wiring.md` in the afternoon.
@@ -132,6 +144,7 @@ the end of every card and at each milestone.
 | T-04 | 2026-11-02 17:00 ET | Fable 5.1 / high | 2026-11-03 16:30 ET: A1-A7 pass (A3 on the real cell, A4/A5 over four live runs by the user, D-57; runs 1-2 not replayable: bridge connected late); 5 test changes logged, none loosened; no paid call made by the builder | `docs/evidence/T-04/README.md` |
 | T-06 | 2026-11-01 16:58 ET | Opus 5.5 / high | **2026-11-03 16:50 ET, card finished (v2 two-board build, D-63/D-64/D-64b/D-65): A1 A2 A3 A5 A6 A7 pass; A4 pass except the fan min duty on the NPN switch (50 % recorded on the L293D only).** A5.8 link loss 1056 ms + alarm seen by the user (LCD `LINK LOST - STOP`, red blinking; beeps heard, count 2 or 3 unconfirmed). Open for the lead: NPN min duty (`bringup` `f`), beep count, D-46 boot screen on the LCD. wiring.md rewritten for v2; DECISIONS = lead's D-01..D-71; `ring3cell` unchanged since `222d26d` (.hex identical). 10 test-program changes logged, none loosened an expectation | `docs/evidence/T-06/README.md` |
 | T-07 Part A | 2026-11-02 | Opus 5.5 / high | 2026-11-02 11:20 ET; A1 pass (Part B: A2-A4 open); offline, no paid call; 1 test-program change logged (fixture offset 4 -> 2 deg + new disable cases), no limit loosened | `docs/evidence/T-07/README.md` |
+| T-07 Part B | 2026-11-03 | Opus 5.5 / high | code + simulated cell done (A2-A4 open: live, user); D-72 points, 15 mm horn, agent-v3; 4 test-program changes logged, no limit changed; no paid call by the builder | `docs/evidence/T-07/README.md` (Part B) |
 
 ## Last evidence
 `docs/evidence/T-01/` (isolation transcript, ktest, panic dump, build, pytest, toolchain, skills byte-check).

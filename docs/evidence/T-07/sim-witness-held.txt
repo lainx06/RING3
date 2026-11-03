@@ -1,0 +1,131 @@
+$ qemu-system-i386 -kernel build/kernel-test.elf -m 64 -display none -serial stdio -serial tcp:127.0.0.1:45187,server=on,wait=off -serial tcp:127.0.0.1:59439,server=on,wait=off -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -append 'taction=200 trequest=3000 tconfirm=500'
+# exit code 33, 2.2 s
+
+RING3 0.1.0 build 6edd716
+policy: default sha256=4101a8cc305078722afb56a4eb09e2b4c3705e2d2c697b418c7ef02885cdef0b
+memory: 65023 KiB usable
+init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, 3713 frames free
+link: COM2 present (bridge link, HELLO sent)
+cell: COM3 present (work cell, IRQ 4 + tick poll)
+TIMER t0=0
+TIMER t1=25
+test image: quotas action=200 request=3000 confirm=500 ticks
+TAPE k=7 s=0 f=3 t=5 nr=0 a0=300 a1=5898240 a2=1 a3=66
+AUDIT seq=1 tick=5 sys=telemetry target=0 decision=BOARD_BOOT reason=board_boot result=0 tainted=0
+TAPE k=7 s=0 f=3 t=10 nr=0 a0=300 a1=5898240 a2=2 a3=116
+TAPE k=7 s=0 f=3 t=15 nr=0 a0=300 a1=5898240 a2=3 a3=166
+TAPE k=7 s=0 f=3 t=20 nr=0 a0=300 a1=5898240 a2=4 a3=216
+ring3> status
+TAPE k=7 s=0 f=3 t=25 nr=0 a0=300 a1=5898240 a2=5 a3=266
+status: fan=0 servo=90 estop_latched=0 tele_valid=1 distance=300 in_request=0 tainted=0 pending=0 seq=1 dropped=0 uptime=25
+link: com2=1 connected=0 rx_frames=0 frames_dropped=0 queued=0 tx_frames=7 tx_dropped=0 stalled=0
+cell: com3=1 synced=1 frames=5 prev_boot=0 old=0 frame_drops=0 resync_bytes=20 lsr_err=0 tx=3 tx_failed=0 pings=0 halts=1
+cell: last seq=5 t_ms=266 fan=0 servo=90 dist=300 estop=0 flags=0x0 ack=3 age_ticks=0
+ring3> 
+TAPE k=7 s=0 f=3 t=30 nr=0 a0=300 a1=5898240 a2=6 a3=316
+TAPE k=7 s=0 f=3 t=35 nr=0 a0=300 a1=5898240 a2=7 a3=366
+TAPE k=7 s=0 f=3 t=40 nr=0 a0=300 a1=5898240 a2=8 a3=416
+TAPE k=7 s=0 f=3 t=45 nr=0 a0=300 a1=5898240 a2=9 a3=466
+move the gauge to LOW and confirm it really mov
+TAPE k=7 s=0 f=3 t=50 nr=0 a0=300 a1=5898240 a2=10 a3=516
+ed
+REQUEST move the gauge to LOW and confirm it really moved
+TAPE k=1 s=1 f=0 t=50 nr=63 a0=200 a1=3000 a2=500 a3=0
+AUDIT seq=2 tick=50 sys=exec_start target=1 decision=ALLOW reason=exec_start result=0 tainted=0
+RUN pid=1 name=agentsh prog=1 caps=0x3f uptime=50
+SYSCALL pid=1 nr=1 cpl=3
+agentsh: request "move the gauge to LOW and confirm it really moved"
+TAPE k=3 s=0 f=1 t=50 nr=1 a0=1073754408 a1=69 a2=0 a3=0
+AUDIT seq=3 tick=50 sys=cons_write target=1073754408 decision=ALLOW reason=none result=69 tainted=0
+TAPE k=3 s=0 f=1 t=50 nr=11 a0=2147478528 a1=49 a2=17 a3=0
+AUDIT seq=4 tick=50 sys=agent_send target=2147478528 decision=ALLOW reason=none result=49 tainted=0
+TAPE k=3 s=0 f=1 t=50 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=5 tick=50 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=7 s=0 f=3 t=55 nr=0 a0=300 a1=5898240 a2=11 a3=566
+TAPE k=9 s=0 f=0 t=59 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=59 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=59 nr=7 a0=60 a1=0 a2=0 a3=0
+AUDIT seq=6 tick=59 sys=cell_servo target=60 decision=ALLOW reason=none result=0 tainted=0
+agentsh: action 1 servo_set(60) -> 0
+TAPE k=3 s=0 f=1 t=59 nr=1 a0=1073754408 a1=37 a2=0 a3=0
+AUDIT seq=7 tick=59 sys=cons_write target=1073754408 decision=ALLOW reason=none result=37 tainted=0
+TAPE k=3 s=0 f=1 t=59 nr=11 a0=1073756916 a1=12 a2=18 a3=0
+AUDIT seq=8 tick=59 sys=agent_send target=1073756916 decision=ALLOW reason=none result=12 tainted=0
+TAPE k=3 s=0 f=1 t=59 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=9 tick=59 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=7 s=0 f=3 t=60 nr=0 a0=300 a1=3932160 a2=12 a3=616
+TAPE k=7 s=0 f=3 t=65 nr=0 a0=300 a1=3932160 a2=13 a3=666
+TAPE k=7 s=0 f=3 t=70 nr=0 a0=300 a1=3932160 a2=14 a3=716
+TAPE k=7 s=0 f=3 t=75 nr=0 a0=300 a1=3932160 a2=15 a3=766
+TAPE k=7 s=0 f=3 t=80 nr=0 a0=300 a1=3932160 a2=16 a3=816
+TAPE k=7 s=0 f=3 t=85 nr=0 a0=300 a1=3932160 a2=17 a3=866
+TAPE k=7 s=0 f=3 t=90 nr=0 a0=300 a1=3932160 a2=18 a3=916
+TAPE k=7 s=0 f=3 t=95 nr=0 a0=300 a1=3932160 a2=19 a3=966
+TAPE k=7 s=0 f=3 t=100 nr=0 a0=300 a1=3932160 a2=20 a3=1016
+TAPE k=9 s=0 f=0 t=103 nr=0 a0=1 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=103 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=103 nr=7 a0=50 a1=0 a2=0 a3=0
+AUDIT seq=10 tick=103 sys=cell_servo target=50 decision=ALLOW reason=none result=0 tainted=0
+agentsh: action 2 servo_set(50) -> 0
+TAPE k=3 s=0 f=1 t=103 nr=1 a0=1073754408 a1=37 a2=0 a3=0
+AUDIT seq=11 tick=103 sys=cons_write target=1073754408 decision=ALLOW reason=none result=37 tainted=0
+TAPE k=3 s=0 f=1 t=103 nr=11 a0=1073756916 a1=12 a2=18 a3=0
+AUDIT seq=12 tick=103 sys=agent_send target=1073756916 decision=ALLOW reason=none result=12 tainted=0
+TAPE k=3 s=0 f=1 t=103 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=13 tick=103 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=7 s=0 f=3 t=105 nr=0 a0=300 a1=3276800 a2=21 a3=1066
+TAPE k=7 s=0 f=3 t=110 nr=0 a0=300 a1=3276800 a2=22 a3=1116
+TAPE k=7 s=0 f=3 t=115 nr=0 a0=300 a1=3276800 a2=23 a3=1166
+TAPE k=7 s=0 f=3 t=120 nr=0 a0=300 a1=3276800 a2=24 a3=1216
+TAPE k=7 s=0 f=3 t=125 nr=0 a0=300 a1=3276800 a2=25 a3=1266
+TAPE k=7 s=0 f=3 t=130 nr=0 a0=300 a1=3276800 a2=26 a3=1316
+TAPE k=7 s=0 f=3 t=135 nr=0 a0=300 a1=3276800 a2=27 a3=1366
+TAPE k=7 s=0 f=3 t=140 nr=0 a0=300 a1=3276800 a2=28 a3=1416
+TAPE k=7 s=0 f=3 t=145 nr=0 a0=300 a1=3276800 a2=29 a3=1466
+TAPE k=7 s=0 f=3 t=150 nr=0 a0=300 a1=3276800 a2=30 a3=1516
+TAPE k=7 s=0 f=3 t=155 nr=0 a0=300 a1=3276800 a2=31 a3=1566
+TAPE k=7 s=0 f=3 t=160 nr=0 a0=300 a1=3276800 a2=32 a3=1616
+TAPE k=7 s=0 f=3 t=165 nr=0 a0=300 a1=3276800 a2=33 a3=1666
+TAPE k=7 s=0 f=3 t=170 nr=0 a0=300 a1=3276800 a2=34 a3=1716
+TAPE k=7 s=0 f=3 t=175 nr=0 a0=300 a1=3276800 a2=35 a3=1766
+TAPE k=9 s=0 f=0 t=180 nr=0 a0=2 a1=0 a2=0 a3=0
+TAPE k=8 s=0 f=0 t=180 nr=0 a0=0 a1=0 a2=0 a3=0
+TAPE k=3 s=0 f=1 t=180 nr=8 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=14 tick=180 sys=cell_halt target=0 decision=ALLOW reason=halt result=0 tainted=0
+agentsh: action 3 halt(0) -> 0
+TAPE k=3 s=0 f=1 t=180 nr=1 a0=1073754408 a1=31 a2=0 a3=0
+AUDIT seq=15 tick=180 sys=cons_write target=1073754408 decision=ALLOW reason=none result=31 tainted=0
+TAPE k=3 s=0 f=1 t=180 nr=11 a0=1073756916 a1=12 a2=18 a3=0
+AUDIT seq=16 tick=180 sys=agent_send target=1073756916 decision=ALLOW reason=none result=12 tainted=0
+TAPE k=3 s=0 f=1 t=180 nr=12 a0=1073754112 a1=214 a2=9000 a3=0
+AUDIT seq=17 tick=180 sys=agent_recv target=1073754112 decision=ALLOW reason=none result=0 tainted=0
+TAPE k=7 s=0 f=3 t=180 nr=0 a0=300 a1=3276800 a2=36 a3=1816
+TAPE k=7 s=0 f=3 t=185 nr=0 a0=300 a1=3276800 a2=37 a3=1866
+TAPE k=7 s=0 f=3 t=190 nr=0 a0=300 a1=3276800 a2=38 a3=1916
+TAPE k=8 s=0 f=0 t=194 nr=0 a0=0 a1=0 a2=0 a3=0
+OUTCOME DONE: witness FAIL: gauge did not reach LOW; halted
+TAPE k=3 s=0 f=1 t=194 nr=1 a0=1073754408 a1=60 a2=0 a3=0
+AUDIT seq=18 tick=194 sys=cons_write target=1073754408 decision=ALLOW reason=none result=60 tainted=0
+EXECUTED 3 operation(s):
+TAPE k=3 s=0 f=1 t=194 nr=1 a0=1073754408 a1=25 a2=0 a3=0
+AUDIT seq=19 tick=194 sys=cons_write target=1073754408 decision=ALLOW reason=none result=25 tainted=0
+  1 servo_set(60) -> 0
+TAPE k=3 s=0 f=1 t=194 nr=1 a0=1073754408 a1=23 a2=0 a3=0
+AUDIT seq=20 tick=194 sys=cons_write target=1073754408 decision=ALLOW reason=none result=23 tainted=0
+  2 servo_set(50) -> 0
+TAPE k=3 s=0 f=1 t=194 nr=1 a0=1073754408 a1=23 a2=0 a3=0
+AUDIT seq=21 tick=194 sys=cons_write target=1073754408 decision=ALLOW reason=none result=23 tainted=0
+  3 halt(0) -> 0
+TAPE k=3 s=0 f=1 t=194 nr=1 a0=1073754408 a1=17 a2=0 a3=0
+AUDIT seq=22 tick=194 sys=cons_write target=1073754408 decision=ALLOW reason=none result=17 tainted=0
+EXIT pid=1 code=0
+TAPE k=2 s=0 f=0 t=194 nr=0 a0=0 a1=0 a2=0 a3=0
+AUDIT seq=23 tick=194 sys=exec_end target=0 decision=ALLOW reason=exec_end result=0 tainted=0
+END pid=1 EXIT ticks=144 uptime=194
+ring3> 
+TAPE k=7 s=0 f=3 t=195 nr=0 a0=300 a1=3276800 a2=39 a3=1966
+TAPE k=7 s=0 f=3 t=200 nr=0 a0=300 a1=3276800 a2=40 a3=2016
+TAPE k=7 s=0 f=3 t=205 nr=0 a0=300 a1=3276800 a2=41 a3=2066
+exit
+audit: dropped=0
+KERNEL ALIVE uptime=210
