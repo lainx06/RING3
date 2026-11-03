@@ -30,6 +30,16 @@
 #define SYNC_TIMEOUT_TICKS (3u * POLICY_HZ)   /* no reset happened (D-20 path): trust the stream after 3 s */
 #define PING_TICKS (250u * POLICY_HZ / 1000u) /* PING every 250 ms while nothing else was sent */
 #define TX_SPIN_MAX 4000000u                  /* polled TX bound per byte */
+/* T-09 F4: the receive pump's budget per tick: bytes read from the UART and frames handed to the policy
+ * (fed or rejected; a previous boot's frames cost bytes only). The tick refills it; the IRQ handler and the
+ * tick's own poll spend it; once spent, pump() returns with the rest waiting in the UART for the next IRQ or
+ * tick, so a stream faster than the kernel (a boot frame every time, each with its synchronous FAN 0, LCD
+ * and alarm) cannot keep the CPU in interrupt context: the policy tick, the lease and the console keep
+ * running. 115200 baud delivers at most ~115 bytes (5 frames) per 10 ms tick, so a real board never meets
+ * the budget; only a sender faster than the wire (QEMU's unthrottled chardev) does. */
+#define RX_TICK_BYTES 512u
+#define RX_TICK_FRAMES 8u
+#define INIT_DRAIN_MAX 4096u                  /* bytes discarded at init: bounded even if the line floods */
 
 static int present;
 static uint32_t init_tick;
@@ -44,8 +54,10 @@ static int have_last;
 static uint16_t tx_seq;
 static uint32_t last_tx_tick;
 static uint32_t mute_until;
+static uint32_t rx_bytes_left = RX_TICK_BYTES, rx_frames_left = RX_TICK_FRAMES;
 static struct {
     uint32_t resync_bytes, prev_boot, frames, old, dropped, lsr_err, tx_frames, tx_failed, pings, halts;
+    uint32_t rx_deferred;              /* pump() returned on a spent budget with bytes still waiting (F4) */
 } cnt;
 
 int device_present(void) { return present; }
@@ -220,6 +232,8 @@ void device_auto_halt(const struct pol_decision *d)
 static void reject(enum cell_rx e, uint32_t len)
 {
     cnt.dropped++;
+    if (rx_frames_left)
+        rx_frames_left--;
     struct pol_event ev = { EV_TELEMETRY, (uint8_t)e, 0, 0, ticks_now(), 0, { (int32_t)len, 0, 0, 0 } };
     struct pol_decision d;
     audit_feed(&ev, &d);                               /* FRAME_DROP, audited */
@@ -237,6 +251,8 @@ static void on_state(const struct cell_state *st)
         }
         synced = 1;
     }
+    if (rx_frames_left)
+        rx_frames_left--;
     last = *st;
     last_tick = now;
     have_last = 1;
@@ -275,6 +291,8 @@ static void end_of_frame(void)
     on_state(&st);
 }
 
+/* Reads the UART until it is empty or this tick's budget is spent (F4): never more than RX_TICK_BYTES bytes
+ * or RX_TICK_FRAMES policy-bound frames per tick, whatever the number of IRQs. */
 static void pump(void)
 {
     for (;;) {
@@ -283,7 +301,12 @@ static void pump(void)
             cnt.lsr_err++;
         if (!(lsr & LSR_DR))
             return;
+        if (rx_bytes_left == 0 || rx_frames_left == 0) {
+            cnt.rx_deferred++;                         /* the rest waits for the next tick's budget */
+            return;
+        }
         uint8_t b = inb(COM3_PORT + REG_DATA);
+        rx_bytes_left--;
         if (!resynced) {
             if (b == 0x00)
                 resynced = 1;                          /* D-53: the cut frame before it is not a drop */
@@ -315,6 +338,8 @@ void device_on_tick(void)
 {
     if (!present)
         return;
+    rx_bytes_left = RX_TICK_BYTES;                     /* F4: a fresh receive budget every tick */
+    rx_frames_left = RX_TICK_FRAMES;
     pump();                                            /* backstop for a lost shared-line edge (D-39a) */
     if (synced && ticks_now() - last_tx_tick >= PING_TICKS) {
         if (tx_frame(CELL_T_PING, 0, 0) == 0)
@@ -368,9 +393,9 @@ void device_print_status(void)
     uint32_t lt = last_tick;
     irq_restore(fl);
     printk("cell: com3=%u synced=%u frames=%u prev_boot=%u old=%u frame_drops=%u resync_bytes=%u lsr_err=%u "
-           "tx=%u tx_failed=%u pings=%u halts=%u\n",
+           "tx=%u tx_failed=%u pings=%u halts=%u rx_deferred=%u\n",
            (unsigned)present, (unsigned)synced, cnt.frames, cnt.prev_boot, cnt.old, cnt.dropped,
-           cnt.resync_bytes, cnt.lsr_err, cnt.tx_frames, cnt.tx_failed, cnt.pings, cnt.halts);
+           cnt.resync_bytes, cnt.lsr_err, cnt.tx_frames, cnt.tx_failed, cnt.pings, cnt.halts, cnt.rx_deferred);
     if (hl)
         printk("cell: last seq=%u t_ms=%u fan=%u servo=%u dist=%u estop=%u flags=0x%x ack=%u age_ticks=%u\n",
                st.seq, st.t_ms, st.fan, st.servo, st.dist_mm, st.estop, st.flags, st.ack_seq,
@@ -384,6 +409,8 @@ void device_mute(uint32_t ticks)
     mute_until = ticks ? ticks_now() + ticks : 0;
     irq_restore(fl);
 }
+
+int device_rx_ready(void) { return present && (inb(COM3_PORT + REG_LSR) & LSR_DR) != 0; }
 #endif
 
 /* ---- init ------------------------------------------------------------------------------------------- */
@@ -408,8 +435,8 @@ void device_init(void)
     outb(COM3_PORT + REG_FCR, 0xC7);                   /* FIFO on, clear both (D-53: flush before counting) */
     /* DTR + RTS as the host already holds them (no second reset, D-54); OUT2 routes the IRQ. */
     outb(COM3_PORT + REG_MCR, 0x0B);
-    while (inb(COM3_PORT + REG_LSR) & LSR_DR)
-        (void)inb(COM3_PORT + REG_DATA);
+    for (uint32_t i = 0; i < INIT_DRAIN_MAX && (inb(COM3_PORT + REG_LSR) & LSR_DR); i++)
+        (void)inb(COM3_PORT + REG_DATA);               /* bounded (F4): a flooding line cannot hold init */
     init_tick = ticks_now();
     last_tx_tick = init_tick;
     outb(COM3_PORT + REG_IER, 0x01);                   /* received data available */

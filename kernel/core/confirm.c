@@ -38,8 +38,27 @@ static void idle_ticks(uint32_t n)
 }
 
 #ifdef RING3_TEST
+#include "device.h"
+#define GAP_SPIN_MAX 10000000u             /* COM3 LSR reads: an upper bound of several seconds under TCG */
 static int race;
 void confirm_set_race(int on) { race = on; }
+static int gap;
+void confirm_set_gap(int on) { gap = on; }
+
+/* T-09 F1 seam: after the answer's final decision, hold (interrupts exactly as the code left them) until a
+ * COM3 byte is waiting or the E-stop latched, then give a pending interrupt a moment to be taken, and only
+ * then return to the caller that sends the command. With interrupts on here (the code before T-09) the
+ * frame is received and acted on inside the gap, so the latch's FAN 0 precedes the confirmed command;
+ * with them off the frame waits in the UART until the command is out. */
+static void gap_wait(void)
+{
+    printk("confirmgap: waiting for COM3\n");
+    for (uint32_t i = 0; i < GAP_SPIN_MAX; i++)
+        if (device_rx_ready() || audit_state()->estop_latched)
+            break;
+    for (uint32_t i = 0; i < 20000u; i++)
+        (void)device_rx_ready();
+}
 #endif
 
 void confirm_run(const struct pol_event *call, struct pol_decision *d)
@@ -78,9 +97,13 @@ void confirm_run(const struct pol_event *call, struct pol_decision *d)
             int yes = strncmp(line, "y", 2) == 0 || strncmp(line, "yes", 4) == 0;
             struct pol_event ev = { EV_CONFIRM, yes ? ANSWER_YES : ANSWER_NO, 0, 0, ticks_now(), 0,
                                     { 0, 0, 0, 0 } };
-            uint32_t fl = irq_save();
+            /* T-09 F1: the answer's decision and the command it allows are one step. Interrupts go off
+             * here and stay off until the caller has written the command to COM3 and returned to ring 3
+             * (or the console loop idles again): a telemetry frame that latches the E-stop or halts the
+             * fan is decided either before this answer (the rules re-run at the answer's tick and refuse
+             * the call) or after the command is out, never in between. */
+            cli();
             audit_feed(&ev, d);
-            irq_restore(fl);
             if (d->code == DEC_NONE) {
                 /* The timeout tick had already cleared `pending` in this same wake-up: the line was a stray
                  * answer (reason no_pending, no effect) and the call timed out (F4, D-52). The tick
@@ -91,9 +114,14 @@ void confirm_run(const struct pol_event *call, struct pol_decision *d)
                 d->result = -ECANCELED;
                 d->audit = 0;
             }
+#ifdef RING3_TEST
+            if (gap && d->code == DEC_CONFIRM_YES)
+                gap_wait();
+#endif
             return;
         }
         if (!audit_state()->pending) {                /* the tick path timed the prompt out */
+            cli();                                    /* every return leaves interrupts off (F1) */
             printk("\n");
             d->code = DEC_CONFIRM_NO;
             d->reason = R_TIMEOUT;

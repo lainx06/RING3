@@ -2,7 +2,10 @@
  * -errno). Order per call (R3, R5): uaccess on every user pointer -> one policy event through decide() ->
  * prompt if CONFIRM_PENDING -> execute only on ALLOW/CONFIRM_YES. No syscall dereferences a user pointer
  * before uaccess passed (INV-3). cell_* calls reach the COM3 driver only on ALLOW / CONFIRM_YES (T-04);
- * without a COM3 device they return -ENOSYS after the decision. */
+ * without a COM3 device they return -ENOSYS after the decision. Interrupts are off from the decision
+ * (decide() here, or the answer's decision inside confirm_run(), which returns with them off) through the
+ * COM3 write in execute() to the return to ring 3 (T-09 F1): no telemetry can latch the E-stop or halt the
+ * fan between a decision and the command it allowed. */
 #include "syscall.h"
 #include "agentlink.h"
 #include "audit.h"
@@ -229,7 +232,7 @@ static void dispatch(struct trap_frame *f)
     if (dec.action == ACT_PROMPT) {
         if (is_cell_call(nr))
             device_show(nr, &dec);               /* "ASK ..." on the panel while the human decides */
-        confirm_run(&ev, &dec);                  /* may not return (LIMIT); flushes before the prompt */
+        confirm_run(&ev, &dec);                  /* may not return (LIMIT); returns with interrupts off */
         idx = -1;
     }
     if (is_cell_call(nr))

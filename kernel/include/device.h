@@ -8,7 +8,8 @@
  * receiver rules) and every valid one is an EV_TELEMETRY event into decide(); commands leave only when a
  * decision says so: ACT_EXEC on a cell_* syscall, ACT_HALT (FAN 0) from the lease, a board boot or the
  * E-stop latch, and the console's confirmed `estop reset`. PING every 250 ms once the board's current boot
- * is known. Receive: IRQ 4 (shared with the polled COM1, D-39a) plus a poll on every PIT tick (D-54). */
+ * is known. Receive: IRQ 4 (shared with the polled COM1, D-39a) plus a poll on every PIT tick (D-54), under a
+ * per-tick byte/frame budget (T-09 F4) so a flood cannot hold the CPU in interrupt context. */
 void device_init(void);                        /* probe COM3; 115200 8N1, RX IRQ 4 */
 int device_present(void);
 int device_synced(void);                       /* a frame of the board's current boot has arrived (TX allowed) */
@@ -33,5 +34,6 @@ int device_last_frame(struct cell_state *st, uint32_t *tick);
 void device_print_status(void);                /* one `cell:` line for the console `status` command */
 #ifdef RING3_TEST
 void device_mute(uint32_t ticks);              /* test images: send nothing for `ticks` (link-watchdog test) */
+int device_rx_ready(void);                     /* test images: a COM3 byte is waiting in the UART (F1 seam) */
 #endif
 #endif

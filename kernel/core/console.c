@@ -150,14 +150,14 @@ static void feed_console(uint8_t sub)
         return;
     /* T-04: `estop reset` opens a confirmation (INV-05); on y the policy re-checks the button and the
      * telemetry at that tick and only then does the kernel send ESTOP_RESET on COM3. */
+    int r = 0;
     if (d.action == ACT_PROMPT) {
         cli();
-        confirm_run(&ev, &d);
+        confirm_run(&ev, &d);                /* returns with interrupts off (T-09 F1) ... */
+        if (d.action == ACT_EXEC)
+            r = device_estop_reset();        /* ... so the answer's decision and the frame are one step */
         sti();
     }
-    int r = 0;
-    if (d.action == ACT_EXEC)
-        r = device_estop_reset();
     device_show(PEND_ESTOP_RESET, &d);
     audit_flush(1);
     printk("estop reset: %s %s%s\n", policy_code_name(d.code), policy_reason_name(d.reason),
@@ -190,7 +190,8 @@ static void dispatch(const char *l)
         printk("commands: help status audit objects 'estop reset' exit; any other line is a request for the agent"
 #ifdef RING3_TEST
                "; test: 'run <prog> [args]' 'agent-test <text>' 'agent-nocap <text>' 'tele <mm> <estop> [bad]'"
-               " 'teletick <mm> <estop> <n>|off' 'tape on|off' 'confirmrace on|off' 'cellmute <ticks>' panic"
+               " 'teletick <mm> <estop> <n>|off' 'tape on|off' 'confirmrace on|off' 'confirmgap on|off'"
+               " 'cellmute <ticks>' panic"
 #endif
                "\n");
         feed_console(CONSOLE_OTHER);
@@ -280,6 +281,11 @@ static void dispatch(const char *l)
         int on = word(rest, "on", &rest);
         confirm_set_race(on);
         printk("confirm race %s\n", on ? "on" : "off");
+    } else if (word(l, "confirmgap", &rest)) {
+        feed_console(CONSOLE_OTHER);
+        int on = word(rest, "on", &rest);
+        confirm_set_gap(on);
+        printk("confirm gap %s\n", on ? "on" : "off");
     } else if (word(l, "panic", &rest)) {
         feed_console(CONSOLE_OTHER);
         printk("deliberate CPL-0 fault (test): write to unmapped 0xFFFFF000\n");

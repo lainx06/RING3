@@ -106,6 +106,7 @@ class SimCell:
         self._last_rx = time.monotonic()
         self._sent: list[bytes] = []
         self._hold_after = 0
+        self._flags = 0
         self.t0 = time.monotonic()
 
     # ---- lifecycle ----
@@ -172,6 +173,26 @@ class SimCell:
         with self._lock:
             block = b"".join(self._sent[-n:])
         self._write(block)
+
+    def emit_state(self) -> None:
+        """One STATE frame of the current boot now, from the model as it stands (seq/t_ms advance as in a
+        20 Hz pass), whether or not the stream is paused: a single frame at a chosen moment (T-09 F1)."""
+        with self._lock:
+            self._emit()
+
+    def write_fast(self, data: bytes, deadline_s: float = 10.0) -> int:
+        """Writes everything as fast as the socket takes it (a flood, T-09 F4); returns the bytes written."""
+        assert self._sock is not None
+        sent = 0
+        deadline = time.monotonic() + deadline_s
+        while sent < len(data) and time.monotonic() < deadline:
+            try:
+                sent += self._sock.send(data[sent:])
+            except BlockingIOError:
+                time.sleep(0.001)
+            except OSError:
+                break
+        return sent
 
     def frames_after(self, index: int) -> list[KernelFrame]:
         with self._lock:
@@ -287,20 +308,26 @@ class SimCell:
         self.bad_frame = False
         if not self.fan_history or self.fan_history[-1][2] != self.fan:
             self.fan_history.append((now, self.t_ms, self.fan))
+        self._flags = flags
         if self.streaming:
-            wire = state_frame(
-                self.seq, self.t_ms, self.fan, self.servo, self.distance, int(self.estop), flags, self.ack_seq
-            )
-            self._write(wire)
-            self._sent.append(wire)
-            del self._sent[:-64]
-            self.states_sent += 1
-            self.seq = (self.seq + 1) & 0xFFFF
+            self._emit()
             if self._hold_after:
                 self._hold_after -= 1
                 if self._hold_after == 0:
                     self.streaming = False
         self.t_ms += int(self.period_s * 1000)
+
+    def _emit(self) -> None:
+        """Writes one STATE frame from the model's current fields (lock held)."""
+        wire = state_frame(
+            self.seq, self.t_ms, self.fan, self.servo, self.distance, int(self.estop), self._flags,
+            self.ack_seq,
+        )  # fmt: skip
+        self._write(wire)
+        self._sent.append(wire)
+        del self._sent[:-64]
+        self.states_sent += 1
+        self.seq = (self.seq + 1) & 0xFFFF
 
     def _run(self) -> None:
         assert self._sock is not None
