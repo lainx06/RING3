@@ -288,7 +288,7 @@ replies, executor died), `ERROR` (link failure). RING3 never prints "success"; i
   - `{"action":"done","summary":<str ≤ 200>}` · `{"action":"refuse","reason":<str ≤ 200>}`
   - Duplicate keys, extra keys, floats, NaN, BOM, code fences or trailing text → rejected. Two consecutive invalid
     replies → `STOP`.
-- **Context:** the versioned context pack (`docs/context-packs/agent-vN.md`: ops, the cell and its limits, the
+- **Context:** the versioned context pack (`docs/context-packs/agent-vN.md`, chosen per run with `ring3 run --pack`, e.g. `agent-v2-redteam` for enforcement tests, D-69: ops, the cell and its limits, the
   object table, one-action rule) + the request + prior actions and observations. Observations are labelled as untrusted
   data in the prompt; that is a hint, not a defence. The kernel is the defence.
 - **Spend ledger:** reservation logged before every request; fail closed with no price or over the run cap

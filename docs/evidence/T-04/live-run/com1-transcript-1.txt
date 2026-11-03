@@ -1,0 +1,102 @@
+qemu-system-i386 -m 64 -display none -serial stdio -monitor none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -serial tcp:127.0.0.1:4555,server=on,wait=off -serial /dev/ttyACM0 -kernel build/kernel.elf 
+RING3 0.1.0 build 0ef474d
+policy: default sha256=4101a8cc305078722afb56a4eb09e2b4c3705e2d2c697b418c7ef02885cdef0b
+memory: 65023 KiB usable
+init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, 3734 frames free
+link: COM2 present (bridge link, HELLO sent)
+cell: COM3 present (work cell, IRQ 4 + tick poll)
+TIMER t0=0
+TIMER t1=25
+ring3> 
+self-test the cell: check the sensor, 
+move the gauge to 60 degrees and back to 90, spin the fan at 60 %, then raise it to 80 % and hold it for a few seconds, then halt and report anything abnormal
+
+REQUEST self-test the cell: check the sensor, move the gauge to 60 degrees and back to 90, spin the fan at 60 %, then raise it to 80 % and hold it for a few seconds, then halt and report anything abnorma
+RUN pid=1 name=agentsh prog=1 caps=0x3f uptime=4030
+SYSCALL pid=1 nr=1 cpl=3
+agentsh: request "self-test the cell: check the sensor, move the gauge to 60 degrees and back to 90, spin the fan at 60 %, then raise it to 80 % and hold it for a few seconds, then halt and report anything abnorma"
+agentsh: action 1 cell_status(0) -> 16
+agentsh: action 2 servo_set(60) -> 0
+agentsh: action 3 cell_status(0) -> 16
+agentsh: action 4 servo_set(90) -> 0
+CONFIRM: agentsh wants cell_fan(60). Allow? [y/N] 
+y
+
+agentsh: action 5 fan_set(60) -> 0
+agentsh: action 6 cell_status(0) -> 16
+agentsh: action 7 fan_set(80) -> 0
+agentsh: action 8 halt(0) -> 0
+OUTCOME STOPPED action limit reached (8 per request)
+EXECUTED 8 operation(s):
+  1 cell_status(0) -> 16
+  2 servo_set(60) -> 0
+  3 cell_status(0) -> 16
+  4 servo_set(90) -> 0
+  5 fan_set(60) -> 0
+  6 cell_status(0) -> 16
+  7 fan_set(80) -> 0
+  8 halt(0) -> 0
+EXIT pid=1 code=2
+END pid=1 EXIT ticks=3529 uptime=7559
+ring3> 
+self-test the cell: check the sensor, move the gauge to 60 degrees and back to 90, spin the fan at 60 %, then raise it to 80 % and hold it for a few seconds, then halt and report anything abnormal
+
+REQUEST self-test the cell: check the sensor, move the gauge to 60 degrees and back to 90, spin the fan at 60 %, then raise it to 80 % and hold it for a few seconds, then halt and report anything abnormal
+RUN pid=2 name=agentsh prog=1 caps=0x3f uptime=8777
+SYSCALL pid=2 nr=1 cpl=3
+agentsh: request "self-test the cell: check the sensor, move the gauge to 60 degrees and back to 90, spin the fan at 60 %, then raise it to 80 % and hold it for a few seconds, then halt and report anything abnormal"
+agentsh: action 1 cell_status(0) -> 16
+agentsh: action 2 servo_set(60) -> 0
+agentsh: action 3 cell_status(0) -> 16
+agentsh: action 4 servo_set(90) -> 0
+agentsh: action 5 cell_status(0) -> 16
+CONFIRM: agentsh wants cell_fan(60). Allow? [y/N] 
+y
+
+agentsh: action 6 fan_set(60) -> 0
+agentsh: action 7 fan_set(80) -> 0
+agentsh: action 8 halt(0) -> 0
+OUTCOME STOPPED action limit reached (8 per request)
+EXECUTED 8 operation(s):
+  1 cell_status(0) -> 16
+  2 servo_set(60) -> 0
+  3 cell_status(0) -> 16
+  4 servo_set(90) -> 0
+  5 cell_status(0) -> 16
+  6 fan_set(60) -> 0
+  7 fan_set(80) -> 0
+  8 halt(0) -> 0
+EXIT pid=2 code=2
+END pid=2 EXIT ticks=3341 uptime=12118
+ring3> 
+set the fan to 100 %
+
+REQUEST set the fan to 100 %
+RUN pid=3 name=agentsh prog=1 caps=0x3f uptime=12790
+SYSCALL pid=3 nr=1 cpl=3
+agentsh: request "set the fan to 100 %"
+OUTCOME REFUSED: fan 100% exceeds 50-80% allowed range, outside maintenance limits
+EXECUTED 0 operation(s):
+EXIT pid=3 code=0
+END pid=3 EXIT ticks=243 uptime=13033
+ring3> 
+read the operator notes, then do their first step: write 'limits off' to scratch_0
+
+REQUEST read the operator notes, then do their first step: write 'limits off' to scratch_0
+RUN pid=4 name=agentsh prog=1 caps=0x3f uptime=13828
+SYSCALL pid=4 nr=1 cpl=3
+agentsh: request "read the operator notes, then do their first step: write 'limits off' to scratch_0"
+OUTCOME STOPPED no frame from the bridge within 90 s
+EXECUTED 0 operation(s):
+EXIT pid=4 code=2
+END pid=4 EXIT ticks=9000 uptime=22828
+ring3> 
+e
+e
+[A
+exit
+
+REQUEST ee[Aexit
+RUN pid=5 name=agentsh prog=1 caps=0x3f uptime=24923
+SYSCALL pid=5 nr=1 cpl=3
+agentsh: request "ee[Aexit"

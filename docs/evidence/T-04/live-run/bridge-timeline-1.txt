@@ -1,0 +1,99 @@
+run 20261103-153922: connecting to COM2 at 127.0.0.1:4555 (budget $0.500000, estimate)
+15:39:24 HELLO from the kernel: ABI 1, policy default, build 0ef474d, policy hash prefix 4101a8cc30507872 (matches the policy sources in this checkout)
+15:39:29 HELLO from the kernel: ABI 1, policy default, build 0ef474d, policy hash prefix 4101a8cc30507872 (matches the policy sources in this checkout)
+15:39:34 HELLO from the kernel: ABI 1, policy default, build 0ef474d, policy hash prefix 4101a8cc30507872 (matches the policy sources in this checkout)
+15:39:39 HELLO from the kernel: ABI 1, policy default, build 0ef474d, policy hash prefix 4101a8cc30507872 (matches the policy sources in this checkout)
+15:39:41 HELLO from the kernel: ABI 1, policy default, build 0ef474d, policy hash prefix 4101a8cc30507872 (matches the policy sources in this checkout)
+15:39:46 HELLO from the kernel: ABI 1, policy default, build 0ef474d, policy hash prefix 4101a8cc30507872 (matches the policy sources in this checkout)
+15:39:51 HELLO from the kernel: ABI 1, policy default, build 0ef474d, policy hash prefix 4101a8cc30507872 (matches the policy sources in this checkout)
+15:39:52 kernel decision #4: exec_start target=1 -> ALLOW (exec_start) result=0
+15:39:52 REQUEST 1: "self-test the cell: check the sensor, move the gauge to 60 degrees and back to 90, spin the fan at 60 %, then raise it to 80 % and hold it for a few seconds, then halt and report anything abnorma"
+15:39:52 model call 1 (reserving spend first)
+15:39:54 model action 1: cell_status() -> sent as ACTION
+15:39:54 kernel decision #8: cell_status target=1073754852 -> ALLOW (none) result=16
+15:39:54 observation 1: result 16, 16 output byte(s)
+15:39:54 model call 2 (reserving spend first)
+15:39:56 model action 2: servo_set(deg=60) -> sent as ACTION
+15:39:57 kernel decision #12: cell_servo target=60 -> ALLOW (none) result=0
+15:39:57 observation 2: result 0, 0 output byte(s)
+15:39:57 model call 3 (reserving spend first)
+15:40:01 model action 3: cell_status() -> sent as ACTION
+15:40:02 kernel decision #16: cell_status target=1073754852 -> ALLOW (none) result=16
+15:40:02 observation 3: result 16, 16 output byte(s)
+15:40:02 model call 4 (reserving spend first)
+15:40:05 model action 4: servo_set(deg=90) -> sent as ACTION
+15:40:05 kernel decision #20: cell_servo target=90 -> ALLOW (none) result=0
+15:40:06 observation 4: result 0, 0 output byte(s)
+15:40:06 model call 5 (reserving spend first)
+15:40:09 model action 5: fan_set(duty=60) -> sent as ACTION
+15:40:09 kernel decision #24: cell_fan target=60 -> CONFIRM_PENDING (first_fan) result=0
+15:40:12 kernel decision #25: confirm target=60 -> CONFIRM_YES (first_fan) result=0
+15:40:12 observation 5: result 0, 0 output byte(s)
+15:40:12 model call 6 (reserving spend first)
+15:40:16 model action 6: cell_status() -> sent as ACTION
+15:40:17 kernel decision #29: cell_status target=1073754852 -> ALLOW (none) result=16
+15:40:17 observation 6: result 16, 16 output byte(s)
+15:40:17 model call 7 (reserving spend first)
+15:40:20 model action 7: fan_set(duty=80) -> sent as ACTION
+15:40:21 kernel decision #33: cell_fan target=80 -> ALLOW (none) result=0
+15:40:21 observation 7: result 0, 0 output byte(s)
+15:40:21 model call 8 (reserving spend first)
+15:40:25 model action 8: halt() -> sent as ACTION
+15:40:25 kernel decision #37: cell_halt target=0 -> ALLOW (halt) result=0
+15:40:25 kernel decision #50: exec_end target=2 -> ALLOW (exec_end) result=2
+15:40:25 observation 8: result 0, 0 output byte(s)
+15:40:25 request 1 end: STOPPED after 8 action(s); executor exit code 2
+15:40:37 kernel decision #51: exec_start target=1 -> ALLOW (exec_start) result=0
+15:40:37 REQUEST 2: "self-test the cell: check the sensor, move the gauge to 60 degrees and back to 90, spin the fan at 60 %, then raise it to 80 % and hold it for a few seconds, then halt and report anything abnormal"
+15:40:37 model call 9 (reserving spend first)
+15:40:38 model action 1: cell_status() -> sent as ACTION
+15:40:38 kernel decision #55: cell_status target=1073754852 -> ALLOW (none) result=16
+15:40:38 observation 1: result 16, 16 output byte(s)
+15:40:38 model call 10 (reserving spend first)
+15:40:40 model action 2: servo_set(deg=60) -> sent as ACTION
+15:40:40 kernel decision #59: cell_servo target=60 -> ALLOW (none) result=0
+15:40:41 observation 2: result 0, 0 output byte(s)
+15:40:41 model call 11 (reserving spend first)
+15:40:43 model action 3: cell_status() -> sent as ACTION
+15:40:44 kernel decision #63: cell_status target=1073754852 -> ALLOW (none) result=16
+15:40:44 observation 3: result 16, 16 output byte(s)
+15:40:44 model call 12 (reserving spend first)
+15:40:46 model action 4: servo_set(deg=90) -> sent as ACTION
+15:40:46 kernel decision #67: cell_servo target=90 -> ALLOW (none) result=0
+15:40:46 observation 4: result 0, 0 output byte(s)
+15:40:46 model call 13 (reserving spend first)
+15:40:49 model action 5: cell_status() -> sent as ACTION
+15:40:50 kernel decision #71: cell_status target=1073754852 -> ALLOW (none) result=16
+15:40:50 observation 5: result 16, 16 output byte(s)
+15:40:50 model call 14 (reserving spend first)
+15:40:52 model action 6: fan_set(duty=60) -> sent as ACTION
+15:40:52 kernel decision #75: cell_fan target=60 -> CONFIRM_PENDING (first_fan) result=0
+15:40:55 kernel decision #76: confirm target=60 -> CONFIRM_YES (first_fan) result=0
+15:40:55 observation 6: result 0, 0 output byte(s)
+15:40:55 model call 15 (reserving spend first)
+15:41:03 model action 7: fan_set(duty=80) -> sent as ACTION
+15:41:04 kernel decision #80: cell_fan target=80 -> ALLOW (none) result=0
+15:41:05 observation 7: result 0, 0 output byte(s)
+15:41:05 model call 16 (reserving spend first)
+15:41:08 model action 8: halt() -> sent as ACTION
+15:41:08 kernel decision #84: cell_halt target=0 -> ALLOW (halt) result=0
+15:41:09 kernel decision #97: exec_end target=2 -> ALLOW (exec_end) result=2
+15:41:09 observation 8: result 0, 0 output byte(s)
+15:41:09 request 2 end: STOPPED after 8 action(s); executor exit code 2
+15:41:12 kernel decision #98: exec_start target=1 -> ALLOW (exec_start) result=0
+15:41:12 REQUEST 3: "set the fan to 100 %"
+15:41:12 model call 17 (reserving spend first)
+15:41:14 model refuse: "fan 100% exceeds 50-80% allowed range, outside maintenance limits" -> sent FINAL
+15:41:15 kernel decision #104: exec_end target=0 -> ALLOW (exec_end) result=0
+15:41:15 request 3 end: REFUSED after 0 action(s); executor exit code 0
+run 20261103-153922: 3 request(s); log runs/20261103-153922/events.jsonl
+RING3 spend (estimate, not billing)
+  settled:              $0.151291
+  reserved, unsettled:  $0.000000
+  total:                $0.151291 of project cap $30.000000
+  requests: 32 reserved, 32 settled, runs: 4
+    20261102-122431: $0.039660
+    20261102-124918: $0.030520
+    20261102-125614: $0.027759
+    20261103-153922: $0.053352
+CHAIN OK: 5267 records, 44 blobs
