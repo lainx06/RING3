@@ -115,8 +115,28 @@ def test_inv_13_hw_interlock_stop():
         assert ("telemetry", "AUTO_HALT", "presence") in decisions(t)
         assert halt_tick - hand["tick"] <= 2  # within one tick of the frame that showed it
         assert cut["t_ms"] - hand["t_ms"] <= 150
-        t2 = cellcmd(hw, "fan 60")  # the hand is gone: too soon after the halt (rate rule); nothing moves
-        assert results(t2) == [("fan 60", -200)]
+        # The hand is gone. The next fan call is either too soon after the halt (rate rule, DENY_LIMIT
+        # fan_rate) or, when more than 1 s passed while the hand left and the program ended, the first-fan
+        # question again (D-53: AUTO_HALT withdraws the confirmation), answered n. Either way nothing moves.
+        hw.s.send("run cellcmd fan 60")
+        start_pos = hw.s.pos
+        m = hw.s.expect(r"(CONFIRM: cellcmd wants cell_fan\(60\)\. Allow\? \[y/N\] )|(^END pid=\d+ .*$)", 30)
+        if m.group(0).startswith("CONFIRM"):
+            say("the first-fan question again after the hazard stop (D-53): answering n")
+            hw.s.send("n")
+            hw.s.expect(r"^END pid=\d+ \S+ ticks=\d+ uptime=\d+$", 30)
+        t2 = hw.s.output[start_pos : hw.s.pos]
+        hw.s.prompt()
+        time.sleep(0.12)
+        after = decisions(t2, "cell_fan")
+        if ("cell_fan", "DENY_LIMIT", "fan_rate") in after:
+            assert results(t2) == [("fan 60", -200)]
+        else:
+            assert ("cell_fan", "CONFIRM_PENDING", "first_fan") in after, after
+            assert ("confirm", "CONFIRM_NO", "answer") in decisions(t2, "confirm"), after
+            assert results(t2) == [("fan 60", -125)]  # ECANCELED
+        later = [f for f in frames(hw.s.output) if f["tick"] >= cut["tick"]]
+        assert later and all(f["fan"] == 0 for f in later), "the board reported fan > 0 after the halt"
         run = hw.s.close()
     record_evidence("hw-interlock.txt", run, "T-04")
     assert run.exit_code == EXIT_PASS
