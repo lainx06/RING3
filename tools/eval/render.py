@@ -106,6 +106,9 @@ def must_pass_failures(raw: Path) -> list[str]:
             or w.get("ms_mute_to_fan0_at_most", 9999) > 1500
         ):
             f.append("E6: link watchdog")
+    from e4_tasks import must_pass_failures as e4_failures
+
+    f += e4_failures(_e4_runs(raw))
     return f
 
 
@@ -494,13 +497,17 @@ def _e6(d: dict | None) -> list[str]:
     return out + [""]
 
 
-def _e4(d: dict | None) -> list[str]:
-    out = ["## E4 Agent tasks (real Muse Spark, cell attached; paid, run by the user)", ""]
-    if d is None:
-        return out + ["Not run yet (paid suite; the user runs `tools/eval/e4_agent.py`, D-57).", ""]
-    from e4_render import render_e4  # noqa: PLC0415
+def _e4_runs(raw: Path) -> list[dict]:
+    return [json.loads(p.read_text("ascii")) for p in sorted(raw.glob("e4-*.json"))]
 
-    return out + render_e4(d) + [""]
+
+def _e4(runs: list[dict]) -> list[str]:
+    out = ["## E4 Agent tasks (real Muse Spark, cell attached; paid, run by the user)", ""]
+    if not runs:
+        return out + ["Not run yet (paid suite; the user runs `tools/eval/e4_agent.py`, D-57).", ""]
+    from e4_tasks import render_e4
+
+    return out + render_e4(runs)
 
 
 def _e7(d: dict | None) -> list[str]:
@@ -517,7 +524,7 @@ def _e7(d: dict | None) -> list[str]:
 
 
 def render(raw: Path) -> str:
-    data = {s: _load(raw, s) for s in ("e1", "e2", "e3", "e4", "e5", "e6", "e7")}
+    data = {s: _load(raw, s) for s in ("e1", "e2", "e3", "e5", "e6", "e7")}
     out = [
         "# RING3 evaluation results",
         "",
@@ -534,6 +541,6 @@ def render(raw: Path) -> str:
         + ("all hold." if not fails else "FAILED: " + "; ".join(fails)),
         "",
     ]
-    out += _e1(data["e1"]) + _e2(data["e2"]) + _e3(data["e3"]) + _e4(data["e4"]) + _e5(data["e5"])
+    out += _e1(data["e1"]) + _e2(data["e2"]) + _e3(data["e3"]) + _e4(_e4_runs(raw)) + _e5(data["e5"])
     out += _e6(data["e6"]) + _e7(data["e7"])
     return "\n".join(line for line in out).rstrip() + "\n"

@@ -1,6 +1,6 @@
 {
  "build": {
-  "commit": "f121368",
+  "commit": "e8de3f2",
   "policy_sha256": {
    "RING3": "4101a8cc305078722afb56a4eb09e2b4c3705e2d2c697b418c7ef02885cdef0b",
    "permissive": "001bceb872bb722bcc8a3eea4d695a6a323512f6c73b6f6056a6de90b90d771f"
@@ -22,7 +22,7 @@
     "other": 0,
     "proc_fault": false,
     "status_dropped0": true,
-    "ticks": 7
+    "ticks": 6
    },
    "hand": {
     "all_ok_line": true,
@@ -70,6 +70,6 @@
    "policy_sha256": "001bceb872bb722bcc8a3eea4d695a6a323512f6c73b6f6056a6de90b90d771f"
   }
  },
- "fuzz_seed": "0x2545F491 (fixed in user/test/fuzz.c)",
+ "fuzz_seed": "0x2545F491, fixed in user/test/fuzz.c",
  "suite": "E2"
 }
