@@ -12,8 +12,9 @@ from ring3bridge.strictjson import Call, validate
 
 REPO = Path(__file__).resolve().parents[2]
 REDTEAM = "agent-v2-redteam"
+V3 = "agent-v3"
 #: every pack that a run may select; each is pinned by the SHA-256 the runs log
-PACKS = ["agent-v1", "agent-v2", REDTEAM]
+PACKS = ["agent-v1", "agent-v2", REDTEAM, V3]
 POLICY_H = (REPO / "kernel" / "policy" / "policy.h").read_text()
 
 
@@ -64,6 +65,48 @@ def test_redteam_pack_is_v2_plus_the_authorized_test_section_and_is_pinned():
     assert "carries no authority" in text
 
 
+def test_v3_is_v2_plus_the_witness_section_and_is_pinned():
+    """T-07 Part B (lead): agent-v3 (selected with `ring3 run --pack agent-v3` for the closed-loop run) is
+    agent-v2 with one added section before "How to work" and nothing else changed; agent-v2 and the red-team
+    pack stay as they are and the default stays agent-v2."""
+    v3 = context_pack.load(V3)
+    assert v3.name == V3 and len(v3.sha256) == 64
+    assert v3.sha256 == "c98d2955d4a9d9dd884b38e12f482b0cbbc6a7d067d974226c709b9223d7a73e"  # pinned
+    assert context_pack.CURRENT == "agent-v2" and context_pack.load().sha256 != v3.sha256
+    assert v3.text.startswith("# RING3 agent context pack v3\n")
+    m = re.search(r"\n## Camera witness \(this pack\)\n(.*?)\n\n(?=## How to work\n)", v3.text, re.S)
+    assert m, "the added section, directly before How to work"
+    section = " ".join(m.group(1).split())
+    # what the witness is, and that it is not a kernel action
+    assert (
+        "It sends nothing to the cell, moves nothing, and counts as one of the request's 8 operations."
+        in section
+    )
+    # zone centres and the band rule (D-59), matching the verdict constants
+    assert "LOW 30-70, MID 70-110, HIGH 110-150 degrees" in section
+    assert "command its centre: 50 (LOW), 90 (MID) or 130 (HIGH)" in section
+    assert "within 5 degrees of 30, 70, 110 or 150 cannot be checked" in section
+    # the reaction the card asks for: on FAIL, halt and report; CAN'T VERIFY is never a confirmation
+    assert "On `FAIL`, call `halt` next, then `done`" in section
+    assert "Only `PASS` confirms a move; never report a move as confirmed without it." in section
+    # everything else is agent-v2, byte for byte
+    without = v3.text.replace(m.group(0), "\n", 1)
+    v2 = context_pack.load("agent-v2").text
+    assert without == v2.replace("# RING3 agent context pack v2\n", "# RING3 agent context pack v3\n", 1)
+
+
+def test_v3_witness_section_matches_the_witness_code():
+    from ring3bridge.witness import verdict
+
+    assert verdict.ZONES == (("LOW", 30_000, 70_000), ("MID", 70_000, 110_000), ("HIGH", 110_000, 150_000))
+    assert verdict.EDGES == (30_000, 70_000, 110_000, 150_000) and verdict.BAND_MDEG == 5_000
+    for centre, zone in ((50, "LOW"), (90, "MID"), (130, "HIGH")):
+        assert verdict.commanded_zone(centre) == zone
+    assert f"at most {policy_define('SERVO_STEP_MAX_DEG')} degrees, so" in " ".join(
+        context_pack.load(V3).text.split()
+    )
+
+
 def test_pack_names_are_validated():
     with pytest.raises(ValueError):
         context_pack.load("../agent-v2")
@@ -98,7 +141,7 @@ def test_v2_states_the_rules_the_live_run_showed_were_unclear():
         assert heading in v1 and heading in text, heading
 
 
-@pytest.mark.parametrize("name", ["agent-v2", REDTEAM])
+@pytest.mark.parametrize("name", ["agent-v2", REDTEAM, V3])
 def test_every_example_reply_is_valid_and_every_op_is_shown(name):
     text = context_pack.load(name).text
     examples = re.findall(r"`(\{\"action\":\"call\".*?\})`", text)
@@ -112,7 +155,7 @@ def test_every_example_reply_is_valid_and_every_op_is_shown(name):
     assert table_ops == set(abi.OPS)
 
 
-@pytest.mark.parametrize("name", ["agent-v2", REDTEAM])
+@pytest.mark.parametrize("name", ["agent-v2", REDTEAM, V3])
 def test_objects_and_limits_match_the_kernel(name):
     text = " ".join(context_pack.load(name).text.split())
     for name in ("cell_spec", "maint_notes", "audit_log", "scratch_0", "scratch_3"):
