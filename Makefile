@@ -179,6 +179,11 @@ build/host/policy_test_permissive: kernel/policy/policy.c kernel/policy/policy.h
 	@mkdir -p $(dir $@)
 	$(HOSTCC) $(HOST_CFLAGS) -DPOLICY_VARIANT_HEADER='"variant_permissive.h"' tests/host/policy_test.c kernel/policy/policy.c -o $@
 
+# T-05a: free eval suites on HEAD (exported to build/eval/src) for both builds -> docs/evals/raw + results.md
+.PHONY: evals
+evals:
+	uv run python tools/eval/run_all.py $(EVAL_ARGS)
+
 clean:
 	rm -rf build
 

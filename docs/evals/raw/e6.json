@@ -1,0 +1,216 @@
+{
+ "firmware": {
+  "after_d49": {
+   "bad_crc": {
+    "details": [
+     "OK BAD_FRAME seen=True, fan stayed 0, ack_seq stayed 21 (bad frame was seq 22)=True"
+    ],
+    "fail": 0,
+    "ms": [],
+    "ok": 1
+   },
+   "clamp": {
+    "details": [
+     "OK fan reported 80 clamp=True; servo reported 165 clamp=True",
+     "OK fan reported 80 clamp=True; servo reported 165 clamp=True",
+     "OK fan reported 80 clamp=True; servo reported 165 clamp=True"
+    ],
+    "fail": 0,
+    "ms": [],
+    "ok": 3
+   },
+   "discard_estop": {
+    "details": [
+     "OK fan 0 while latched=True, reset clears=True, fan 0 for 1 s after the reset=True, a new FAN starts it=True",
+     "OK fan 0 while latched=True, reset clears=True, fan 0 for 1 s after the reset=True, a new FAN starts it=True"
+    ],
+    "fail": 0,
+    "ms": [],
+    "ok": 2
+   },
+   "discard_link": {
+    "details": [
+     "OK LINK_LOST=True, link restored by the FAN=True, fan 0 for 1 s=True, a new FAN starts it=True",
+     "OK LINK_LOST=True, link restored by the FAN=True, fan 0 for 1 s=True, a new FAN starts it=True",
+     "OK LINK_LOST=True, link restored by the FAN=True, fan 0 for 1 s=True, a new FAN starts it=True"
+    ],
+    "fail": 0,
+    "ms": [],
+    "ok": 3
+   },
+   "discard_presence": {
+    "details": [
+     "FAIL fan 0 + fault held while the hand was there=True, clearing FAN cleared the fault=False, fan stayed 0 for 1 s=True, a new FAN starts it=True",
+     "OK fan 0 + fault held while the hand was there=True, clearing FAN cleared the fault=True, fan stayed 0 for 1 s=True, a new FAN starts it=True"
+    ],
+    "fail": 1,
+    "ms": [],
+    "ok": 1
+   },
+   "echo_unplug": {
+    "details": [
+     "OK fan 0 100 ms (device clock) after the first NO_ECHO STATE; the 3-miss window starts up to ~100 ms earlier; PRESENCE latched=True; wire back=True"
+    ],
+    "fail": 0,
+    "ms": [
+     100,
+     100
+    ],
+    "ok": 1
+   },
+   "estop": {
+    "details": [
+     "OK cut on press=True, reset refused while held=True, latch holds after release=True, reset clears=True, fan not auto-restarted=True",
+     "OK cut on press=True, reset refused while held=True, latch holds after release=True, reset clears=True, fan not auto-restarted=True"
+    ],
+    "fail": 0,
+    "ms": [],
+    "ok": 2
+   },
+   "estop_flood": {
+    "details": [
+     "OK press seen=True, fan stayed 0=True"
+    ],
+    "fail": 0,
+    "ms": [],
+    "ok": 1
+   },
+   "link_loss": {
+    "details": [
+     "OK parked after 1093 ms, fan=0 servo=90, PING clears LINK_LOST=True, fan not auto-restarted=True",
+     "OK parked after 1056 ms, fan=0 servo=90, PING clears LINK_LOST=True, fan not auto-restarted=True"
+    ],
+    "fail": 0,
+    "ms": [
+     1093,
+     1056
+    ],
+    "ok": 2
+   },
+   "presence": {
+    "details": [
+     "OK cut=True, still latched after hand removed=True, FAN 0 with clear reading clears=True"
+    ],
+    "fail": 0,
+    "ms": [],
+    "ok": 1
+   },
+   "rate": {
+    "details": [
+     "OK 95 STATE, 19.1 Hz host clock, 20.0 Hz device clock, seq gaps 0, undecodable 0"
+    ],
+    "fail": 0,
+    "ms": [],
+    "ok": 1
+   }
+  },
+  "before_d49": {
+   "bad_crc": {
+    "details": [
+     "OK BAD_FRAME seen=True, fan stayed 0, ack_seq not advanced to 32=True"
+    ],
+    "fail": 0,
+    "ms": [],
+    "ok": 1
+   },
+   "clamp": {
+    "details": [
+     "FAIL fan reported 0 clamp=True; servo reported 90 clamp=True"
+    ],
+    "fail": 1,
+    "ms": [],
+    "ok": 0
+   },
+   "link_loss": {
+    "details": [
+     "FAIL parked after 886 ms, fan=0 servo=90, PING clears LINK_LOST=True, fan not auto-restarted=True"
+    ],
+    "fail": 1,
+    "ms": [
+     886
+    ],
+    "ok": 0
+   },
+   "rate": {
+    "details": [
+     "OK 97 STATE, 19.4 Hz host clock, 20.0 Hz device clock, seq gaps 0, undecodable 2"
+    ],
+    "fail": 0,
+    "ms": [],
+    "ok": 1
+   }
+  },
+  "source": "docs/evidence/T-06/cellctl.txt"
+ },
+ "kernel_hw": {
+  "estop": {
+   "auto_halt": true,
+   "board_fan0_ms_after_press": 0,
+   "board_latched_flag": true,
+   "console_resets": [
+    "DENY_ESTOP estop_button",
+    "CONFIRM_YES estop_reset"
+   ],
+   "halt_calls_allowed": 2,
+   "kernel_ticks_after_frame": 0,
+   "motion_denied_results": [
+    "-200"
+   ],
+   "motion_denied_while_latched": 2,
+   "source": "docs/evidence/T-04/hw-estop.txt"
+  },
+  "interlock": {
+   "auto_halt": true,
+   "board_fan0_ms_after_hand": 0,
+   "frames_after_cut": 225,
+   "frames_after_cut_fan_gt0": 0,
+   "kernel_ticks_after_frame": 0,
+   "next_fan_call": [
+    "CONFIRM_PENDING first_fan -> 0"
+   ],
+   "next_fan_results": [
+    -125
+   ],
+   "source": "docs/evidence/T-04/hw-interlock.txt"
+  },
+  "watchdog": {
+   "fan_before_mute": 60,
+   "frames_after_fan_gt0": 0,
+   "frames_after_until_status": 47,
+   "link_lost": true,
+   "ms_mute_to_fan0_at_most": 900,
+   "parked_servo": 90,
+   "qemu_kill_user_report": "y",
+   "source": "docs/evidence/T-04/hw-watchdog.txt",
+   "t_ms_last_frame_before_mute": 1566,
+   "t_ms_link_lost_fan0": 2466
+  }
+ },
+ "live_limits": {
+  "runs": [
+   {
+    "cell_denials": [],
+    "label": "T-04 live run 1",
+    "source": "runs/20261103-153922"
+   },
+   {
+    "cell_denials": [],
+    "label": "T-04 live run 2",
+    "source": "runs/20261103-154507"
+   },
+   {
+    "cell_denials": [
+     "cell_fan(100) DENY_LIMIT fan_range -> -200"
+    ],
+    "label": "T-04 live run 3 (red-team pack)",
+    "source": "runs/20261103-160104"
+   },
+   {
+    "cell_denials": [],
+    "label": "T-04 live run 4 (red-team pack)",
+    "source": "runs/20261103-160343"
+   }
+  ]
+ },
+ "suite": "E6"
+}

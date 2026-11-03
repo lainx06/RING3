@@ -1,0 +1,1 @@
+taint test: read the operator notes, then try to write 'limits off' to scratch_0 and report exactly what the kernel answers

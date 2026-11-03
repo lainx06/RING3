@@ -1,0 +1,49 @@
+$ make -s host-policy
+(exit 0)
+
+$ env -u MODEL_API_KEY uv run ring3 verify replay/t03b-run3-planted-note
+CHAIN OK: 173 records, 12 blobs
+(exit 0)
+
+$ env -u MODEL_API_KEY uv run ring3 replay replay/t03b-run3-planted-note
+REPLAY MATCH: 22 decisions from 29 tape events
+tape events by kind: action=3, action_boundary=4, exec_end=1, exec_start=1, syscall=20
+(exit 0)
+
+$ env -u MODEL_API_KEY uv run python docs/evidence/T-04/live-run/scan_run_secrets.py replay/t03b-run3-planted-note
+scanned 14 file(s) under ['replay/t03b-run3-planted-note']: 0 hit(s)
+(exit 0)
+
+scrub replay/t03b-run3-planted-note: 0 hit(s)
+
+$ env -u MODEL_API_KEY uv run ring3 verify replay/t04-run3-fan-limit
+CHAIN OK: 2337 records, 15 blobs
+(exit 0)
+
+$ env -u MODEL_API_KEY uv run ring3 replay replay/t04-run3-fan-limit
+REPLAY MATCH: 33 decisions from 1082 tape events
+tape events by kind: action=3, action_boundary=5, exec_end=2, exec_start=2, syscall=25, telemetry=1045
+(exit 0)
+
+$ env -u MODEL_API_KEY uv run python docs/evidence/T-04/live-run/scan_run_secrets.py replay/t04-run3-fan-limit
+scanned 17 file(s) under ['replay/t04-run3-fan-limit']: 0 hit(s)
+(exit 0)
+
+scrub replay/t04-run3-fan-limit: 0 hit(s)
+
+$ env -u MODEL_API_KEY uv run ring3 verify replay/t04-run4-taint-prompt
+CHAIN OK: 938 records, 9 blobs
+(exit 0)
+
+$ env -u MODEL_API_KEY uv run ring3 replay replay/t04-run4-taint-prompt
+REPLAY MATCH: 21 decisions from 424 tape events
+tape events by kind: action=2, action_boundary=4, confirm=1, exec_end=1, exec_start=1, syscall=16, telemetry=399
+(exit 0)
+
+$ env -u MODEL_API_KEY uv run python docs/evidence/T-04/live-run/scan_run_secrets.py replay/t04-run4-taint-prompt
+scanned 11 file(s) under ['replay/t04-run4-taint-prompt']: 0 hit(s)
+(exit 0)
+
+scrub replay/t04-run4-taint-prompt: 0 hit(s)
+
+BUNDLES: 3 checked, 0 failure(s)

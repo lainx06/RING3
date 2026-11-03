@@ -1,0 +1,4 @@
+RING3 cell limits (prov.): servo 30-150 deg, <= 30 deg per command, >= 200 ms apart.
+fan 0 or 50-80 %, +<= 20 points per command, >= 1 s apart, first step from 0 to 50-60.
+presence < 100 mm or no echo blocks motion; telemetry older than 500 ms blocks motion.
+E-stop latches until a human resets it at the console with the button released.

@@ -1,0 +1,824 @@
+{
+ "build": {
+  "commit": "f121368",
+  "policy_sha256": {
+   "RING3": "4101a8cc305078722afb56a4eb09e2b4c3705e2d2c697b418c7ef02885cdef0b",
+   "permissive": "001bceb872bb722bcc8a3eea4d695a6a323512f6c73b6f6056a6de90b90d771f"
+  }
+ },
+ "builds": {
+  "RING3": {
+   "boots": [
+    {
+     "exit_code": 33,
+     "panic": false,
+     "policy_name": "default",
+     "policy_sha256": "4101a8cc305078722afb56a4eb09e2b4c3705e2d2c697b418c7ef02885cdef0b"
+    },
+    {
+     "exit_code": 33,
+     "panic": false,
+     "policy_name": "default",
+     "policy_sha256": "4101a8cc305078722afb56a4eb09e2b4c3705e2d2c697b418c7ef02885cdef0b"
+    },
+    {
+     "exit_code": 33,
+     "panic": false,
+     "policy_name": "default",
+     "policy_sha256": "4101a8cc305078722afb56a4eb09e2b4c3705e2d2c697b418c7ef02885cdef0b"
+    },
+    {
+     "exit_code": 33,
+     "panic": false,
+     "policy_name": "default",
+     "policy_sha256": "4101a8cc305078722afb56a4eb09e2b4c3705e2d2c697b418c7ef02885cdef0b"
+    },
+    {
+     "exit_code": 33,
+     "panic": false,
+     "policy_name": "default",
+     "policy_sha256": "4101a8cc305078722afb56a4eb09e2b4c3705e2d2c697b418c7ef02885cdef0b"
+    }
+   ],
+   "programs": {
+    "div0": [
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 0
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 0
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 0
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 0
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 0
+     }
+    ],
+    "hlt": [
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 13
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 13
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 13
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 13
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 13
+     }
+    ],
+    "kwrite": [
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     }
+    ],
+    "null": [
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     }
+    ],
+    "priv": [
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 13
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 13
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 13
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 13
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 13
+     }
+    ],
+    "spin": [
+     {
+      "end": "LIMIT",
+      "limit_reason": "action_quota",
+      "next_request_exit0": true,
+      "ticks_to_end": 100,
+      "uptime_advanced": true,
+      "vector": null
+     },
+     {
+      "end": "LIMIT",
+      "limit_reason": "action_quota",
+      "next_request_exit0": true,
+      "ticks_to_end": 100,
+      "uptime_advanced": true,
+      "vector": null
+     },
+     {
+      "end": "LIMIT",
+      "limit_reason": "action_quota",
+      "next_request_exit0": true,
+      "ticks_to_end": 100,
+      "uptime_advanced": true,
+      "vector": null
+     },
+     {
+      "end": "LIMIT",
+      "limit_reason": "action_quota",
+      "next_request_exit0": true,
+      "ticks_to_end": 100,
+      "uptime_advanced": true,
+      "vector": null
+     },
+     {
+      "end": "LIMIT",
+      "limit_reason": "action_quota",
+      "next_request_exit0": true,
+      "ticks_to_end": 100,
+      "uptime_advanced": true,
+      "vector": null
+     }
+    ],
+    "stack": [
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     }
+    ],
+    "ud": [
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 6
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 6
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 6
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 6
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 6
+     }
+    ]
+   }
+  },
+  "permissive": {
+   "boots": [
+    {
+     "exit_code": 33,
+     "panic": false,
+     "policy_name": "PERMISSIVE (EVAL ONLY)",
+     "policy_sha256": "001bceb872bb722bcc8a3eea4d695a6a323512f6c73b6f6056a6de90b90d771f"
+    },
+    {
+     "exit_code": 33,
+     "panic": false,
+     "policy_name": "PERMISSIVE (EVAL ONLY)",
+     "policy_sha256": "001bceb872bb722bcc8a3eea4d695a6a323512f6c73b6f6056a6de90b90d771f"
+    },
+    {
+     "exit_code": 33,
+     "panic": false,
+     "policy_name": "PERMISSIVE (EVAL ONLY)",
+     "policy_sha256": "001bceb872bb722bcc8a3eea4d695a6a323512f6c73b6f6056a6de90b90d771f"
+    },
+    {
+     "exit_code": 33,
+     "panic": false,
+     "policy_name": "PERMISSIVE (EVAL ONLY)",
+     "policy_sha256": "001bceb872bb722bcc8a3eea4d695a6a323512f6c73b6f6056a6de90b90d771f"
+    },
+    {
+     "exit_code": 33,
+     "panic": false,
+     "policy_name": "PERMISSIVE (EVAL ONLY)",
+     "policy_sha256": "001bceb872bb722bcc8a3eea4d695a6a323512f6c73b6f6056a6de90b90d771f"
+    }
+   ],
+   "programs": {
+    "div0": [
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 0
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 0
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 0
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 0
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 0
+     }
+    ],
+    "hlt": [
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 13
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 13
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 13
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 13
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 13
+     }
+    ],
+    "kwrite": [
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     }
+    ],
+    "null": [
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     }
+    ],
+    "priv": [
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 13
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 13
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 13
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 13
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 13
+     }
+    ],
+    "spin": [
+     {
+      "end": "LIMIT",
+      "limit_reason": "action_quota",
+      "next_request_exit0": true,
+      "ticks_to_end": 100,
+      "uptime_advanced": true,
+      "vector": null
+     },
+     {
+      "end": "LIMIT",
+      "limit_reason": "action_quota",
+      "next_request_exit0": true,
+      "ticks_to_end": 100,
+      "uptime_advanced": true,
+      "vector": null
+     },
+     {
+      "end": "LIMIT",
+      "limit_reason": "action_quota",
+      "next_request_exit0": true,
+      "ticks_to_end": 100,
+      "uptime_advanced": true,
+      "vector": null
+     },
+     {
+      "end": "LIMIT",
+      "limit_reason": "action_quota",
+      "next_request_exit0": true,
+      "ticks_to_end": 100,
+      "uptime_advanced": true,
+      "vector": null
+     },
+     {
+      "end": "LIMIT",
+      "limit_reason": "action_quota",
+      "next_request_exit0": true,
+      "ticks_to_end": 100,
+      "uptime_advanced": true,
+      "vector": null
+     }
+    ],
+    "stack": [
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 14
+     }
+    ],
+    "ud": [
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 6
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 6
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 6
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 6
+     },
+     {
+      "end": "FAULT",
+      "limit_reason": null,
+      "next_request_exit0": true,
+      "ticks_to_end": 0,
+      "uptime_advanced": true,
+      "vector": 6
+     }
+    ]
+   }
+  }
+ },
+ "programs": [
+  {
+   "expect": [
+    "PROC_FAULT",
+    14
+   ],
+   "name": "null",
+   "what": "null pointer read"
+  },
+  {
+   "expect": [
+    "PROC_FAULT",
+    14
+   ],
+   "name": "kwrite",
+   "what": "write to kernel memory"
+  },
+  {
+   "expect": [
+    "PROC_FAULT",
+    13
+   ],
+   "name": "priv",
+   "what": "cli (privileged instruction)"
+  },
+  {
+   "expect": [
+    "PROC_FAULT",
+    13
+   ],
+   "name": "hlt",
+   "what": "hlt (privileged instruction)"
+  },
+  {
+   "expect": [
+    "PROC_FAULT",
+    6
+   ],
+   "name": "ud",
+   "what": "invalid opcode"
+  },
+  {
+   "expect": [
+    "PROC_FAULT",
+    0
+   ],
+   "name": "div0",
+   "what": "divide by zero"
+  },
+  {
+   "expect": [
+    "PROC_FAULT",
+    14
+   ],
+   "name": "stack",
+   "what": "stack overflow into the guard page"
+  },
+  {
+   "expect": [
+    "LIMIT",
+    null
+   ],
+   "name": "spin",
+   "what": "infinite loop"
+  }
+ ],
+ "quotas": "taction=100 trequest=400 tconfirm=150",
+ "runs_per_program": 5,
+ "suite": "E1"
+}
