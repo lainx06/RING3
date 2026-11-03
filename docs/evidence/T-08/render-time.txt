@@ -1,0 +1,1 @@
+test_t08_vga_buffer: {'renders': 95, 'avg_us': 32, 'max_us': 456, 'over_1ms': 0, 'max_cells_changed': 628, 'tsc_mhz': 4192}

@@ -77,6 +77,15 @@ the end of every card and at each milestone.
   up to ~7 deg, shape filter fits on-axis, refuses 35 mm off-axis; agentsh ends a request after its 8th
   ACTION. A2-A4 open: Windows helper + `witness-frame` -> `calibrate` -> `calibrate --checks` -> live
   `ring3 run --pack agent-v3` (user). `docs/evidence/T-07/README.md` "Part B".
+- **T-08 code complete** (2026-11-03 evening, Opus 5.5 / high, D-57, offline): A1-A5 pass, A6 partial. Kernel VGA
+  status screen behind the `screen` boot option (pure `screen_render()` in `kernel/ui/`, host goldens; one
+  verdict/reason table `kernel/ui/words.c` shared with the LCD, so the **panel now says CONFIRMED / DECLINED**
+  for confirm answers; driver reads copies only, `decide()`/gate/parsers/log untouched), `make run-cell-screen`
+  (WSLg GTK opens; curses fallback `[UNVERIFIED]`), `make screendump NAME=x`, `screen` command: render avg
+  ~30 us, max ~0.5 ms under TCG, 0 over 1 ms. `ring3 run --style console` (new `style.py` + flag hook; non-TTY =
+  plain byte for byte). Full suite at `9d49b42` in a clean worktree: 770 passed, 6 skipped. Open: A6 real-run
+  PNGs (user: bridge first, `make run-cell-screen`, `make screendump NAME=real-idle|real-ask|real-estop`).
+  `docs/evidence/T-08/README.md`.
 - Second terminal Nov 1: **T-06** (Opus 5.5 / high) once T-01 has made its first commit (D-42).
 - User, while T-01 runs: `SETUP.md` step 8 (usbipd + Uno + arduino-cli in Ubuntu), then wiring per
   `hardware/wiring.md` in the afternoon.
@@ -147,6 +156,7 @@ the end of every card and at each milestone.
 | T-07 Part A | 2026-11-02 | Opus 5.5 / high | 2026-11-02 11:20 ET; A1 pass (Part B: A2-A4 open); offline, no paid call; 1 test-program change logged (fixture offset 4 -> 2 deg + new disable cases), no limit loosened | `docs/evidence/T-07/README.md` |
 | T-05a | 2026-11-03 evening | Opus 5.5 / high | 2026-11-03: A1-A5, A7 pass; A6 (E4, paid) open for the user; no paid call, no hardware run; no existing test changed, 2 first-run fixes in new tests logged | `docs/evidence/T-05a/README.md` |
 | T-07 Part B | 2026-11-03 | Opus 5.5 / high | code + simulated cell done (A2-A4 open: live, user); D-72 points, 15 mm horn, agent-v3; 4 test-program changes logged, no limit changed; no paid call by the builder | `docs/evidence/T-07/README.md` (Part B) |
+| T-08 | 2026-11-03 16:50 ET | Opus 5.5 / high | 2026-11-03 evening: A1-A5 pass, A6 partial (sim-cell shots filed, real-run PNGs open for the user); no paid call, no hardware; 2 existing tests changed (LCD word CONFIRMED, scanner file pointer) + optional harness `monitor=`, none loosened | `docs/evidence/T-08/README.md` |
 
 ## Last evidence
 `docs/evidence/T-01/` (isolation transcript, ktest, panic dump, build, pytest, toolchain, skills byte-check).

@@ -1,0 +1,25 @@
+╔═ RING3 / KERNEL EXECUTIVE ═══════════════════════════════════════════════════╗
+║ UP 00:00:01   EXEC IDLE                 FREE 14812 KiB   LOGGED 48           ║
+║ LAST KERNEL DECISION: ALLOW                              TAINTED: NO         ║
+║                                    ALLOW                                     ║
+║ cell_servo(90)                                                               ║
+╠═ CONSOLE ════════════════════════════════════════════════════════════════════╣
+║ cellcmd: wait 25 -> 0                                                        ║
+║ cellcmd: servo 90 -> 0                                                       ║
+║ cellcmd: done                                                                ║
+║ EXIT pid=1 code=0                                                            ║
+║ END pid=1 EXIT ticks=25 uptime=54                                            ║
+║ ring3>                                                                       ║
+║                                                                              ║
+╠═ LIVE CELL ══════════════════════════════════════════════════════════════════╣
+║ FAN 000%         [                    ]                                      ║
+║ SERVO 090°       [---|------^------|---]   0° |30-150 limits| 180°           ║
+║ DIST 300 mm      [███████████████     ]                                      ║
+║ E-STOP released                         LINK ok                              ║
+║ PRESENCE NO                             TELEMETRY AGE 10 ms                  ║
+╠═ LAST 4 KERNEL DECISIONS / OLDEST TO NEWEST ═════════════════════════════════╣
+║ 00:00:00  REQ -  BOARD BOOT  fresh boot                                      ║
+║ 00:00:00  REQ 1  ALLOW       cell_status                                     ║
+║ 00:00:00  REQ 1  ALLOW       cell_servo(120)                                 ║
+║ 00:00:00  REQ 1  ALLOW       cell_servo(90)                                  ║
+╚══════════════════════════════════════════════════════════════════════════════╝
