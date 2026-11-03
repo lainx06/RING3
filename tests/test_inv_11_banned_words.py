@@ -76,9 +76,12 @@ def test_inv_11_banned_words():
 
 
 def test_scanner_sees_strings():
-    """The scanner would catch a hit: the kernel's LCD and audit vocabulary is in its reach."""
-    device = REPO / "kernel" / "drivers" / "device.c"
-    texts = [t for _, t in c_literals(device)]
-    assert "hand too close" in texts and "within limits" in texts
+    """The scanner would catch a hit: the kernel's LCD / screen vocabulary (kernel/ui/words.c since T-08, one
+    table for the panel and the VGA screen) and the screen's own text are in its reach."""
+    words = REPO / "kernel" / "ui" / "words.c"
+    texts = [t for _, t in c_literals(words)]
+    assert "hand too close" in texts and "within limits" in texts and "CONFIRMED" in texts
+    screen = [t for _, t in c_literals(REPO / "kernel" / "ui" / "screen.c")]
+    assert "LAST KERNEL DECISION: " in screen and "; waiting for y/N" in screen
     assert BANNED.search("the cell is safe now") and BANNED.search("Success!") and BANNED.search("real-time")
     assert not BANNED.search("ESAFETY") and not BANNED.search("safety policy")

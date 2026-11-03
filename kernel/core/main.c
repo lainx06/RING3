@@ -21,6 +21,7 @@
 #include "printk.h"
 #include "qemu.h"
 #include "serial.h"
+#include "vga.h"
 
 static char cmdline[256];
 
@@ -78,6 +79,7 @@ void kmain(uint32_t magic, uint32_t mbi_addr)
     agentlink_init();
     device_init();
     sti();
+    vga_init();                          /* T-08: only with the `screen` boot option */
     printk("init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, %u frames free\n",
            pmm_free_frames());
     printk("link: COM2 %s\n", agentlink_present() ? "present (bridge link, HELLO sent)" : "absent (no bridge link)");

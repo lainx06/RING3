@@ -11,6 +11,7 @@
 #include "pic.h"
 #include "pit.h"
 #include "printk.h"
+#include "words.h"
 
 #define COM3_PORT 0x3E8
 #define COM3_IRQ 4
@@ -127,37 +128,8 @@ static int alarm(uint8_t pattern) { return tx_frame(CELL_T_ALARM, &pattern, CELL
 int device_estop_reset(void) { return tx_frame(CELL_T_ESTOP_RESET, 0, 0); }
 
 /* ---- the panel: the kernel's last decision in plain words (INV-11: no banned words) ----------------- */
+/* Verdict words and reason phrases come from kernel/ui/words.c, the table the VGA screen shares (T-08). */
 static void lcd_text(uint32_t line, const char *s) { device_lcd(line, s, (uint32_t)strlen(s)); }
-
-static const char *reason_words(uint8_t reason)
-{
-    switch (reason) {
-    case R_PRESENCE:     return "hand too close";
-    case R_NO_ECHO:      return "sensor: no echo";
-    case R_STALE:        return "stale telemetry";
-    case R_NO_TELEMETRY: return "no telemetry";
-    case R_ESTOP:        return "E-STOP latched";
-    case R_ESTOP_BUTTON: return "button pressed";
-    case R_FAN_RANGE:    return "fan max 80%";
-    case R_FAN_STEP:     return "fan step > 20";
-    case R_FAN_RATE:     return "fan: too soon";
-    case R_SERVO_RANGE:  return "servo 30-150";
-    case R_SERVO_STEP:   return "servo step > 30";
-    case R_SERVO_RATE:   return "servo: too soon";
-    case R_ARG:          return "bad value";
-    case R_FIRST_FAN:    return "first fan: ask";
-    case R_TAINT:        return "tainted: ask";
-    case R_ANSWER:       return "operator said no";
-    case R_TIMEOUT:      return "no answer";
-    case R_CAP:          return "no capability";
-    case R_PENDING:      return "prompt pending";
-    case R_NO_REQUEST:   return "no request";
-    case R_BOARD_BOOT:   return "fresh boot";
-    case R_ESTOP_RESET:  return "console reset";
-    case R_HALT:         return "halt";
-    default:             return "policy";
-    }
-}
 
 static void put_dec(char *dst, uint32_t cap, uint32_t *n, int v)
 {
@@ -180,70 +152,57 @@ static void put_str(char *dst, uint32_t cap, uint32_t *n, const char *s)
         dst[(*n)++] = *s++;
 }
 
-/* Row 0: verdict + call, e.g. "DENIED fan 100", "ALLOW servo 120", "AUTO HALT fan 60". Row 1: the reason. */
+/* Row 0: verdict + call, e.g. "DENIED fan 100", "ALLOW servo 120", "AUTO HALT fan 60". Row 1: the reason.
+ * When verdict + call do not fit the 16 columns ("CONFIRMED servo 120"), row 0 is the verdict alone and
+ * row 1 the call: a number is never cut. */
 void device_show(uint32_t nr, const struct pol_decision *d)
 {
     if (!present || !synced)
         return;
-    char row[CELL_LCD_COLS + 1];
-    uint32_t n = 0;
-    const char *verdict;
-    int beep = 0;
-    switch (d->code) {
-    case DEC_ALLOW:
-    case DEC_CONFIRM_YES:
-        if (nr != SYS_CELL_FAN && nr != SYS_CELL_SERVO && nr != SYS_CELL_HALT && nr != PEND_ESTOP_RESET)
-            return;                                    /* status reads and the executor's own LCD text */
-        verdict = "ALLOW";
-        break;
-    case DEC_CONFIRM_PENDING: verdict = "ASK"; break;
-    case DEC_CONFIRM_NO:
-    case DEC_DENY_CAP:
-    case DEC_DENY_RULE:
-    case DEC_DENY_ARG:
-    case DEC_DENY_FAULT:
-    case DEC_DENY_LIMIT:
-    case DEC_DENY_INTERLOCK:
-    case DEC_DENY_STALE:
-    case DEC_DENY_ESTOP:
-        verdict = "DENIED";
-        beep = 1;
-        break;
-    case DEC_AUTO_HALT:
-        verdict = "AUTO HALT";
-        beep = d->reason == R_ESTOP ? 2 : 1;
-        break;
-    case DEC_BOARD_BOOT:
-        verdict = "BOARD BOOT";
-        break;
-    default:
+    const char *verdict = ui_verdict_word(d->code);
+    if (!verdict)
         return;
-    }
-    put_str(row, CELL_LCD_COLS, &n, verdict);
+    if ((d->code == DEC_ALLOW || d->code == DEC_CONFIRM_YES) && nr != SYS_CELL_FAN && nr != SYS_CELL_SERVO &&
+        nr != SYS_CELL_HALT && nr != PEND_ESTOP_RESET)
+        return;                                        /* status reads and the executor's own LCD text */
+    int beep = ui_verdict_adverse(d->code) ? 1 : d->code == DEC_AUTO_HALT ? (d->reason == R_ESTOP ? 2 : 1) : 0;
+    char call[CELL_LCD_COLS + 1];
+    uint32_t c = 0;
     switch (nr) {
     case SYS_CELL_FAN:
-        put_str(row, CELL_LCD_COLS, &n, " fan ");
-        put_dec(row, CELL_LCD_COLS, &n, (int)d->target);
+        put_str(call, CELL_LCD_COLS, &c, "fan ");
+        put_dec(call, CELL_LCD_COLS, &c, (int)d->target);
         break;
     case SYS_CELL_SERVO:
-        put_str(row, CELL_LCD_COLS, &n, " servo ");
-        put_dec(row, CELL_LCD_COLS, &n, (int)d->target);
+        put_str(call, CELL_LCD_COLS, &c, "servo ");
+        put_dec(call, CELL_LCD_COLS, &c, (int)d->target);
         break;
-    case SYS_CELL_HALT:   put_str(row, CELL_LCD_COLS, &n, " halt"); break;
-    case SYS_CELL_LCD:    put_str(row, CELL_LCD_COLS, &n, " lcd"); break;
-    case SYS_CELL_STATUS: put_str(row, CELL_LCD_COLS, &n, " status"); break;
-    case PEND_ESTOP_RESET: put_str(row, CELL_LCD_COLS, &n, " reset"); break;
+    case SYS_CELL_HALT:    put_str(call, CELL_LCD_COLS, &c, "halt"); break;
+    case SYS_CELL_LCD:     put_str(call, CELL_LCD_COLS, &c, "lcd"); break;
+    case SYS_CELL_STATUS:  put_str(call, CELL_LCD_COLS, &c, "status"); break;
+    case PEND_ESTOP_RESET: put_str(call, CELL_LCD_COLS, &c, "reset"); break;
     default:
         if (d->code == DEC_AUTO_HALT && d->target) {
-            put_str(row, CELL_LCD_COLS, &n, " fan ");
-            put_dec(row, CELL_LCD_COLS, &n, (int)d->target);
+            put_str(call, CELL_LCD_COLS, &c, "fan ");
+            put_dec(call, CELL_LCD_COLS, &c, (int)d->target);
         }
         break;
     }
+    char row[CELL_LCD_COLS + 1];
+    uint32_t n = 0;
+    uint32_t vlen = (uint32_t)strlen(verdict);
+    put_str(row, CELL_LCD_COLS, &n, verdict);
+    if (c && vlen + 1 + c <= CELL_LCD_COLS) {
+        row[n++] = ' ';
+        for (uint32_t i = 0; i < c; i++)
+            row[n++] = call[i];
+        c = 0;
+    }
     device_lcd(0, row, n);
-    lcd_text(1, d->code == DEC_ALLOW && d->reason == R_NONE ? "within limits"
-             : d->code == DEC_CONFIRM_YES                   ? "operator: yes"
-                                                            : reason_words(d->reason));
+    if (c)
+        device_lcd(1, call, c);
+    else
+        lcd_text(1, ui_detail_words(d->code, d->reason));
     if (beep)
         alarm((uint8_t)beep);
 }
@@ -387,6 +346,18 @@ int device_status(uint8_t out[LINK_CELLST_LEN])
     out[LINK_CELLST_OFF_CMD_FAN] = s->fan_duty;
     out[LINK_CELLST_OFF_CMD_SERVO] = s->servo_deg;
     return LINK_CELLST_LEN;
+}
+
+int device_last_frame(struct cell_state *st, uint32_t *tick)
+{
+    uint32_t fl = irq_save();
+    int h = have_last;
+    if (h) {
+        *st = last;
+        *tick = last_tick;
+    }
+    irq_restore(fl);
+    return h;
 }
 
 void device_print_status(void)

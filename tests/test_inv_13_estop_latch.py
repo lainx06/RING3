@@ -61,7 +61,7 @@ def test_inv_13_estop_latch():
         assert estop_reset(c, "y") == "CONFIRM_YES estop_reset (ESTOP_RESET sent)"
         c.sim.wait_frame(lambda f: f.type == T_ESTOP_RESET, timeout=2.0)
         time.sleep(0.1)
-        assert not c.sim.latched and c.sim.lcd == {0: "ALLOW reset", 1: "operator: yes"}
+        assert not c.sim.latched and c.sim.lcd == {0: "CONFIRMED reset", 1: "operator: yes"}
         t = cellcmd(c, "wait 110; fan 60", answers=["y"])
         assert results(t)[1] == ("fan 60", 0)
         c.sim.wait_fan(60, start=n)

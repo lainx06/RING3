@@ -27,6 +27,9 @@ void device_auto_halt(const struct pol_decision *d);
 void device_show(uint32_t nr, const struct pol_decision *d);
 /* The 16-byte cell_status record (abi/link_abi.h LINK_CELLST_*); -ENOSYS without a device. */
 int device_status(uint8_t out[16]);
+/* A copy of the last accepted STATE frame and its tick (display, T-08); 0 when none has arrived. */
+struct cell_state;
+int device_last_frame(struct cell_state *st, uint32_t *tick);
 void device_print_status(void);                /* one `cell:` line for the console `status` command */
 #ifdef RING3_TEST
 void device_mute(uint32_t ticks);              /* test images: send nothing for `ticks` (link-watchdog test) */

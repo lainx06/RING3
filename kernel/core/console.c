@@ -14,6 +14,7 @@
 #include "printk.h"
 #include "qemu.h"
 #include "serial.h"
+#include "vga.h"
 
 static char line[CONSOLE_LINE_MAX + 1];
 static uint32_t len;
@@ -30,8 +31,10 @@ void console_poll(void)
             ready = 1;
             serial_putc('\n');
         } else if (c == 8 || c == 127) {
-            if (len)
+            if (len) {
                 len--;
+                vga_backspace();
+            }
         } else if (c >= 32 && c < 127 && len < CONSOLE_LINE_MAX) {
             line[len++] = (char)c;
             serial_putc((char)c);
@@ -194,6 +197,9 @@ static void dispatch(const char *l)
     } else if (word(l, "status", &rest)) {
         feed_console(CONSOLE_OTHER);
         cmd_status();
+    } else if (word(l, "screen", &rest)) {
+        feed_console(CONSOLE_OTHER);
+        vga_print_stats();
     } else if (word(l, "audit", &rest)) {
         feed_console(CONSOLE_OTHER);
         cmd_audit();

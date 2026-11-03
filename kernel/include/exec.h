@@ -42,6 +42,7 @@ struct exec_outcome exec_request(const struct uprog *p, const char *arg);
 int exec_request_agent(const char *text, int variant);
 const char *exec_current_name(void);
 int exec_current_pid(void);
+int exec_last_pid(void);                         /* pid of the latest started request (display, T-08) */
 void exec_action_boundary(void);                 /* agent_recv returned: the action quota restarts (R2) */
 void exec_flag_kill(void);                       /* a LIMIT decided in main context on the executor's behalf */
 

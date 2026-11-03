@@ -1,6 +1,7 @@
 /* COM1 console: polled, 115200 8N1, interrupts disabled (IER = 0). */
 #include "serial.h"
 #include "io.h"
+#include "vga.h"
 
 #define REG_DATA 0
 #define REG_IER  1
@@ -37,6 +38,7 @@ void serial_putc(char c)
         put_raw('\r');
     put_raw(c);
     line_start = c == '\n';                 /* after the whole CR LF pair (F5, D-52) */
+    vga_putc(c);                            /* T-08: console window mirror */
 }
 
 void serial_write(const char *s, uint32_t n)

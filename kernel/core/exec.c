@@ -48,6 +48,7 @@ static uint32_t q_action = QUOTA_ACTION_TICKS, q_request = QUOTA_REQUEST_TICKS,
                 q_confirm = CONFIRM_TIMEOUT_TICKS;
 
 int exec_current_pid(void) { return cur.active ? cur.pid : 0; }
+int exec_last_pid(void) { return next_pid; }
 uint32_t exec_confirm_ticks(void) { return q_confirm; }
 const char *exec_current_name(void) { return cur.active ? cur.name : "kernel"; }
 int exec_kill_pending(void) { return cur.active && cur.kill_pending; }

@@ -9,6 +9,9 @@
 #   make run-link            like `make run`, with COM2 null and the Uno as COM3
 #   make run                 COM1 on this terminal, COM2 = tcp:127.0.0.1:$(COM2_PORT) for `uv run ring3 run`
 #   make run-cell            `make run` plus the Uno as COM3 (T-04 live run; TEST=1 for the scripted hw checks)
+#   make run-cell-screen     `make run-cell` with the VGA status screen in a QEMU window (T-08, WSLg GTK);
+#                            SCREEN_DISPLAY=curses for a terminal instead (COM1 then on tcp:127.0.0.1:$(COM1_PORT))
+#   make screendump NAME=x   PNG of the running screen -> docs/evidence/T-08/x.png (QEMU monitor socket)
 VERSION    := 0.1.0
 BUILD_HASH := $(shell git rev-parse --short HEAD 2>/dev/null || echo nogit)
 POLICY     ?= default
@@ -54,7 +57,7 @@ POLICY_HASH := $(shell cat $(POLICY_SRC) | sha256sum | cut -d' ' -f1)
 POLICY_DEFS := -Ikernel/policy -DPOLICY_VARIANT_HEADER='"variant_$(POLICY).h"'
 
 CFLAGS  := $(TARGET) -std=c11 -ffreestanding -nostdlib -fno-pic -fno-stack-protector -mno-sse -mno-mmx -mno-80387 \
-           -fno-asynchronous-unwind-tables -O2 -g -Wall -Wextra -Werror -Ikernel/include -Iabi -I$(BUILD)/gen \
+           -fno-asynchronous-unwind-tables -O2 -g -Wall -Wextra -Werror -Ikernel/include -Ikernel/ui -Iabi -I$(BUILD)/gen \
            $(POLICY_DEFS) -DRING3_VERSION=\"$(VERSION)\" -DBUILD_HASH=\"$(BUILD_HASH)\"
 ASFLAGS := $(TARGET) -ffreestanding -nostdlib -fno-pic -g -Wall -Wextra -Werror -Ikernel/include
 LDFLAGS := -m elf_i386 -nostdlib --gc-sections
@@ -75,7 +78,8 @@ else
   UPROGS  := agentsh
 endif
 
-KSRC_C := $(wildcard kernel/arch/i386/*.c kernel/core/*.c kernel/lib/*.c kernel/drivers/*.c) kernel/policy/policy.c
+KSRC_C := $(wildcard kernel/arch/i386/*.c kernel/core/*.c kernel/lib/*.c kernel/drivers/*.c kernel/ui/*.c) \
+          kernel/policy/policy.c
 KSRC_S := $(wildcard kernel/arch/i386/*.S)
 KOBJ   := $(patsubst %.c,$(BUILD)/%.o,$(KSRC_C)) $(patsubst %.S,$(BUILD)/%.o,$(KSRC_S))
 
@@ -93,8 +97,21 @@ QEMU_RUN  := $(QEMU_BASE) -serial tcp:127.0.0.1:$(COM2_PORT),server=on,wait=off
 CELL_PORT ?= /dev/ttyACM0
 QEMU_LINK := $(QEMU_BASE) -serial null -serial $(CELL_PORT)
 QEMU_CELL := $(QEMU_RUN) -serial $(CELL_PORT)
+# T-08: the same three serial ports as run-cell, a display, the `screen` boot option, a monitor socket for
+# screendumps. With curses the terminal shows the screen, so COM1 moves to a TCP port (`nc 127.0.0.1 4556`).
+SCREEN_DISPLAY ?= gtk
+SCREEN_MON ?= build/screen-mon.sock
+COM1_PORT ?= 4556
+ifeq ($(SCREEN_DISPLAY),curses)
+  SCREEN_COM1 := tcp:127.0.0.1:$(COM1_PORT),server=on,wait=on
+else
+  SCREEN_COM1 := stdio
+endif
+QEMU_SCREEN := $(QEMU) -m 64 -display $(SCREEN_DISPLAY) -serial $(SCREEN_COM1) \
+               -monitor unix:$(SCREEN_MON),server=on,wait=off -device isa-debug-exit,iobase=0xf4,iosize=0x04 \
+               -no-reboot -serial tcp:127.0.0.1:$(COM2_PORT),server=on,wait=off -serial $(CELL_PORT)
 
-.PHONY: all clean run run-link run-cell test-link test-kernel user host-policy
+.PHONY: all clean run run-link run-cell run-cell-screen screendump test-link test-kernel user host-policy host-screen
 .SECONDARY: $(patsubst %,build/user/%.elf,$(UPROGS))
 all: $(KERNEL)
 
@@ -157,6 +174,15 @@ run-link: $(KERNEL)
 run-cell: $(KERNEL)
 	$(QEMU_CELL) -kernel $(KERNEL) $(QEMU_EXTRA)
 
+run-cell-screen: $(KERNEL)
+	@mkdir -p $(dir $(SCREEN_MON))
+	@if [ "$(SCREEN_DISPLAY)" = curses ]; then echo "COM1 console: nc 127.0.0.1 $(COM1_PORT) (QEMU waits for it)"; fi
+	$(QEMU_SCREEN) -kernel $(KERNEL) -append "screen" $(QEMU_EXTRA)
+
+screendump:
+	@[ -n "$(NAME)" ] || { echo "usage: make screendump NAME=<state>"; exit 2; }
+	uv run python -I tools/screendump.py $(SCREEN_MON) docs/evidence/T-08/$(NAME).png
+
 test-link:
 	$(MAKE) KTEST_LINK=1
 	$(QEMU_LINK) -kernel build/kernel-link.elf -append "linktest" $(QEMU_EXTRA); rc=$$?; \
@@ -183,6 +209,15 @@ build/host/policy_test_permissive: kernel/policy/policy.c kernel/policy/policy.h
 .PHONY: evals
 evals:
 	uv run python tools/eval/run_all.py $(EVAL_ARGS)
+
+# Host build of the status screen renderer (T-08): golden tests in tests/test_t08_screen.py.
+SCREEN_SRC := kernel/ui/screen.c kernel/ui/words.c kernel/ui/screen.h kernel/ui/words.h
+host-screen: build/host/screen_test
+
+build/host/screen_test: $(SCREEN_SRC) kernel/policy/policy.c kernel/policy/policy.h kernel/policy/variant_default.h tests/host/screen_test.c
+	@mkdir -p $(dir $@)
+	$(HOSTCC) $(HOST_CFLAGS) -Ikernel/ui -DPOLICY_VARIANT_HEADER='"variant_default.h"' tests/host/screen_test.c \
+	  kernel/ui/screen.c kernel/ui/words.c kernel/policy/policy.c -o $@
 
 clean:
 	rm -rf build

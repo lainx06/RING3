@@ -10,6 +10,7 @@
 #include "printk.h"
 #include "serial.h"
 #include "trap.h"
+#include "vga.h"
 
 #define RING 256u
 #define TICK_DRAIN_MAX 2u      /* records printed per tick while ring 3 runs (F5) */
@@ -50,8 +51,10 @@ int audit_feed(const struct pol_event *ev, struct pol_decision *out)
     decide(&state, ev, &next, out);
     int changed = memcmp(&state, &next, sizeof state) != 0;
     int idx = -1;
-    if (out->audit)
+    if (out->audit) {
         next.seq = state.seq + 1;
+        vga_note_decision(ev, out, &state);   /* T-08: a copy for the status screen, display only */
+    }
     if (out->audit || changed) {
         if (head - tail >= RING) {
             /* Never drop (F5, D-52). From a syscall or the kernel loop, and from a tick that interrupted
@@ -154,6 +157,7 @@ static int may_print(int force)
 
 void audit_flush(int force)
 {
+    vga_service();                        /* T-08: every kernel wait loop passes here; at most once per tick */
     if (!may_print(force))
         return;
     while (queued())
@@ -224,6 +228,7 @@ void audit_on_tick(struct trap_frame *f)
          * in T-04) are drained a bounded amount per tick. The kernel's main context is parked in the ring-3
          * entry, so nothing of its own is mid-print. */
         audit_drain(TICK_DRAIN_MAX);
+        vga_service();                     /* T-08: ring 3 is computing; the kernel's own context is parked */
     }
     irq_ctx = 0;
 }

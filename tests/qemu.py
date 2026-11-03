@@ -84,11 +84,13 @@ def qemu_command(
     memory_mb: int = 64,
     com2_port: int | None = None,
     com3_port: int | str | None = None,
+    monitor: str = "none",
 ) -> list[str]:
     """`com2_port`: expose COM2 as `tcp:127.0.0.1:<port>,server=on,wait=off` (the bridge link, T-03b);
     None leaves QEMU without a second serial port (the kernel reports `link: COM2 absent`). `com3_port`:
     the same for COM3, the work cell (T-04, `tests/sim_cell.py` connects there), or a device path such as
-    /dev/ttyACM0 (the real board, hardware tests); it needs a COM2 (null if `com2_port` is None)."""
+    /dev/ttyACM0 (the real board, hardware tests); it needs a COM2 (null if `com2_port` is None). `monitor`:
+    QEMU's `-monitor` argument (T-08 reads the VGA text buffer through a unix-socket monitor)."""
     cmd = [
         QEMU,
         "-kernel",
@@ -110,7 +112,7 @@ def qemu_command(
         cmd += ["-serial", f"tcp:127.0.0.1:{com3_port},server=on,wait=off"]
     cmd += [
         "-monitor",
-        "none",
+        monitor,
         "-device",
         "isa-debug-exit,iobase=0xf4,iosize=0x04",
         "-no-reboot",
@@ -161,10 +163,13 @@ class Session:
         timeout: float = 30.0,
         com2: bool = False,
         com3: bool | str = False,
+        monitor: str = "none",
     ):
         self.com2_port: int | None = free_port() if com2 else None
         self.com3_port: int | str | None = com3 if isinstance(com3, str) else free_port() if com3 else None
-        self.cmd = qemu_command(kernel, append, com2_port=self.com2_port, com3_port=self.com3_port)
+        self.cmd = qemu_command(
+            kernel, append, com2_port=self.com2_port, com3_port=self.com3_port, monitor=monitor
+        )
         self.timeout = timeout
         self.t0 = time.monotonic()
         self.proc = subprocess.Popen(
