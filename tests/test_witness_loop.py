@@ -217,3 +217,31 @@ def test_calibration_script_through_the_kernel(tmp_path):
     assert len(t.posts) == 5 and ledger.settled_uusd() == 5 * 2500
     assert _b2k(b).count("ACTION") == len(moves)  # the moves only; the 5 witness ops send nothing
     assert len(_witness_records(b)) == 5
+
+
+def test_scripted_checks_normal_and_held(tmp_path):
+    """`ring3 calibrate --checks` on the simulated cell: two console requests, each visiting LOW, MID, HIGH
+    centres through the kernel with a real witness check after each. Request 1: all PASS. Request 2: a hand
+    holds the arm in MID -> 50 and 130 FAIL (never PASS); 90 may PASS (the arm is really there)."""
+    with start(append=AGENT_QUOTAS, com2=True, timeout=150) as c:
+        w, cam, t, ledger = _setup(tmp_path, c.sim)
+        script = CalibrationScript(w, (50, 90, 130), checks=True)
+        b = BridgeThread(c.s.com2_port, runs_dir(tmp_path, "checks"), [], requests=2, client=script,
+                         witness=script.measure, max_actions=script.max_actions())  # fmt: skip
+        script.runner = b.runner
+        b.start()
+        t1 = _request(c, "checks normal", timeout=90)
+        cam.held = 90.0 + OFFSET_DEG
+        t2 = _request(c, "checks held", timeout=90)
+        b.join(90)
+        run = c.close()
+    record_evidence("sim-checks.txt", run, "T-07")
+    assert run.exit_code == EXIT_PASS
+    for tr in (t1, t2):
+        assert "OUTCOME DONE: checks done: 3 witness checks after kernel-allowed moves" in tr, tr
+        assert "DENY" not in "".join(x["decision"] for x in audit_lines(tr) if x["sys"] == "cell_servo")
+    got = [(i, ch.result.commanded_deg, ch.result.verdict) for i, _, ch in script.results]
+    assert got[:3] == [(1, 50, "PASS"), (1, 90, "PASS"), (1, 130, "PASS")]
+    held = {deg: v for i, deg, v in got if i == 2}
+    assert held[50] == "FAIL" and held[130] == "FAIL" and held[90] in ("PASS", "CAN'T VERIFY")
+    assert len(t.posts) == 6 and ledger.settled_uusd() == 6 * 2500

@@ -22,7 +22,7 @@ from ring3bridge.witness import CANT_VERIFY, NO_MOVE, CantVerify
 from ring3bridge.witness.angle import DEFAULT_ARM, ArmModel
 from ring3bridge.witness.calibrate import Calibration
 from ring3bridge.witness.capture import request_frame
-from ring3bridge.witness.dial import Geometry
+from ring3bridge.witness.dial import Geometry, find_dial
 from ring3bridge.witness.pipeline import WitnessResult, calibration_point, check
 from ring3bridge.witness.sam import DEFAULT_PROMPT, SamClient
 from ring3bridge.witness.verdict import commanded_zone
@@ -47,6 +47,43 @@ def cant_verify(commanded_deg: int, reason: str, detail: str) -> WitnessResult:
 
 def no_move(commanded_deg: int, detail: str) -> WitnessResult:
     return cant_verify(commanded_deg, NO_MOVE, detail)
+
+
+AXIS_OK_MM = 5.0  # (prov.) camera axis within this of the pivot; Part A: 22 mm off moved readings ~10 deg
+
+
+@dataclass(frozen=True)
+class FrameReport:
+    """Setup check for one frame (``ring3 witness-frame``): no SAM, no spend."""
+
+    ok: bool
+    lines: list[str]
+    crop_img: np.ndarray | None = None
+
+
+def frame_report(img: np.ndarray, geom: Geometry) -> FrameReport:
+    """Markers and dial crop in this frame, the marker fit, and the gauge point under the image centre (for a
+    camera looking straight down, its axis): the pivot should be under it (parallax, Part A finding 2)."""
+    h, w = img.shape[:2]
+    lines = [f"frame {w}x{h}"]
+    try:
+        dial = find_dial(img, geom)
+    except CantVerify as e:
+        return FrameReport(False, [*lines, f"{e} -> every witness check would be CAN'T VERIFY"])
+    c = dial.img_to_mm @ np.array([w / 2, h / 2, 1.0])
+    x, y = c[0] / c[2], c[1] / c[2]
+    off = float(np.hypot(x, y))
+    axis_ok = off <= AXIS_OK_MM
+    lines += [
+        f"markers 0-3 found, worst marker corner fit {dial.reproj_mm_max:.2f} mm",
+        f"image centre is over gauge point x={x:+.1f} y={y:+.1f} mm, {off:.1f} mm from the pivot "
+        + (
+            "(ok)"
+            if axis_ok
+            else f"(move the camera so the pivot is under the image centre, <= {AXIS_OK_MM:g} mm)"
+        ),
+    ]
+    return FrameReport(axis_ok, lines, dial.crop_img)
 
 
 class FolderCamera:

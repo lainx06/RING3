@@ -83,6 +83,24 @@ def plan(current: int, points: tuple[int, ...] = CAL_POINTS) -> list[tuple[int, 
     return up if len(up) <= len(down) else down
 
 
+CHECK_TARGETS = (50, 90, 130)  # zone centres (D-59), for ``ring3 calibrate --checks``
+
+
+def route(current: int, targets: tuple[int, ...]) -> list[tuple[int, bool]]:
+    """``(deg, check)`` commands visiting ``targets`` in order, in steps of at most STEP_MAX; a target equal
+    to the current angle is still commanded (the witness needs a kernel-allowed move in the request)."""
+    lo, hi = SERVO_RANGE
+    if not lo <= current <= hi or not targets or any(not lo <= t <= hi for t in targets):
+        raise ValueError("bad current angle or targets")
+    moves: list[tuple[int, bool]] = []
+    cur = current
+    for t in targets:
+        path = _steps(cur, t)
+        moves += [(d, False) for d in path[:-1]] + [(t, True)]
+        cur = t
+    return moves
+
+
 def _reply(obj: dict) -> ModelReply:
     text = json.dumps(obj, separators=(",", ":"))
     return ModelReply(text, None, None, status=STATUS_COMPLETED, texts=1)
@@ -94,10 +112,13 @@ def _call(op: str, **args: int) -> ModelReply:
 
 @dataclass
 class CalibrationScript:
-    """The scripted model (``ask``) and the witness callable (``measure``) for one calibration request."""
+    """The scripted model (``ask``) and the witness callable (``measure``) for calibration requests, or with
+    ``checks=True`` for scripted zone checks (``ring3 calibrate --checks``): ``route`` to each of ``points``
+    and a real ``Witness.check`` after each; every request starts again from its own fresh telemetry."""
 
     witness: Witness
     points: tuple[int, ...] = CAL_POINTS
+    checks: bool = False
     move_gap_s: float = MOVE_GAP_S
     requests: int = 0  # replies given (the run loop's timeline reads this like a model client's)
     runner: object = None  # bound after the Runner exists (reads telemetry and the open request's results)
@@ -108,6 +129,10 @@ class CalibrationScript:
     _step: int = 0  # index of the next move
     _expect_point: int | None = None
     _measured: dict[int, int | None] = field(default_factory=dict)
+    results: list[tuple[int, str, Checked]] = field(
+        default_factory=list
+    )  # checks: (request, its text, result)
+    _req: object = None
 
     def max_actions(self) -> int:
         """The bridge's turn bound for this request: the kernel's ACTION cap (the moves) plus one witness per
@@ -115,7 +140,12 @@ class CalibrationScript:
         return abi.ACTIONS_PER_REQUEST + len(self.points)
 
     def measure(self, commanded_deg: int) -> Checked:
-        checked = self.witness.measure(commanded_deg)
+        if self.checks:
+            checked = self.witness.check(commanded_deg)
+            req = getattr(self.runner, "request", None)
+            self.results.append((getattr(req, "index", 0), getattr(req, "text", ""), checked))
+        else:
+            checked = self.witness.measure(commanded_deg)
         self._measured[commanded_deg] = checked.result.dial_mdeg
         return checked
 
@@ -125,32 +155,39 @@ class CalibrationScript:
     def ask(self, instructions: str, user_input: str) -> ModelReply:
         self.requests += 1
         req = getattr(self.runner, "request", None)
+        if req is not self._req:  # a new request: plan again from its own telemetry
+            self._req, self.start_deg, self.moves, self._step, self._expect_point = req, None, [], 0, None
         last = req.results[-1] if req is not None and req.results else None
+        what = "checks" if self.checks else "calibration"
         if self.start_deg is None:
             start = self.runner.fresh_servo() if self.runner is not None else None
             if start is None:
                 self.note = "no telemetry from the cell yet"
-                return self._done("calibration not started: " + self.note)
+                return self._done(f"{what} not started: " + self.note)
             self.start_deg = start
             try:
-                self.moves = plan(self.start_deg, self.points)
+                self.moves = (route if self.checks else plan)(self.start_deg, self.points)
             except ValueError as e:
                 self.note = str(e)
-                return self._done("calibration not started: " + self.note)
+                return self._done(f"{what} not started: " + self.note)
             if len(self.moves) >= abi.ACTIONS_PER_REQUEST:  # agentsh ends the request after its 8th ACTION
                 self.note = f"{len(self.moves)} moves needed; at most {abi.ACTIONS_PER_REQUEST - 1} fit"
-                return self._done("calibration not started: " + self.note)
+                return self._done(f"{what} not started: " + self.note)
         elif last is not None and last[0] == "servo_set" and last[1] < 0:
             deg = self.moves[self._step - 1][0]
             self.note = f"servo_set {deg} refused by the kernel (result {last[1]})"
-            return self._done("calibration stopped: " + self.note)
+            return self._done(f"{what} stopped: " + self.note)
         if self._expect_point is not None:  # the witness op for this point has just been answered
             p, self._expect_point = self._expect_point, None
-            self.pairs.append((p, self._measured.pop(p, None)))
+            if not self.checks:
+                self.pairs.append((p, self._measured.pop(p, None)))
         elif self._step > 0 and self.moves[self._step - 1][1]:
             self._expect_point = self.moves[self._step - 1][0]
             return _call("witness")
         if self._step >= len(self.moves):
+            if self.checks:
+                n = sum(1 for _, m in self.moves if m)
+                return self._done(f"checks done: {n} witness checks after kernel-allowed moves")
             got = sum(1 for _, m in self.pairs if m is not None)
             return self._done(f"calibration moves done: {got} of {len(self.pairs)} points measured")
         deg = self.moves[self._step][0]

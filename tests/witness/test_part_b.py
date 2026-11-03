@@ -312,3 +312,62 @@ def test_run_dry_run_names_the_witness(capsys, tmp_path):
     out = capsys.readouterr().out
     assert "context pack agent-v3" in out
     assert "witness: sam-3.1, one image reserved per witness op ($0.002500), calibration cal-x" in out
+
+
+# ---- setup check (ring3 witness-frame): no SAM ----
+
+
+def test_frame_report_on_axis_and_off_axis():
+    from ring3bridge.witness.service import frame_report
+
+    frame, _, _ = synth.render(Scene([90.0], quad="flat"))
+    rep = frame_report(frame, GEOM)
+    assert rep.crop_img is not None and rep.lines[1].startswith("markers 0-3 found")
+    assert "from the pivot" in rep.lines[2]
+    covered, _, _ = synth.render(Scene([90.0], cover_marker=1))
+    rep = frame_report(covered, GEOM)
+    assert not rep.ok and rep.crop_img is None and "MARKERS" in rep.lines[-1]
+
+
+def test_witness_frame_through_the_capture_folder(tmp_path, capsys, monkeypatch):
+    """The CLI asks the helper for one frame (a fake helper thread answers), reports, saves under runs/."""
+    import threading
+    import time as _time
+
+    from ring3bridge.witness.capture import add_nonce_comment
+
+    monkeypatch.setattr(cli, "RUNS", tmp_path / "runs")
+    frame, _, _ = synth.render(Scene([90.0], quad="flat"))
+    jpeg = cv2.imencode(".jpg", frame)[1].tobytes()
+    stop = threading.Event()
+
+    def helper():
+        while not stop.is_set():
+            for req in tmp_path.glob("*.req"):
+                n = req.stem
+                (tmp_path / f"{n}.tmp.jpg").write_bytes(add_nonce_comment(jpeg, n))
+                (tmp_path / f"{n}.tmp.jpg").replace(tmp_path / f"{n}.jpg")
+            _time.sleep(0.02)
+
+    th = threading.Thread(target=helper, daemon=True)
+    th.start()
+    try:
+        rc = cli.main(["witness-frame", "--witness-dir", str(tmp_path)])
+    finally:
+        stop.set()
+        th.join(2)
+    out = capsys.readouterr().out
+    assert "markers 0-3 found" in out and "from the pivot" in out
+    saved = list((tmp_path / "runs").glob("witness-frame-*"))
+    assert len(saved) == 1 and (saved[0] / "frame.jpg").exists() and (saved[0] / "crop.jpg").exists()
+    assert rc in (0, 1)
+
+
+def test_calibrate_checks_dry_run(capsys, monkeypatch):
+    monkeypatch.delenv("MODEL_API_KEY", raising=False)
+    assert cli.main(["calibrate", "--budget-usd", "0.05", "--dry-run", "--checks"]) == 0
+    out = capsys.readouterr().out
+    assert "targets [50, 90, 130]" in out and "moves: 60, 50*, 80, 90*, 120, 130*   (* = checked)" in out
+    assert "reservation: 12 images x $0.002500 = $0.030000 over 4 request(s)" in out
+    assert cli.main(["calibrate", "--budget-usd", "0.05", "--checks", "--witness-dir", "."]) == 2
+    assert "--calibration <run> is required" in capsys.readouterr().err
