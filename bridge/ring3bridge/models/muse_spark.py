@@ -5,7 +5,8 @@ Order for every request, enforced here:
   2. ``ledger.reserve`` (worst case: 1 token per request byte + max output tokens) - refused -> ``ModelStop``;
   3. log ``spend_reserved``, then a header-free ``model_request`` (body as a blob);
   4. ``transport.post``;
-  5. log ``model_reply`` (status + scrubbed body blob), settle the reservation, log ``spend_settled``.
+  5. log ``model_reply`` (status + scrubbed body blob), settle the reservation, log ``spend_settled``;
+  6. redact the decoded reply strings with the transport's ``Redactor`` (T-09 F2) before returning them.
 The first 401/403, any other non-200 status or any transport error stops the client: every later ``ask()``
 raises ``ModelStop`` without sending.
 
@@ -190,6 +191,13 @@ class MuseSparkClient:
             self.stopped = ModelStop(abi.LINK_STOP_TRANSPORT, f"HTTP {resp.status}")
             raise self.stopped
         reply = parse_response(resp.body)
+        red = getattr(self.transport, "redactor", None)
+        if red is not None:
+            # T-09 F2: the decoded strings, once more (the body was scrubbed as bytes and through its JSON
+            # escapes; the text the run loop validates, logs and prints must not carry the key either way).
+            reply = ModelReply(red.text(reply.text), reply.input_tokens, reply.output_tokens,
+                               reply.cached_tokens, red.text(reply.status), red.text(reply.incomplete_reason),
+                               reply.texts)  # fmt: skip
         self._settle(res, reply.input_tokens, reply.output_tokens, reply.cached_tokens)
         return reply
 

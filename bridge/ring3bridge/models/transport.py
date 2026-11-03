@@ -2,13 +2,20 @@
 
 The key is read from the environment (never from ``.env`` or any file), kept in a private attribute, put into
 the ``Authorization`` header and nowhere else. Response bodies are returned with any occurrence of the key
-replaced. Errors are re-raised as ``TransportError`` built *outside* the ``except`` block, so no original
-exception (which might carry a request or headers) is chained or kept as context.
+replaced, through JSON escapes too (``Redactor``, T-09 F2): the literal key in any letter case, and the key
+written as ``\\u00XX`` escapes (upper- or lower-case hex, all or some characters) inside any JSON string of
+the body, at any nesting depth up to ``NEST_DEPTH`` (the API envelope, the action JSON the model embeds in
+its text, one more). The same ``Redactor`` is applied by the client to every decoded string it returns, so
+nothing leaves ``models/`` with the key in it. Errors are re-raised as ``TransportError`` built *outside*
+the ``except`` block, so no original exception (which might carry a request or headers) is chained or kept
+as context.
 """
 
 from __future__ import annotations
 
+import json
 import os
+import re
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -16,7 +23,54 @@ from typing import Protocol
 
 KEY_ENV = "MODEL_API_KEY"
 REDACTED = b"[REDACTED]"
+REDACTED_TEXT = "[REDACTED]"
 MAX_RESPONSE_BYTES = 1 << 20
+NEST_DEPTH = 3  # envelope string -> action JSON string inside it -> one more
+_JSON_STRING = re.compile(r'"(?:[^"\\]|\\.)*"')  # one JSON string token; its escapes are left to json.loads
+
+
+class Redactor:
+    """Holds the key privately and replaces it wherever it could reappear after decoding (T-09 F2).
+
+    ``text()``: the literal key (any letter case) in a decoded string, then every JSON string token the
+    string contains is decoded and redacted the same way, ``depth`` levels down; a token whose decoded value
+    changed is re-encoded (ASCII escapes), every other byte is left as it was. ``body()``: the same on the
+    raw response bytes (invalid UTF-8 survives untouched through ``surrogateescape``)."""
+
+    def __init__(self, key: str) -> None:
+        if not key:
+            raise ValueError("empty key")
+        self.__pat = re.compile(re.escape(key), re.IGNORECASE)
+        self.__pat_bytes = re.compile(re.escape(key.encode("utf-8", "replace")), re.IGNORECASE)
+
+    def __repr__(self) -> str:
+        return "Redactor(key=<hidden>)"
+
+    def text(self, s: str, depth: int = NEST_DEPTH) -> str:
+        s = self.__pat.sub(REDACTED_TEXT, s)
+        if depth <= 0 or "\\" not in s:
+            return s
+
+        def fix(m: re.Match[str]) -> str:
+            tok = m.group(0)
+            try:
+                val = json.loads(tok)
+            except ValueError:
+                return tok
+            if type(val) is not str:
+                return tok
+            new = self.text(val, depth - 1)
+            return tok if new == val else json.dumps(new, ensure_ascii=True)
+
+        return _JSON_STRING.sub(fix, s)
+
+    def body(self, b: bytes) -> bytes:
+        b = self.__pat_bytes.sub(REDACTED, b)
+        if b"\\" not in b:
+            return b
+        s = b.decode("utf-8", "surrogateescape")
+        new = self.text(s)
+        return b if new == s else new.encode("utf-8", "surrogateescape")
 
 
 @dataclass(frozen=True)
@@ -35,6 +89,8 @@ class TransportError(Exception):
 
 
 class Transport(Protocol):
+    """``redactor`` (optional attribute): a ``Redactor`` the client applies to decoded reply strings."""
+
     def post(self, url: str, body: bytes, timeout_s: int) -> TransportResponse: ...
 
 
@@ -61,12 +117,13 @@ class HttpsTransport:
         if not key:
             raise TransportError("no_key")
         self.__key = key
+        self.redactor = Redactor(key)
 
     def __repr__(self) -> str:
         return "HttpsTransport(key=<hidden>)"
 
     def _scrub(self, b: bytes) -> bytes:
-        return b.replace(self.__key.encode("utf-8", "replace"), REDACTED)
+        return self.redactor.body(b)
 
     def post(self, url: str, body: bytes, timeout_s: int) -> TransportResponse:
         if not url.startswith("https://"):

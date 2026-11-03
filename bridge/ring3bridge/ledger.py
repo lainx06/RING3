@@ -6,13 +6,20 @@ against both the run cap (``--budget-usd``) and the project cap (config/budget.t
 no run budget, a cap that would be passed, or an unreadable ledger -> ``BudgetRefused``, nothing sent.
 
 Every figure is an estimate from configured prices, not billing.
+
+Interprocess (T-09 F3): a reservation is reload + cap check + append under an exclusive ``flock`` on
+``<ledger>.lock`` next to the ledger, and a settlement takes the same lock, so two processes (two runs, or a
+run and ``calibrate``) that both loaded the ledger cannot both reserve the last allowance.
 """
 
 from __future__ import annotations
 
+import fcntl
 import json
 import os
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -75,10 +82,30 @@ def _canon(rec: dict) -> str:
 class Ledger:
     def __init__(self, project_cap_uusd: int, path: Path = DEFAULT_LEDGER) -> None:
         self.path = Path(path)
+        self.lock_path = self.path.with_name(self.path.name + ".lock")
         self.project_cap = project_cap_uusd
         self._res: dict[int, Reservation] = {}
         self._settled: dict[int, int] = {}
         self._error: str | None = None
+        self._load()
+
+    @contextmanager
+    def _locked(self) -> Iterator[None]:
+        """Exclusive across processes (F3): the ledger is re-read from disk under the lock, so the cap check
+        and the append that follow see every reservation another process made since this one loaded."""
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with open(self.lock_path, "a+", encoding="ascii") as lk:
+            fcntl.flock(lk.fileno(), fcntl.LOCK_EX)
+            try:
+                self._reload()
+                yield
+            finally:
+                fcntl.flock(lk.fileno(), fcntl.LOCK_UN)
+
+    def _reload(self) -> None:
+        self._res.clear()
+        self._settled.clear()
+        self._error = None
         self._load()
 
     def _load(self) -> None:
@@ -134,8 +161,6 @@ class Ledger:
         price: Price | None,
         run_budget_uusd: int | None,
     ) -> Reservation:
-        if self._error:
-            raise BudgetRefused("ledger_unreadable", self._error)
         if price is None:
             raise BudgetRefused("no_price", "model price unset in config/models.toml")
         if not run_budget_uusd or run_budget_uusd <= 0:
@@ -144,19 +169,22 @@ class Ledger:
         amount = cost_uusd(tin, price.input_uusd_per_mtok) + cost_uusd(
             max_output_tokens, price.output_uusd_per_mtok
         )
-        if self.committed_uusd(run_id) + amount > run_budget_uusd:
-            raise BudgetRefused(
-                "run_cap", f"{fmt_usd(amount)} would pass the run budget {fmt_usd(run_budget_uusd)}"
-            )
-        if self.committed_uusd() + amount > self.project_cap:
-            raise BudgetRefused("project_cap", f"{fmt_usd(amount)} would pass the project cap")
-        rid = max(self._res, default=0) + 1
-        r = Reservation(rid, run_id, amount, tin, max_output_tokens, price.input_uusd_per_mtok,
-                        price.output_uusd_per_mtok, price.cached_input_uusd_per_mtok or 0)  # fmt: skip
-        self._append({"kind": "reserve", "id": rid, "run": run_id, "uusd": amount, "in_tok": tin,
-                      "out_tok": max_output_tokens, "p_in": r.price_in, "p_out": r.price_out,
-                      "p_cached": r.price_cached, "t_ns": time.time_ns()})  # fmt: skip
-        self._res[rid] = r
+        with self._locked():
+            if self._error:
+                raise BudgetRefused("ledger_unreadable", self._error)
+            if self.committed_uusd(run_id) + amount > run_budget_uusd:
+                raise BudgetRefused(
+                    "run_cap", f"{fmt_usd(amount)} would pass the run budget {fmt_usd(run_budget_uusd)}"
+                )
+            if self.committed_uusd() + amount > self.project_cap:
+                raise BudgetRefused("project_cap", f"{fmt_usd(amount)} would pass the project cap")
+            rid = max(self._res, default=0) + 1
+            r = Reservation(rid, run_id, amount, tin, max_output_tokens, price.input_uusd_per_mtok,
+                            price.output_uusd_per_mtok, price.cached_input_uusd_per_mtok or 0)  # fmt: skip
+            self._append({"kind": "reserve", "id": rid, "run": run_id, "uusd": amount, "in_tok": tin,
+                          "out_tok": max_output_tokens, "p_in": r.price_in, "p_out": r.price_out,
+                          "p_cached": r.price_cached, "t_ns": time.time_ns()})  # fmt: skip
+            self._res[rid] = r
         return r
 
     def settle(
@@ -170,8 +198,6 @@ class Ledger:
 
         ``cached_tokens`` (a subset of ``input_tokens``, Responses API ``usage.input_tokens_details``) are
         priced at the cached-input price when the reservation has one; unknown or out of range -> none."""
-        if r.id in self._settled:
-            raise ValueError("already settled")
         if input_tokens is None or output_tokens is None or input_tokens < 0 or output_tokens < 0:
             actual = r.uusd
         else:
@@ -183,8 +209,11 @@ class Ledger:
                 + cost_uusd(cached, r.price_cached)
                 + cost_uusd(output_tokens, r.price_out)
             )
-        self._append({"kind": "settle", "id": r.id, "uusd": actual, "t_ns": time.time_ns()})
-        self._settled[r.id] = actual
+        with self._locked():
+            if r.id in self._settled:
+                raise ValueError("already settled")
+            self._append({"kind": "settle", "id": r.id, "uusd": actual, "t_ns": time.time_ns()})
+            self._settled[r.id] = actual
         return actual
 
     def report(self) -> str:
