@@ -15,7 +15,8 @@
       "Bash(git push)", "Bash(git push *)", "Bash(git add .env*)",
       "Bash(arduino-cli upload)", "Bash(arduino-cli upload *)", "Bash(avrdude *)",
       "Bash(sudo *)", "Bash(curl *)", "Bash(wget *)",
-      "Bash(uv run ring3 run)", "Bash(uv run ring3 run *)"
+      "Bash(uv run ring3 run)", "Bash(uv run ring3 run *)",
+      "Bash(uv run ring3 calibrate)", "Bash(uv run ring3 calibrate *)"
     ]
   }
 }
