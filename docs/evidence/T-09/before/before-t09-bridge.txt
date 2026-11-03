@@ -1,0 +1,56 @@
+FFFFFF                                                                   [100%]
+=================================== FAILURES ===================================
+________________________ test_redactor_through_escapes _________________________
+tests/bridge/test_t09_f2_redaction.py:80: in test_redactor_through_escapes
+    r = transport_mod.Redactor(key)  # absent before T-09: this test errors, the next one fails
+        ^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'ring3bridge.models.transport' has no attribute 'Redactor'
+_______________________ test_t09_f2_escaped_key_nowhere ________________________
+tests/bridge/test_t09_f2_redaction.py:134: in test_t09_f2_escaped_key_nowhere
+    assert verdicts[2] == Done("[REDACTED]") and verdicts[4] == Done("[REDACTED]")
+E   AssertionError: assert (Done(summary=...6ffc9cde5c05') == Done(summary='[REDACTED]')
+E     
+E     Differing attributes:
+E     ['summary']
+E     
+E     Drill down into differing attribute summary:
+E       summary: 'sk-ring3-sentinel-07f0deabe36a6ffc9cde5c05' != '[REDACTED]'
+E       - [REDACTED]
+E       + sk-ring3-sentinel-07f0deabe36a6ffc9cde5c05)
+__________________ test_t09_f3_two_processes_one_allowance[0] __________________
+tests/bridge/test_t09_f3_ledger_lock.py:44: in test_t09_f3_two_processes_one_allowance
+    assert sorted(kind for _, kind, _ in results) == ["project_cap", "reserved"], results
+E   AssertionError: [('a', 'reserved', 8200), ('b', 'reserved', 8200)]
+E   assert ['reserved', 'reserved'] == ['project_cap', 'reserved']
+E     
+E     At index 0 diff: 'reserved' != 'project_cap'
+E     Use -v to get more diff
+__________________ test_t09_f3_two_processes_one_allowance[1] __________________
+tests/bridge/test_t09_f3_ledger_lock.py:44: in test_t09_f3_two_processes_one_allowance
+    assert sorted(kind for _, kind, _ in results) == ["project_cap", "reserved"], results
+E   AssertionError: [('a', 'reserved', 8200), ('b', 'reserved', 8200)]
+E   assert ['reserved', 'reserved'] == ['project_cap', 'reserved']
+E     
+E     At index 0 diff: 'reserved' != 'project_cap'
+E     Use -v to get more diff
+__________________ test_t09_f3_two_processes_one_allowance[2] __________________
+tests/bridge/test_t09_f3_ledger_lock.py:44: in test_t09_f3_two_processes_one_allowance
+    assert sorted(kind for _, kind, _ in results) == ["project_cap", "reserved"], results
+E   AssertionError: [('a', 'reserved', 8200), ('b', 'reserved', 8200)]
+E   assert ['reserved', 'reserved'] == ['project_cap', 'reserved']
+E     
+E     At index 0 diff: 'reserved' != 'project_cap'
+E     Use -v to get more diff
+______________ test_t09_f3_stale_view_is_refreshed_under_the_lock ______________
+tests/bridge/test_t09_f3_ledger_lock.py:57: in test_t09_f3_stale_view_is_refreshed_under_the_lock
+    with pytest.raises(BudgetRefused) as e:
+E   Failed: DID NOT RAISE BudgetRefused
+=========================== short test summary info ============================
+FAILED tests/bridge/test_t09_f2_redaction.py::test_redactor_through_escapes
+FAILED tests/bridge/test_t09_f2_redaction.py::test_t09_f2_escaped_key_nowhere
+FAILED tests/bridge/test_t09_f3_ledger_lock.py::test_t09_f3_two_processes_one_allowance[0]
+FAILED tests/bridge/test_t09_f3_ledger_lock.py::test_t09_f3_two_processes_one_allowance[1]
+FAILED tests/bridge/test_t09_f3_ledger_lock.py::test_t09_f3_two_processes_one_allowance[2]
+FAILED tests/bridge/test_t09_f3_ledger_lock.py::test_t09_f3_stale_view_is_refreshed_under_the_lock
+6 failed in 0.54s
+exit 1

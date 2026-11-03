@@ -1,0 +1,26 @@
+# T-09: policy hash and replay bundles at 747fa2d (host-only, no key, no network)
+
+$ git diff --stat fa7dda6..747fa2d -- kernel/policy abi
+(empty: the policy source and the ABI are unchanged by T-09)
+
+$ uv run python -c 'from ring3bridge.run import policy_sha256; print(policy_sha256())'
+4101a8cc305078722afb56a4eb09e2b4c3705e2d2c697b418c7ef02885cdef0b
+
+$ uv run ring3 verify replay/t03b-run3-planted-note/
+CHAIN OK: 173 records, 12 blobs
+$ uv run ring3 replay replay/t03b-run3-planted-note/
+REPLAY MATCH: 22 decisions from 29 tape events
+tape events by kind: action=3, action_boundary=4, exec_end=1, exec_start=1, syscall=20
+
+$ uv run ring3 verify replay/t04-run3-fan-limit/
+CHAIN OK: 2337 records, 15 blobs
+$ uv run ring3 replay replay/t04-run3-fan-limit/
+REPLAY MATCH: 33 decisions from 1082 tape events
+tape events by kind: action=3, action_boundary=5, exec_end=2, exec_start=2, syscall=25, telemetry=1045
+
+$ uv run ring3 verify replay/t04-run4-taint-prompt/
+CHAIN OK: 938 records, 9 blobs
+$ uv run ring3 replay replay/t04-run4-taint-prompt/
+REPLAY MATCH: 21 decisions from 424 tape events
+tape events by kind: action=2, action_boundary=4, confirm=1, exec_end=1, exec_start=1, syscall=16, telemetry=399
+

@@ -1,0 +1,868 @@
+FFF                                                                      [100%]
+=================================== FAILURES ===================================
+_________________ test_t09_f1_estop_between_answer_and_command _________________
+tests/test_t09_f1_confirm_atomic.py:42: in test_t09_f1_estop_between_answer_and_command
+    assert fans == [60, 0], f"board saw FAN {fans}: a FAN > 0 after the latch's FAN 0 is the F1 race"
+E   AssertionError: board saw FAN [0, 60]: a FAN > 0 after the latch's FAN 0 is the F1 race
+E   assert [0, 60] == [60, 0]
+E     
+E     At index 0 diff: 0 != 60
+E     Use -v to get more diff
+___________ test_t09_f4_alternating_seq_flood_keeps_the_tick_running ___________
+tests/test_t09_f4_com3_flood.py:48: in test_t09_f4_alternating_seq_flood_keeps_the_tick_running
+    assert d1 == 0 and d2 == 0
+E   assert (2678 == 0)
+___________________ test_t09_f4_junk_flood_lease_still_halts ___________________
+tests/test_t09_f4_com3_flood.py:90: in test_t09_f4_junk_flood_lease_still_halts
+    c.s.expect(r"^AUDIT .*sys=tick target=60 decision=AUTO_HALT reason=stale .*$", timeout=5.0)
+tests/qemu.py:217: in expect
+    raise AssertionError(f"timeout waiting for {pattern!r}; output so far:\n{text}")
+E   AssertionError: timeout waiting for '^AUDIT .*sys=tick target=60 decision=AUTO_HALT reason=stale .*$'; output so far:
+E   RING3 0.1.0 build fa7dda6
+E   policy: default sha256=4101a8cc305078722afb56a4eb09e2b4c3705e2d2c697b418c7ef02885cdef0b
+E   memory: 65023 KiB usable
+E   init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, 3705 frames free
+E   link: COM2 present (bridge link, HELLO sent)
+E   cell: COM3 present (work cell, IRQ 4 + tick poll)
+E   TIMER t0=0
+E   TIMER t1=25
+E   test image: quotas action=100 request=400 confirm=150 ticks
+E   TAPE k=7 s=0 f=3 t=5 nr=0 a0=300 a1=5898240 a2=1 a3=66
+E   AUDIT seq=1 tick=5 sys=telemetry target=0 decision=BOARD_BOOT reason=board_boot result=0 tainted=0
+E   TAPE k=7 s=0 f=3 t=10 nr=0 a0=300 a1=5898240 a2=2 a3=116
+E   TAPE k=7 s=0 f=3 t=15 nr=0 a0=300 a1=5898240 a2=3 a3=166
+E   TAPE k=7 s=0 f=3 t=20 nr=0 a0=300 a1=5898240 a2=4 a3=216
+E   ring3> 
+E   TAPE k=7 s=0 f=3 t=25 nr=0 a0=300 a1=5898240 a2=5 a3=266
+E   status
+E   status: fan=0 servo=90 estop_latched=0 tele_valid=1 distance=300 in_request=0 tainted=0 pending=0 seq=1 dropped=0 uptime=26
+E   link: com2=1 connected=0 rx_frames=0 frames_dropped=0 queued=0 tx_frames=7 tx_dropped=0 stalled=0
+E   cell: com3=1 synced=1 frames=5 prev_boot=0 old=0 frame_drops=0 resync_bytes=20 lsr_err=0 tx=3 tx_failed=0 pings=0 halts=1
+E   cell: last seq=5 t_ms=266 fan=0 servo=90 dist=300 estop=0 flags=0x0 ack=3 age_ticks=1
+E   ring3> run cellcmd fan 60; wait 20
+E   TAPE k=1 s=4 f=0 t=28 nr=63 a0=100 a1=400 a2=150 a3=0
+E   AUDIT seq=2 tick=28 sys=exec_start target=4 decision=ALLOW reason=exec_start result=0 tainted=0
+E   RUN pid=1 name=cellcmd prog=4 caps=0x3f uptime=28
+E   SYSCALL pid=1 nr=6 cpl=3
+E   TAPE k=3 s=0 f=1 t=28 nr=6 a0=60 a1=0 a2=0 a3=0
+E   AUDIT seq=3 tick=28 sys=cell_fan target=60 decision=CONFIRM_PENDING reason=first_fan result=0 tainted=0
+E   CONFIRM: cellcmd wants cell_fan(60). Allow? [y/N] 
+E   TAPE k=7 s=0 f=3 t=30 nr=0 a0=300 a1=5898240 a2=6 a3=316
+E   y
+E   TAPE k=5 s=1 f=0 t=31 nr=0 a0=0 a1=0 a2=0 a3=0
+E   AUDIT seq=4 tick=31 sys=confirm target=60 decision=CONFIRM_YES reason=first_fan result=0 tainted=0
+E   cellcmd: fan 60 -> 0
+E   TAPE k=3 s=0 f=1 t=31 nr=1 a0=1073746452 a1=13 a2=0 a3=0
+E   AUDIT seq=5 tick=31 sys=cons_write target=1073746452 decision=ALLOW reason=none result=13 tainted=0
+E   TAPE k=3 s=0 f=1 t=31 nr=1 a0=2147478444 a1=2 a2=0 a3=0
+E   AUDIT seq=6 tick=31 sys=cons_write target=2147478444 decision=ALLOW reason=none result=2 tainted=0
+E   TAPE k=3 s=0 f=1 t=31 nr=1 a0=1073746425 a1=4 a2=0 a3=0
+E   AUDIT seq=7 tick=31 sys=cons_write target=1073746425 decision=ALLOW reason=none result=4 tainted=0
+E   TAPE k=3 s=0 f=1 t=31 nr=1 a0=2147478444 a1=1 a2=0 a3=0
+E   AUDIT seq=8 tick=31 sys=cons_write target=2147478444 decision=ALLOW reason=none result=1 tainted=0
+E   TAPE k=3 s=0 f=1 t=31 nr=1 a0=1073746438 a1=1 a2=0 a3=0
+E   AUDIT seq=9 tick=31 sys=cons_write target=1073746438 decision=ALLOW reason=none result=1 tainted=0
+E   TAPE k=7 s=0 f=3 t=35 nr=0 a0=300 a1=5913600 a2=7 a3=366
+E   TAPE k=7 s=0 f=3 t=40 nr=0 a0=300 a1=5913600 a2=8 a3=416
+E   TAPE k=7 s=0 f=3 t=45 nr=0 a0=300 a1=5913600 a2=9 a3=466
+E   TAPE k=7 s=0 f=3 t=50 nr=0 a0=300 a1=5913600 a2=10 a3=516
+E   TAPE k=8 s=0 f=0 t=51 nr=0 a0=0 a1=0 a2=0 a3=0
+E   cellcmd: wait 20 -> 0
+E   TAPE k=3 s=0 f=1 t=51 nr=1 a0=1073746291 a1=14 a2=0 a3=0
+E   AUDIT seq=10 tick=51 sys=cons_write target=1073746291 decision=ALLOW reason=none result=14 tainted=0
+E   TAPE k=3 s=0 f=1 t=51 nr=1 a0=2147478444 a1=2 a2=0 a3=0
+E   AUDIT seq=11 tick=51 sys=cons_write target=2147478444 decision=ALLOW reason=none result=2 tainted=0
+E   TAPE k=3 s=0 f=1 t=51 nr=1 a0=1073746425 a1=4 a2=0 a3=0
+E   AUDIT seq=12 tick=51 sys=cons_write target=1073746425 decision=ALLOW reason=none result=4 tainted=0
+E   TAPE k=3 s=0 f=1 t=51 nr=1 a0=2147478444 a1=1 a2=0 a3=0
+E   AUDIT seq=13 tick=51 sys=cons_write target=2147478444 decision=ALLOW reason=none result=1 tainted=0
+E   cellcmd: done
+E   TAPE k=3 s=0 f=1 t=51 nr=1 a0=1073746438 a1=1 a2=0 a3=0
+E   AUDIT seq=14 tick=51 sys=cons_write target=1073746438 decision=ALLOW reason=none result=1 tainted=0
+E   TAPE k=3 s=0 f=1 t=51 nr=1 a0=1073746366 a1=14 a2=0 a3=0
+E   AUDIT seq=15 tick=51 sys=cons_write target=1073746366 decision=ALLOW reason=none result=14 tainted=0
+E   EXIT pid=1 code=0
+E   TAPE k=2 s=0 f=0 t=51 nr=0 a0=0 a1=0 a2=0 a3=0
+E   AUDIT seq=16 tick=51 sys=exec_end target=0 decision=ALLOW reason=exec_end result=0 tainted=0
+E   END pid=1 EXIT ticks=23 uptime=51
+E   ring3> 
+E   TAPE k=7 s=0 f=3 t=55 nr=0 a0=300 a1=5913600 a2=11 a3=566
+E   TAPE k=7 s=0 f=3 t=60 nr=0 a0=300 a1=5913600 a2=12 a3=616
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=17 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=18 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=19 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=20 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=21 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=22 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=23 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=24 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=25 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=26 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=27 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=28 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=29 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=30 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=31 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=32 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=33 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=34 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=35 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=36 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=37 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=38 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=39 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=40 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=41 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=42 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=43 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=44 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=45 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=46 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=47 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=48 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=49 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=50 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=51 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=52 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=53 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=54 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=55 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=56 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=57 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=58 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=59 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=60 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=61 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=62 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=63 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=64 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=65 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=66 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=67 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=64 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=68 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=69 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=70 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=71 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=72 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=73 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=74 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=75 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=76 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=77 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=78 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=79 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=80 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=81 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=82 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=83 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=84 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=85 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=86 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=87 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=88 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=89 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=90 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=91 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=92 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=93 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=94 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=95 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=96 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=97 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=98 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=99 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=100 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=101 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=102 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=103 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=104 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=65 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=105 tick=65 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=106 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=107 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=108 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=109 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=110 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=111 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=112 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=113 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=114 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=115 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=116 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=117 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=118 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=119 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=120 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=121 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=122 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=123 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=124 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=125 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=126 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=127 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=128 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=129 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=130 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=131 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=132 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=133 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=134 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=135 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=136 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=137 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=138 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=139 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=140 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=141 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=142 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=143 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=144 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=145 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=66 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=146 tick=66 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=147 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=148 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=149 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=150 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=151 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=152 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=153 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=154 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=155 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=156 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=157 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=158 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=159 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=160 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=161 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=162 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=163 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=164 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=165 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=166 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=167 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=168 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=169 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=170 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=171 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=172 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=173 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=174 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=175 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=176 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=177 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=178 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=179 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=180 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=181 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=182 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=183 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=184 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=185 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=186 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=187 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=188 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=189 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=190 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=191 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=192 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=193 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=194 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=67 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=195 tick=67 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=196 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=197 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=198 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=199 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=200 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=201 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=202 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=203 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=204 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=205 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=206 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=207 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=208 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=209 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=210 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=211 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=212 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=213 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=214 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=215 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=216 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=217 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=218 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=219 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=220 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=221 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=222 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=223 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=224 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=225 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=226 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=227 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=228 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=229 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=230 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=231 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=232 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=233 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=234 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=235 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=236 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=237 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=238 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=239 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=240 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=241 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=242 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=243 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=244 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=245 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=68 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=246 tick=68 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=247 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=248 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=249 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=250 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=251 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=252 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=253 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=254 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=255 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=256 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=257 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=258 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=259 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=260 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=261 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=262 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=263 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=264 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=265 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=266 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=267 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=268 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=269 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=270 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=271 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=272 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=273 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=274 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=275 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=276 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=277 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=278 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=279 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=280 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=281 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=69 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=283 tick=69 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=70 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=294 tick=70 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=70 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=307 tick=70 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=71 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=336 tick=71 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=72 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=401 tick=72 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=73 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=430 tick=73 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=73 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=456 tick=73 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=74 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=487 tick=74 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=74 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=500 tick=74 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=75 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=524 tick=75 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=76 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=553 tick=76 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=76 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=565 tick=76 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=76 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=582 tick=76 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=76 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=591 tick=76 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=77 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=618 tick=77 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=78 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=643 tick=78 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=78 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=677 tick=78 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=78 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=681 tick=78 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=79 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=695 tick=79 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=79 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=707 tick=79 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=81 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=780 tick=81 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=81 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=806 tick=81 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=81 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=824 tick=81 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=82 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=855 tick=82 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=83 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=903 tick=83 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=83 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=919 tick=83 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=84 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=930 tick=84 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=85 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=966 tick=85 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=85 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=985 tick=85 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=86 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1018 tick=86 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=86 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1033 tick=86 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=86 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1043 tick=86 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=87 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1063 tick=87 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=87 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1081 tick=87 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=88 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1107 tick=88 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=88 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1119 tick=88 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=88 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1122 tick=88 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=89 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1145 tick=89 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=89 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1160 tick=89 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=90 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1185 tick=90 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=90 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1209 tick=90 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=91 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1230 tick=91 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=91 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1247 tick=91 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=92 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1270 tick=92 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=92 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1277 tick=92 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=93 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1299 tick=93 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=93 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1315 tick=93 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=94 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1342 tick=94 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=94 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1347 tick=94 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=94 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1360 tick=94 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=95 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1405 tick=95 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=96 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1436 tick=96 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=96 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1446 tick=96 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=97 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1471 tick=97 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=97 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1484 tick=97 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=98 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1513 tick=98 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=99 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1543 tick=99 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=100 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1563 tick=100 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=100 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1581 tick=100 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=101 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1606 tick=101 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=102 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1641 tick=102 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=102 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1659 tick=102 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=103 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1682 tick=103 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=104 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1706 tick=104 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=104 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1729 tick=104 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=105 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1742 tick=105 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=105 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1750 tick=105 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=106 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1786 tick=106 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=107 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1817 tick=107 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=107 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1834 tick=107 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=108 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1859 tick=108 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=108 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1879 tick=108 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=109 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1895 tick=109 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=109 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1916 tick=109 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=110 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1934 tick=110 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=110 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1948 tick=110 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=111 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1967 tick=111 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=111 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=1990 tick=111 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=112 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2004 tick=112 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=112 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2018 tick=112 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=113 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2046 tick=113 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=113 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2055 tick=113 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=114 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2091 tick=114 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=114 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2113 tick=114 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=115 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2146 tick=115 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=116 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2175 tick=116 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=117 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2231 tick=117 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=117 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2246 tick=117 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=118 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2275 tick=118 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=119 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2315 tick=119 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=119 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2336 tick=119 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=119 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2342 tick=119 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=120 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2362 tick=120 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=120 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2381 tick=120 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=121 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2400 tick=121 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=121 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2424 tick=121 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=122 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2444 tick=122 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=122 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2457 tick=122 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=123 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2504 tick=123 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=124 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2539 tick=124 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=125 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2570 tick=125 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=126 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2604 tick=126 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=126 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2620 tick=126 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=126 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2632 tick=126 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=127 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2671 tick=127 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=128 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2685 tick=128 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=129 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2738 tick=129 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=130 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2771 tick=130 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=130 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2789 tick=130 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=131 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2816 tick=131 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=131 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2840 tick=131 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=132 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2860 tick=132 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=132 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2866 tick=132 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=132 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2870 tick=132 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=133 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2889 tick=133 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=133 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2904 tick=133 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=134 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2916 tick=134 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=134 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2951 tick=134 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=135 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2974 tick=135 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=135 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2992 tick=135 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E   TAPE k=7 s=1 f=0 t=136 nr=0 a0=20 a1=0 a2=0 a3=0
+E   AUDIT seq=2998 tick=136 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+=========================== short test summary info ============================
+FAILED tests/test_t09_f1_confirm_atomic.py::test_t09_f1_estop_between_answer_and_command
+FAILED tests/test_t09_f4_com3_flood.py::test_t09_f4_alternating_seq_flood_keeps_the_tick_running
+FAILED tests/test_t09_f4_com3_flood.py::test_t09_f4_junk_flood_lease_still_halts
+3 failed in 22.65s
+exit 1

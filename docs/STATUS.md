@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-11-02 18:40 ET (T-04 steps 1-6, 9 done; steps 7-8 are the user's). The builder updates this at
+Updated: 2026-11-03 evening (T-09 complete; the user's paid camera runs may proceed). The builder updates this at
 the end of every card and at each milestone.
 
 ## Now
@@ -86,6 +86,19 @@ the end of every card and at each milestone.
   plain byte for byte). Full suite at `9d49b42` in a clean worktree: 770 passed, 6 skipped. Open: A6 real-run
   PNGs (user: bridge first, `make run-cell-screen`, `make screendump NAME=real-idle|real-ask|real-estop`).
   `docs/evidence/T-08/README.md`.
+- **T-09 complete: A1-A4 pass** (2026-11-03 evening, Fable 5.1 / high, D-57, offline). Codex Gate A's four
+  findings (D-74) closed without touching `decide()` (policy SHA-256 unchanged, the three `replay/` bundles
+  still `REPLAY MATCH`). Step 0 `fa7dda6` (card + D-73/D-74). Kernel `fae44c4`: **F1** the confirmation's
+  final decision and the COM3 command are one step (`confirm_run()` returns with interrupts off; the
+  console reset too), test seam `confirmgap`; **F4** per-tick COM3 receive budget (512 bytes / 8 frames,
+  `rx_deferred` counter), bounded init drain. Bridge `747fa2d`: **F2** `Redactor` in `models/transport.py`
+  (literal key any case + `\u00XX`-escaped key at up to 3 JSON nesting levels; applied to bodies and to the
+  decoded reply strings); **F3** `flock` on `<ledger>.lock` around reload + cap check + append, settle too.
+  Each finding has a test that failed before (board saw FAN 0 then FAN 60; 2,678 audit records dropped
+  under the flood; validated summary = the escaped key; both processes reserved past the cap) and passes
+  after. Full full default suite in a clean worktree at `747fa2d`: **779 passed, 6 skipped** (hw + 2 by design), 185 s. `make evals --suites e1,e2,e3` on `747fa2d`: must-pass rows all hold, 0 kernel panics (E1 8 programs x 5 boots per build, E2 18 hand cases + 10,000 fuzz calls per build, E3 3 x 10,000 frames per build). `docs/evidence/T-09/README.md`. The user's paid camera runs (T-07 A2-A4,
+  T-05a E4) can proceed on `747fa2d` or later. Open for the user: first `test_inv_13_hw.py` run after F4
+  (boot resync timing on the real board, expected unchanged).
 - Second terminal Nov 1: **T-06** (Opus 5.5 / high) once T-01 has made its first commit (D-42).
 - User, while T-01 runs: `SETUP.md` step 8 (usbipd + Uno + arduino-cli in Ubuntu), then wiring per
   `hardware/wiring.md` in the afternoon.
@@ -156,6 +169,7 @@ the end of every card and at each milestone.
 | T-07 Part A | 2026-11-02 | Opus 5.5 / high | 2026-11-02 11:20 ET; A1 pass (Part B: A2-A4 open); offline, no paid call; 1 test-program change logged (fixture offset 4 -> 2 deg + new disable cases), no limit loosened | `docs/evidence/T-07/README.md` |
 | T-05a | 2026-11-03 evening | Opus 5.5 / high | 2026-11-03: A1-A5, A7 pass; A6 (E4, paid) open for the user; no paid call, no hardware run; no existing test changed, 2 first-run fixes in new tests logged | `docs/evidence/T-05a/README.md` |
 | T-07 Part B | 2026-11-03 | Opus 5.5 / high | code + simulated cell done (A2-A4 open: live, user); D-72 points, 15 mm horn, agent-v3; 4 test-program changes logged, no limit changed; no paid call by the builder | `docs/evidence/T-07/README.md` (Part B) |
+| T-09 | 2026-11-03 evening | Fable 5.1 / high | 2026-11-03 evening: A1-A4 pass; F1/F4 kernel + F2/F3 bridge, each with a fails-before/passes-after test; `decide()` untouched; no existing test changed (two sim-cell helpers added); no paid call, no hardware | `docs/evidence/T-09/README.md` |
 | T-08 | 2026-11-03 16:50 ET | Opus 5.5 / high | 2026-11-03 evening: A1-A5 pass, A6 partial (sim-cell shots filed, real-run PNGs open for the user); no paid call, no hardware; 2 existing tests changed (LCD word CONFIRMED, scanner file pointer) + optional harness `monitor=`, none loosened | `docs/evidence/T-08/README.md` |
 
 ## Last evidence
