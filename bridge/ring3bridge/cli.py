@@ -15,7 +15,7 @@ import sys
 import time
 from pathlib import Path
 
-from ring3bridge import abi, context_pack, eventlog, replay, selftest
+from ring3bridge import abi, context_pack, eventlog, replay, selftest, style
 from ring3bridge.config import REPO, load_model_config, load_project_cap
 from ring3bridge.ledger import DEFAULT_LEDGER, Ledger, cost_uusd, fmt_usd, request_tokens, usd_to_uusd
 
@@ -175,10 +175,12 @@ def cmd_run(a: argparse.Namespace) -> int:
     link = Link(a.host, a.port)
     print(f"run {run_id}: connecting to COM2 at {a.host}:{a.port} (budget {fmt_usd(budget)}, estimate)")
     link.connect(a.connect_timeout)
-    runner = Runner(link, client, log, pack, seed, timeline=_timeline, witness=witness)
+    timeline = style.timeline_for(a.style, sys.stdout, _timeline)  # T-08: plain unless a terminal asks
+    runner = Runner(link, client, log, pack, seed, timeline=timeline, witness=witness)
     try:
         runner.serve(requests=a.requests, idle_s=a.idle)
     except KeyboardInterrupt:
+        style.close(timeline)
         print("interrupted by the operator")
         if runner.request is not None:
             try:
@@ -186,6 +188,7 @@ def cmd_run(a: argparse.Namespace) -> int:
             except Exception:  # noqa: BLE001
                 pass
     finally:
+        style.close(timeline)
         runner.finish()
         link.close()
     print(f"run {run_id}: {runner.requests_done} request(s); log {run_dir.relative_to(REPO)}/events.jsonl")
@@ -443,6 +446,9 @@ def main(argv: list[str] | None = None) -> int:
     u.add_argument("--dry-run-request", help="request text to size the dry-run reservation on")
     u.add_argument("--witness-dir", help="capture folder shared with the Windows helper, e.g. /mnt/c/...")
     u.add_argument("--calibration", help="run id (or directory) of a ring3 calibrate run")
+    u.add_argument(
+        "--style", choices=style.STYLES, default="plain", help="plain, or console: 256 colours on a TTY"
+    )
     u.set_defaults(fn=cmd_run)
     wf = sub.add_parser("witness-frame", help="setup check: one frame, markers, camera axis (free, no SAM)")
     wf.add_argument("--witness-dir", required=True, help="capture folder shared with the Windows helper")
