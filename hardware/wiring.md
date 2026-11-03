@@ -1,6 +1,6 @@
 # RING3 work cell: wiring guide (T-06, v2 build)
 
-This guide matches the **v2 build** (D-63, D-64, D-64b): two breadboards with pre-cut wires, the power module in the
+This guide matches the **v2 build** (D-63, D-64, D-64b, D-65): two breadboards with pre-cut wires, the power module in the
 **left** end of the main board, and the fan switched by an **NPN transistor** instead of the L293D. The hole-by-hole
 layout is `hardware/WIRING_V2_LAYOUT.md` (the lead's table; the wire IDs below, such as `E2` or `F3`, refer to it).
 
@@ -169,7 +169,7 @@ Lay the servo flat on the desk with the horn free to turn. (The printed gauge co
 the `RING3 BRINGUP` banner reprints during the sweep, the Uno reset. That is a power problem: the servo is
 probably on the LOGIC rail, or the grounds aren't joined.
 
-## 5. Fan (DC motor + blade, NPN low-side switch, D5) (D-64, D-64b)
+## 5. Fan (DC motor + blade, NPN low-side switch, D5) (D-64, D-64b, D-65)
 
 Parts: PN2222 transistor (3 legs, one flat face), 220 Ω resistor (base), 10 kΩ resistor (base pull-down), 1N4007
 diode (flyback, the stripe is the cathode), 100 nF ceramic capacitor (`104`, motor noise, D-49), the DC motor with
@@ -185,7 +185,7 @@ never on the LOGIC ground (D-49).
 |---|---|
 | `F1` | PN2222, **flat face toward you**: **E c40, B c41, C c42** (`[UNVERIFIED]` for your part: check the print; E-B-C left to right is the usual PN2222 order) |
 | `F2` | **a37** → Uno **D5** (FLEX) |
-| `F3` | **220 Ω e37 – e41** (base resistor; D-64b, was 330 Ω) |
+| `F3` | **220 Ω e37 – e41** (base resistor; D-65, was 330 Ω) |
 | `F4` | **10 kΩ a41 → near −** (base pull-down) |
 | `F5` | **a40** (emitter) → near **−** (FLAT) |
 | `F6` | motor lead 2 → **a42** (collector); motor lead 1 → **b45**. **Twist the two leads together** and keep them away from the E-stop wires |
@@ -194,13 +194,9 @@ never on the LOGIC ground (D-49).
 | `F9` | **a45** → near **+** (FLAT) |
 
 **Placing the motor:** on its side at the front-right desk edge, blade over the edge, **out of the sensor beam**
-(D-49: a motor in the beam read as a 15 cm object) and away from your hand on the E-stop. Hold it with putty **only
-on the side of the can** (D-64b): no putty on the end caps, the shaft or the blade.
-
-**Sluggish motor (D-64b):** this motor starts weakly until it has run for a while. Before a check, a demo run or
-filming, warm it up: move motor lead 2 from **a42** into a near **−** hole for about **30 s** (the motor then runs at
-full speed straight from the rails, with no switch and no E-stop: hands away from the blade), then put it back in
-**a42**. Even warm, it can take a few seconds to get going at 60 %.
+(D-49: a motor in the beam read as a 15 cm object) and away from your hand on the E-stop. Hold it with putty only on
+the side of the can (D-64b): never on either end or near the shaft. Putty pressing on the rear end (the small metal
+bearing cap where the shaft ends) was the real cause of the slow fan. Flick the blade: it must coast freely.
 
 **Check (pull-down):** press the Uno's reset button (or upload a sketch): the fan must not move at all.
 

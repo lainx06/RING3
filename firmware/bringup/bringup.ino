@@ -293,7 +293,6 @@ static void fan_set(uint8_t duty) {
 
 static void check_fan() {
   Serial.println(F("[4/7] FAN  (NPN switch: D5 -> 220 ohm -> PN2222 base, motor on the MOTOR rail)"));
-  Serial.println(F("  Warm the motor up first: ~30 s with its leads straight on the MOTOR rail (hardware/wiring.md, fan)."));
   pinMode(PIN_ESTOP, INPUT_PULLUP);
   if (digitalRead(PIN_ESTOP) == LOW) {
     Serial.println(F("  E-stop reads PRESSED: release it first."));
