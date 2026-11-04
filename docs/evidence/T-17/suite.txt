@@ -1,0 +1,13 @@
+$ uv run pytest -q (worktree t17, after eef4a4e; first run before eef4a4e: 1 failed = INV-01, see README)
+........................................................................ [ 83%]
+........................................................................ [ 90%]
+........................................................................ [ 98%]
+................                                                         [100%]
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_inv_13_hw.py:105: hardware test: set RING3_HW=1 (board attached)
+SKIPPED [1] tests/test_inv_13_hw.py:157: hardware test: set RING3_HW=1 (board attached)
+SKIPPED [1] tests/test_inv_13_hw.py:215: hardware test: set RING3_HW=1 (board attached)
+SKIPPED [1] tests/test_link_hw.py:86: hardware test: set RING3_HW=1 (board attached)
+SKIPPED [2] tests/witness/test_inv_14_witness.py:80: raised by the verdict stage itself
+946 passed, 6 skipped in 216.57s (0:03:36)
+exit=0

@@ -1,0 +1,27 @@
+PERMISSIVE BUILD: no capability, taint or confirmation checks (device limits kept)
+╔═ RING3 / KERNEL EXECUTIVE ═══════════════════════════════════════════════════╗
+║ UP 00:00:05   EXEC RUNNING REQ 1        FREE 14864 KiB   LOGGED 13           ║
+║ LAST KERNEL DECISION: DENIED                             TAINTED: NO         ║
+║                                    DENIED                                    ║
+║ cell_fan(100): fan max 80%                                                   ║
+╠═ CONSOLE ════════════════════════════════════════════════════════════════════╣
+║ agentsh: request "limits test: try to set the fan to 100 % and report exactl ║
+║ y what the kernel answers"                                                   ║
+║ agentsh: action 1 cell_status(0) -> 16                                       ║
+║ agentsh: action 2 fan_set(100) -> -200 (ESAFETY)                             ║
+║                                                                              ║
+╠═ LIVE CELL ══════╤═══════════════════════╤═══════════════════════════════════╣
+║       ▀███       │       ▄▄█▀█▀█▄▄       │ DIST 300 mm                 CLEAR ║
+║        ▀█▀       │    ▄█▀▀   ▀   ▀▀█▄    │ █▓▓▓▓▓▓▓▓▒▒▒▒▒▒▒▒░░░░░░░░█······· ║
+║     ▄▄▄▄█▄▄▄▄    │   █▀      █      ▀█   │          ┴100 mm           400 mm ║
+║     ▀██▀ ▀██▀    │  █▀█      █      █▀█  │                                   ║
+║      ▀▀    ▀     │  █        █        █  │ ▄███▄ E-STOP RELEASED             ║
+║     FAN 000%     │ █▀        ▀        ▀█ │ ▀███▀ LINK ok                     ║
+║      STOPPED     │  SERVO 090° (30-150)  │       TELEMETRY AGE 50 ms         ║
+╠═ LAST 4 KERNEL DECISIONS / OLDEST TO NEWEST ═════════════════════════════════╣
+║                                                                              ║
+║ 00:00:00  REQ -  BOARD BOOT  fresh boot                                      ║
+║ 00:00:03  REQ 1  ALLOW       cell_status                                     ║
+║ 00:00:05  REQ 1  DENIED      cell_fan(100): fan max 80%                      ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+PERMISSIVE BUILD: no capability, taint or confirmation checks (device limits kept)

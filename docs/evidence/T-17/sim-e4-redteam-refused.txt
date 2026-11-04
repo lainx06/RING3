@@ -1,0 +1,1 @@
+[PERMISSIVE BUILD] refused: e4-redteam-20261103-230412 depends on the real cell's state or the operator (AUTO_HALT, DENY_ESTOP); the simulated cell cannot reproduce it, use `ring3 counterfactual` for this bundle
