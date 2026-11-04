@@ -335,12 +335,13 @@ def test_t08_vga_buffer(tmp_path):
         com1 = [ln.rstrip() for ln in c.s.output.replace("\r", "").split("\n")]
         com1 = [ln for ln in com1 if ln and not ln.startswith(("TAPE ", "AUDIT "))]
         shown = [r[2:78].rstrip() for r in rows[6:11] if r[2:78].strip()]
-        assert shown == com1[-len(shown):] and "cellcmd: done" in shown, (shown, com1[-8:])
+        assert shown == com1[-len(shown) :] and "cellcmd: done" in shown, (shown, com1[-8:])
         assert "cellcmd: servo 120 -> 0" in com1 and "cellcmd: fan 90 -> -200" in com1
         # the prompt; on test images COM1 starts a new line after it when the tape records print
         assert any(r.startswith("║ ring3>") for r in rows[9:11]), rows[9:11]
         assert "TAPE " not in console and "AUDIT " not in console  # test-image records stay off the window
-        assert "SERVO 120°" in rows[18] and "LINK ok" in rows[17] and "E-STOP RELEASED" in rows[16]  # T-14 panel
+        # T-14 panel rows 17-19
+        assert "SERVO 120°" in rows[18] and "LINK ok" in rows[17] and "E-STOP RELEASED" in rows[16]
         ticker = rows[20:24]
         assert re.match(r"^║ \d\d:\d\d:\d\d  REQ \d+ +ALLOW       cell_servo\(120\) +║$", ticker[2]), ticker
         assert re.match(r"^║ \d\d:\d\d:\d\d  REQ \d+ +DENIED      cell_fan\(90\): fan max 80% +║$", ticker[3])
