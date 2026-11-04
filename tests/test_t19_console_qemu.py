@@ -319,7 +319,8 @@ def test_a_spoken_request_end_to_end_with_the_kernels_decisions(tmp_path):
 
 def test_the_printed_start_order_gives_a_replayable_run(tmp_path):
     """Bridge first (retrying), then QEMU, then the console, as the evidence README tells the operator. QEMU
-    opens COM2 only once the console has attached, so the bridge must still see the tape from the boot on: a late
+    opens COM2 only once the console has attached, so the bridge must still see the tape from the boot on:
+    a late
     bridge is what made T-04's runs 1-2 unreplayable (D-70)."""
     com2 = free_port()
     b = BridgeThread(

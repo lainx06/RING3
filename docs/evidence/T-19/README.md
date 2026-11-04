@@ -106,12 +106,20 @@ The first full run had 1 failure of 1,132: `test_key_is_read_only_in_models_and_
 `console.py` for reading `RING3_VOICE_DIR` through `os.environ`. Only `models/` may touch the environment. The
 console now takes `--voice-dir` as an argument, like `--witness-dir`; the shell expands the variable.
 
-### One test outside this card failed intermittently (not changed, not caused here)
-`tests/test_t14_panel.py::test_t14_render_time` asserts every render pass is under 1 ms. Over this card it passed 11
-of 13 runs. The 2 failures were each one outlier pass: `max_us` 1091 (`avg_us` 36) in a full suite and 1348 (`avg_us`
-47) in 10 repeats of that test alone, with other sessions' QEMUs on this machine. `kernel/` is identical to `a639f42`
-and the test uses no voice code. It fits the TCG host stalls T-18 measured; that cause is inferred here, not proven.
-The assertion is unchanged. The suite transcript below is a run where it passed; for the lead.
+### One test outside this card fails intermittently (measured; not caused here, not changed)
+`tests/test_t14_panel.py::test_t14_render_time` asserts every render pass is under 1 ms. Each failure is one outlier
+pass, `avg_us` staying at 36-47 (`max_us` seen: 1091-2570).
+
+| Where | Passed | Failed |
+|---|---|---|
+| Clean checkout of `a639f42` (no T-19 code), 20 runs of this test alone | 17 | 3 |
+| Branch `voice`, 20 runs of this test alone, right after | 18 | 2 |
+| Branch `voice`, everything else this card ran (10 repeats + full suites) | see `suite.txt` | |
+
+So it predates this card and fails at about the same rate without it. `kernel/` is identical to `a639f42` and the
+test uses no voice code. It fits the TCG host stalls T-18 measured, with other sessions' QEMUs on this machine; that
+cause is inferred, the rate is measured. The assertion is unchanged. A full suite can therefore show this one failure,
+and `suite.txt` says which it was. For the lead: it makes "full suite passes" a matter of luck on this host.
 
 ## A3. The user's live steps (none run by the builder)
 
@@ -131,7 +139,7 @@ picked, `--list` shows the inputs and `--device NAME` selects one.
 every `ring3 run`. The order matters: the bridge first, so the tape starts at boot; `make` needs nothing else.
 ```
 # PowerShell, leave running
-mkdir C:\ring3-voice; $env:RING3_VOICE_DIR = "C:\ring3-voice"; py <repo>\tools\voice_capture_win.py
+mkdir <folder>; $env:RING3_VOICE_DIR = "<folder>"; py <repo>\tools\voice_capture_win.py
 
 # WSL terminal 1 (worktree root): the bridge, waits up to 120 s for QEMU
 uv run ring3 run --budget-usd 0.06 --requests 1 --pack agent-v2-redteam --style console --connect-timeout 120
@@ -140,7 +148,7 @@ uv run ring3 run --budget-usd 0.06 --requests 1 --pack agent-v2-redteam --style 
 make run-cell-console
 
 # WSL terminal 3: the console; the kernel boots when this attaches
-uv run ring3 console --budget-usd 0.01 --voice-dir /mnt/c/ring3-voice
+uv run ring3 console --budget-usd 0.01 --voice-dir <the same folder under /mnt/c>
 ```
 At `ring3> `: **F2**, say "RING3, set the fan to 100 %", **F2**. Check `heard: "..."`, press **Enter** (Esc discards).
 Expected, on the same pack and limits as the recorded E4 O1: the kernel refuses (`DENY_LIMIT fan_range`,
