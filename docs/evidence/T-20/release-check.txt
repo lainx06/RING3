@@ -1,0 +1,148 @@
+# T-20 release check (lead D-110) at 1eceea2c9fd7ef934430e62af5435737dee21f0a (T-19: gfxfont in the guard's console words (T-18 added it; t)
+# fresh detached git worktree of that commit (~/dev/RING3-rc); no key in the environment; the default suite and the evals use free loopback ports and no /dev/ttyACM0 (hardware tests skipped), so filming was not paused; started 2026-11-04T22:07Z
+# host: load average: 0.04, 0.26, 0.50; other qemu-system processes at start: 0
+
+$ git status --porcelain
+(empty)
+[PASS] worktree clean at the start
+
+$ uv sync --frozen
+ + pytest==9.2.0
+ + ring3==0.1.0 (from file://<worktree>)
+ + ruff==0.17.3
+[PASS] uv sync
+
+$ make clean && make
+clang --target=i686-unknown-none-elf -ffreestanding -nostdlib -fno-pic -g -Wall -Wextra -Werror -Ikernel/include -c user/progs.S -o build/obj/user/progs.o
+ld.lld -m elf_i386 -nostdlib --gc-sections -T kernel/linker.ld -o build/kernel.elf build/obj/kernel/arch/i386/gdt.o build/obj/kernel/arch/i386/idt.o build/obj/kernel/arch/i386/paging.o build/obj/kernel/arch/i386/pic.o build/obj/kernel/arch/i386/pit.o build/obj/kernel/core/agentlink.o build/obj/kernel/core/audit.o build/obj/kernel/core/confirm.o build/obj/kernel/core/console.o build/obj/kernel/core/exec.o build/obj/kernel/core/interrupt.o build/obj/kernel/core/kmalloc.o build/obj/kernel/core/ktest.o build/obj/kernel/core/main.o build/obj/kernel/core/objstore.o build/obj/kernel/core/panic.o build/obj/kernel/core/pmm.o build/obj/kernel/core/printk.o build/obj/kernel/core/syscall.o build/obj/kernel/core/uaccess.o build/obj/kernel/lib/cobs.o build/obj/kernel/lib/crc16.o build/obj/kernel/lib/string.o build/obj/kernel/drivers/cellframe.o build/obj/kernel/drivers/device.o build/obj/kernel/drivers/gfxdev.o build/obj/kernel/drivers/linkprobe.o build/obj/kernel/drivers/serial.o build/obj/kernel/drivers/vga.o build/obj/kernel/ui/gfx.o build/obj/kernel/ui/screen.o build/obj/kernel/ui/words.o build/obj/kernel/policy/policy.o build/obj/kernel/arch/i386/boot.o build/obj/kernel/arch/i386/isr.o build/obj/kernel/arch/i386/usermode.o build/obj/user/progs.o
+warnings: 0
+[PASS] clean build, 0 warnings
+
+$ make host-policy
+[PASS] host policy build + checks
+
+$ policy hash (ring3bridge.run.policy_sha256)
+4101a8cc305078722afb56a4eb09e2b4c3705e2d2c697b418c7ef02885cdef0b
+[PASS] policy hash unchanged from 747fa2d (4101a8cc30507872...)
+
+$ git diff --stat 747fa2d..HEAD -- kernel/policy abi firmware
+(empty)
+[PASS] kernel/policy, abi, firmware unchanged since 747fa2d
+
+$ git diff --stat 7b3c43c..HEAD -- kernel user firmware (T-15 checked commit .. this commit)
+ 17 files changed, 1489 insertions(+), 30 deletions(-)
+[NOTE] kernel/user/firmware differ from 7b3c43c (summary above; informational: T-18 graphics screen and T-19 voice, merged after their own release checks and Gate C)
+
+$ replay every bundle: env -u MODEL_API_KEY unshare -rn (no network namespace) ring3 verify + replay
+replay/e4-redteam-20261103-230412: CHAIN OK: 5262 records, 35 blobs
+[PASS] verify replay/e4-redteam-20261103-230412
+replay/e4-redteam-20261103-230412: REPLAY MATCH: 78 decisions from 2442 tape events
+replay/e4-redteam-20261103-230412: tape events by kind: action=6, action_boundary=12, confirm=1, console=1, exec_end=6, exec_start=6, syscall=60, telemetry=2350
+[PASS] REPLAY MATCH replay/e4-redteam-20261103-230412
+replay/t03b-run3-planted-note: CHAIN OK: 173 records, 12 blobs
+[PASS] verify replay/t03b-run3-planted-note
+replay/t03b-run3-planted-note: REPLAY MATCH: 22 decisions from 29 tape events
+replay/t03b-run3-planted-note: tape events by kind: action=3, action_boundary=4, exec_end=1, exec_start=1, syscall=20
+[PASS] REPLAY MATCH replay/t03b-run3-planted-note
+replay/t04-run3-fan-limit: CHAIN OK: 2337 records, 15 blobs
+[PASS] verify replay/t04-run3-fan-limit
+replay/t04-run3-fan-limit: REPLAY MATCH: 33 decisions from 1082 tape events
+replay/t04-run3-fan-limit: tape events by kind: action=3, action_boundary=5, exec_end=2, exec_start=2, syscall=25, telemetry=1045
+[PASS] REPLAY MATCH replay/t04-run3-fan-limit
+replay/t04-run4-taint-prompt: CHAIN OK: 938 records, 9 blobs
+[PASS] verify replay/t04-run4-taint-prompt
+replay/t04-run4-taint-prompt: REPLAY MATCH: 21 decisions from 424 tape events
+replay/t04-run4-taint-prompt: tape events by kind: action=2, action_boundary=4, confirm=1, exec_end=1, exec_start=1, syscall=16, telemetry=399
+[PASS] REPLAY MATCH replay/t04-run4-taint-prompt
+
+$ secret scan (docs/evidence/T-04/live-run/scan_run_secrets.py, unchanged) on replay/, docs/evals (raw, e4 transcripts, results.md), LICENSE
+scanned 113 file(s) under ['replay', 'docs/evals', 'LICENSE']: 0 hit(s)
+[PASS] secret scan 0 hits
+
+$ tools/check-paths.sh
+check-paths: OK (821 tracked files scanned)
+[PASS] no home paths / user name in tracked files
+
+$ uv run ruff check . && uv run ruff format --check .
+All checks passed!
+246 files already formatted
+[PASS] ruff
+
+$ uv run pytest (full default suite, headless QEMU, no network; other qemu-system processes now: 0)
+SKIPPED [1] tests/test_inv_13_hw.py:105: hardware test: set RING3_HW=1 (board attached)
+SKIPPED [1] tests/test_inv_13_hw.py:157: hardware test: set RING3_HW=1 (board attached)
+SKIPPED [1] tests/test_inv_13_hw.py:215: hardware test: set RING3_HW=1 (board attached)
+SKIPPED [1] tests/test_link_hw.py:86: hardware test: set RING3_HW=1 (board attached)
+SKIPPED [2] tests/witness/test_inv_14_witness.py:80: raised by the verdict stage itself
+1270 passed, 6 skipped in 319.22s (0:05:19)
+(320 s)
+[PASS] full default suite (run 1)
+
+$ boot once with gfx=1 and the simulated cell on COM3 (QEMU standard VGA), then gfx=1 with -vga none (fallback to text); test image, free loopback ports
+gfx=1, sim cell: gfx: 1024x768x32 linear framebuffer phys=0xfd000000 (PCI 1234:1111 BAR0, DISPI id 0xb0c5), back buffer phys=0x01000000, font from VGA plane 2, both windows kernel-only
+gfx=1, sim cell: AUDIT seq=1 tick=6 sys=telemetry target=0 decision=BOARD_BOOT reason=board_boot result=0 tainted=0
+gfx=1, sim cell: screen: renders=0 avg_us=0 max_us=0 over_1ms=0 max_cells_changed=0 tsc_mhz=0 gfx=1 over_2ms=0 max_gross_us=0
+gfx=1, sim cell: exit code 33 (EXIT_PASS=33), PANIC=False
+gfx=1 -vga none: gfx: no QEMU standard VGA (PCI 1234:1111) on bus 0: text mode
+gfx=1 -vga none: screen: renders=0 avg_us=0 max_us=0 over_1ms=0 max_cells_changed=0 tsc_mhz=0 gfx=0 over_2ms=0 max_gross_us=0
+gfx=1 -vga none: exit code 33 (EXIT_PASS=33), PANIC=False
+[PASS] gfx=1 boots the graphics screen with the sim cell (gfx=1 in the screen stats, exit via the test image, no PANIC); with -vga none the kernel says so and stays in text mode (gfx=0)
+
+$ git status --porcelain
+(empty)
+[PASS] worktree clean after the suite
+
+$ make evals EVAL_ARGS="--suites e1,e2,e3" (E1-E3 on the exported commit; other qemu-system processes now: 0)
+eval build: HEAD 1eceea2 exported to build/eval/src
+  make (production): ok
+  make POLICY=permissive: ok
+  make TEST=1: ok
+  make TEST=1 POLICY=permissive: ok
+  make host-policy: ok
+wrote docs/evals/raw/e1.json
+wrote docs/evals/raw/e2.json
+wrote docs/evals/raw/e3.json
+rendered docs/evals/results.md (193 lines)
+(141 s)
+[PASS] make evals E1-E3, no must-pass failure
+
+$ E3 frames counted (from the raw file written by this run)
+  RING3 seed 1: sent 10000, kernel frames_dropped 10000, FRAME_DROP audits 10000, status frames_dropped 10000, tx_dropped 0, stalled 0, fuzz_ok=True panic=False
+  RING3 seed 2: sent 10000, kernel frames_dropped 10000, FRAME_DROP audits 10000, status frames_dropped 10000, tx_dropped 0, stalled 0, fuzz_ok=True panic=False
+  RING3 seed 3: sent 10000, kernel frames_dropped 10000, FRAME_DROP audits 10000, status frames_dropped 10000, tx_dropped 0, stalled 0, fuzz_ok=True panic=False
+  permissive seed 1: sent 10000, kernel frames_dropped 10000, FRAME_DROP audits 10000, status frames_dropped 10000, tx_dropped 0, stalled 0, fuzz_ok=True panic=False
+  permissive seed 2: sent 10000, kernel frames_dropped 10000, FRAME_DROP audits 10000, status frames_dropped 10000, tx_dropped 0, stalled 0, fuzz_ok=True panic=False
+  permissive seed 3: sent 10000, kernel frames_dropped 10000, FRAME_DROP audits 10000, status frames_dropped 10000, tx_dropped 0, stalled 0, fuzz_ok=True panic=False
+
+$ git status --porcelain (make evals rewrites its raw files and results.md for the measured commit; not committed: the published tables stay those of the T-12 run, D-92)
+ M docs/evals/raw/e1.json
+ M docs/evals/raw/e2.json
+ M docs/evals/raw/e3.json
+ M docs/evals/results.md
+after restoring docs/evals: (empty)
+[PASS] worktree clean at the end
+
+RELEASE CHECK: ALL PASS at 1eceea2c9fd7ef934430e62af5435737dee21f0a
+worktree ~/dev/RING3-rc removed
+
+# Addendum (written after the run, in the main tree)
+# Checked commit: 1eceea2c9fd7ef934430e62af5435737dee21f0a (main at the time of D-110). Every required step above is [PASS]:
+# clean build (0 warnings), full default suite 1270 passed / 0 failed / 6 skipped in one run (no re-run needed; the
+# 6 skips are the 4 hardware tests without RING3_HW=1 and 2 witness verdict-stage cases), make evals E1-E3 with no
+# must-pass failure (E3: 10000 of 10000 frames dropped and audited on all six seed/build rows), 4 of 4 replay bundles
+# CHAIN OK + REPLAY MATCH with no key and no network namespace, policy hash 4101a8cc30507872... unchanged, secret
+# scan 0 hits on replay/, docs/evals and LICENSE, check-paths OK, ruff OK, git status clean before and after.
+# gfx=1 with the simulated cell: the kernel reports the 1024x768x32 framebuffer (PCI 1234:1111, font from VGA plane 2,
+# both windows kernel-only), boots to the prompt, screen stats show gfx=1, exits via the test image with no PANIC.
+# gfx=1 with -vga none: the kernel prints "no QEMU standard VGA (PCI 1234:1111) on bus 0: text mode", screen stats
+# show gfx=0, same exit, no PANIC.
+# [NOTE] kernel/user/firmware differ from the T-15 checked commit 7b3c43c: the T-18 graphics screen and T-19 voice
+# changes merged after their own release checks and Gate C; kernel/policy, abi and firmware are unchanged since 747fa2d.
+# The eval raw files and results.md written by this run were restored, not committed (D-92: the published tables stay
+# those of the T-12 run).
+#
+# Secret scan of this file itself (the same scanner on docs/evidence/T-20): 2 hits, both
+# classified, 0 credentials:
+#   1. the key variable's name: line 36, the `env -u <name> unshare -rn ...` command that unsets it before each replay
+#      (the name only; no value is present anywhere in this file, and the key was not in the environment).
+#   2. key-shaped token (44 chars): line 58, the scanner's own path (docs/evidence/T-04/live-run/, the script's name).
