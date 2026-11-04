@@ -294,6 +294,15 @@ acknowledged four moves that did not happen and the witness said FAIL each time.
 Builder: $0 (no call). User's zone checks 2026-11-04: **$0.086560 settled over 4 runs** (ledger: $0.017204,
 $0.007513, $0.023164, $0.038679); reservations never exceeded the run budgets.
 
+## After the rebase onto main (`a639f42`, T-17 merged)
+Full default suite once more: **1020 passed, 6 skipped in 236.44s (0:03:56)**, 0 PANIC (`suite-after-rebase.txt`); ruff clean; `tools/check-paths.sh`
+OK; policy hash `4101a8cc30507872...` unchanged; `git diff main..t16 -- kernel user firmware abi` empty.
+Secret scanner on `docs/evidence/T-16`, `docs/context-packs`, `config`: 5 hits, all classified: the variable
+name `MODEL_API_KEY` in prose (README, `step5.txt` quoting the scanner's own line, `config/models.toml`'s
+pre-existing "never put a key here"), the word "Authorization" in a test description, and the pytest id
+`test_request_shape_matches_the_documented_fields` as a key-shaped token. No key value exists in the builder's
+environment. The pytest tmp path and the worktree path are scrubbed from every transcript.
+
 ## Files (this card's paths)
 `bridge/ring3bridge/models/vision.py` (new), `bridge/ring3bridge/witness/vision.py` (new),
 `bridge/ring3bridge/zonecheck.py` (new), `bridge/ring3bridge/{calibration,cli,config,eventlog,ledger,run}.py`,
