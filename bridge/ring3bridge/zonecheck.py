@@ -1,8 +1,9 @@
 """``ring3 calibrate --witness-backend vision`` (T-16): the zone check's targets and its file.
 
-Six images, two per zone, away from the edges, over two console requests (the first ``50, 90, 130``, the
-second ``90, 50, 130``, each at most 7 moves from where the previous one ended), through the normal kernel
-path like calibration (``calibration.CalibrationScript`` with ``checks=True`` and ``rounds``). The result
+Six images, two per zone, over two console requests (the commands whose servo-mapped angles are the zone
+centres, D-103: LOW, MID, HIGH then HIGH, MID, LOW, each at most 7 moves from where the previous one ended),
+through the normal kernel path like calibration (``calibration.CalibrationScript`` with ``checks=True`` and
+``rounds``). The result
 (``witness.vision.zone_check``) is written next to the run's ``events.jsonl`` as ``zonecheck.json``
 (integers only) and logged as a ``zonecheck`` record with the file's SHA-256. ``ring3 run
 --witness-backend vision --calibration <run>`` re-verifies the chain, the file hash, the pack and gauge
@@ -17,9 +18,9 @@ from pathlib import Path
 
 from ring3bridge import eventlog
 from ring3bridge.witness import PASS
-from ring3bridge.witness.vision import BACKEND, ZoneCheck
+from ring3bridge.witness.servomap import IDENTITY, ServoMap
+from ring3bridge.witness.vision import BACKEND, ZoneCheck, zone_check_rounds
 
-ZONE_TARGETS: tuple[tuple[int, ...], ...] = ((50, 90, 130), (90, 50, 130))
 FILE = "zonecheck.json"
 
 
@@ -27,7 +28,12 @@ class ZoneCheckError(Exception):
     pass
 
 
-def flat_targets(rounds: tuple[tuple[int, ...], ...] = ZONE_TARGETS) -> tuple[int, ...]:
+def rounds_for(servo_map: ServoMap = IDENTITY) -> tuple[tuple[int, ...], ...]:
+    """The two console requests' targets for this servo map (D-103); identity: 50/90/130 then 130/90/50."""
+    return zone_check_rounds(servo_map)
+
+
+def flat_targets(rounds: tuple[tuple[int, ...], ...]) -> tuple[int, ...]:
     return tuple(d for r in rounds for d in r)
 
 
@@ -43,6 +49,11 @@ def zonecheck_doc(zc: ZoneCheck) -> dict:
         "reason": zc.reason,
         "pack_sha256": zc.pack_sha256,
         "geometry_sha256": zc.geometry_sha256,
+        "servo_map": {
+            "gain_ppm": zc.servo_map[0],
+            "offset_mdeg": zc.servo_map[1],
+            "source_run": zc.servo_map[2],
+        },  # fmt: skip
     }
 
 
@@ -62,8 +73,11 @@ def _row_ok(row: object) -> bool:
     )
 
 
-def load_zonecheck(run_dir: Path, pack_sha: str, geom_sha: str) -> tuple[ZoneCheck, dict, str]:
-    """-> (the zone check recomputed from the stored rows, the stored document, its SHA-256)."""
+def load_zonecheck(
+    run_dir: Path, pack_sha: str, geom_sha: str, servo_map: ServoMap = IDENTITY
+) -> tuple[ZoneCheck, dict, str]:
+    """-> (the zone check recomputed from the stored rows, the stored document, its SHA-256). Refused when
+    made with another pack, gauge or servo map (D-103), or when the stored verdict differs from its rows."""
     run_dir = Path(run_dir)
     v = eventlog.verify(run_dir)
     if not v.ok:
@@ -84,6 +98,12 @@ def load_zonecheck(run_dir: Path, pack_sha: str, geom_sha: str) -> tuple[ZoneChe
         raise ZoneCheckError("zone check made with another witness context pack")
     if doc.get("geometry_sha256") != geom_sha:
         raise ZoneCheckError("zone check made on another gauge geometry")
+    sm = doc.get("servo_map")
+    if type(sm) is not dict or (sm.get("gain_ppm"), sm.get("offset_mdeg")) != (
+        servo_map.gain_ppm,
+        servo_map.offset_mdeg,
+    ):
+        raise ZoneCheckError("zone check made with another servo map")
     targets, rows = doc.get("targets"), doc.get("results")
     if type(targets) is not list or not all(type(t) is int for t in targets) or not targets:
         raise ZoneCheckError("bad targets")
@@ -99,5 +119,6 @@ def load_zonecheck(run_dir: Path, pack_sha: str, geom_sha: str) -> tuple[ZoneChe
     if not ok and not reason:
         reason = f"{passed} of {len(targets)} PASS"
     zc = ZoneCheck(ok, reason, passed, len(targets), str(doc.get("run_id", "")), pack_sha, geom_sha,
-                   tuple(targets), tuple(tuple(r) for r in rows))  # fmt: skip
+                   tuple(targets), tuple(tuple(r) for r in rows),
+                   (servo_map.gain_ppm, servo_map.offset_mdeg, str(sm.get("source_run", ""))))  # fmt: skip
     return zc, doc, sha

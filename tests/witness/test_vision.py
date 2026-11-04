@@ -461,13 +461,14 @@ def _result(deg: int, verdict: str, reason: str, zone: str = "", visible: int | 
                          backend="vision", pack_sha256=PACK.sha256, arm_visible=visible)  # fmt: skip
 
 
-TARGETS = (50, 90, 130, 90, 50, 130)
+TARGETS = (50, 90, 130, 130, 90, 50)  # the identity map's rounds (D-103)
 ALL_PASS = [_result(d, PASS, ZONE_MATCH, {50: "LOW", 90: "MID", 130: "HIGH"}[d]) for d in TARGETS]
 
 
 def test_zone_check_targets_are_two_per_zone_away_from_the_edges():
-    flat = tuple(d for r in zonecheck.ZONE_TARGETS for d in r)
-    assert flat == TARGETS and len(zonecheck.ZONE_TARGETS) == 2
+    rounds = zonecheck.rounds_for()  # identity map: the arm follows the command
+    flat = zonecheck.flat_targets(rounds)
+    assert flat == TARGETS and len(rounds) == 2
     for d in flat:
         assert min(abs(d - e) for e in (30, 70, 110, 150)) >= 20
 
@@ -476,7 +477,7 @@ def test_zone_check_enables_only_on_six_of_six():
     zc = zone_check(ALL_PASS, TARGETS, "zc-1", PACK.sha256, GEOM_SHA)
     assert zc.ok and zc.passed == 6 and zc.n == 6 and zc.reason == ""
     assert "enabled" in zc.message() and "6 of 6" in zc.message()
-    for i, bad in [(5, _result(130, CANT_VERIFY, UNSURE)), (0, _result(50, FAIL, WRONG_ZONE, "MID")),
+    for i, bad in [(5, _result(50, CANT_VERIFY, UNSURE)), (0, _result(50, FAIL, WRONG_ZONE, "MID")),
                    (2, _result(130, CANT_VERIFY, NOT_VISIBLE, visible=0))]:  # fmt: skip
         rs = list(ALL_PASS)
         rs[i] = bad
@@ -565,7 +566,7 @@ def test_script_rounds_give_each_request_its_own_targets():
                 req.results.append(("witness", 0))
         raise AssertionError("the script did not end")
 
-    s = CalibrationScript(W(), checks=True, rounds=zonecheck.ZONE_TARGETS, move_gap_s=0)  # type: ignore[arg-type]
+    s = CalibrationScript(W(), checks=True, rounds=zonecheck.rounds_for(), move_gap_s=0)  # type: ignore[arg-type]
     s.runner = _Runner(90)
     s.runner.request.index = 1
     moves, summary = drive(s, 90)
@@ -575,13 +576,13 @@ def test_script_rounds_give_each_request_its_own_targets():
     s.runner.request.index = 2
     s.runner.tele_servo = 130
     moves, summary = drive(s, 130)
-    assert moves == [100, 90, 60, 50, 80, 110, 130] and len(moves) <= abi.ACTIONS_PER_REQUEST - 1
-    assert [d for d, m in s.moves if m] == [90, 50, 130]
+    assert moves == [130, 100, 90, 60, 50] and len(moves) <= abi.ACTIONS_PER_REQUEST - 1
+    assert [d for d, m in s.moves if m] == [130, 90, 50]
     assert [ch.result.commanded_deg for _, _, ch in s.results] == list(TARGETS)
     assert s.max_actions() == abi.ACTIONS_PER_REQUEST + 3
     s.runner.request = _Req()  # a third request repeats the last round
     s.runner.request.index = 3
-    assert s.targets_for(3) == (90, 50, 130) and s.targets_for(1) == (50, 90, 130)
+    assert s.targets_for(3) == (130, 90, 50) and s.targets_for(1) == (50, 90, 130)
 
 
 # ---- the observation names the backend ----
@@ -607,7 +608,11 @@ def test_calibrate_vision_dry_run_prints_six_images_and_the_reservation(capsys, 
     assert rc == 0, out
     assert "zone check" in out and "6 images" in out and "muse-spark-1.3" in out
     assert PACK.name in out and PACK.sha256[:16] in out
-    assert "50, 90, 130" in out and "90, 50, 130" in out
+    from ring3bridge.witness.servomap import load_servo_map
+
+    r1, r2 = zonecheck.rounds_for(load_servo_map())
+    assert ", ".join(map(str, r1)) in out and ", ".join(map(str, r2)) in out
+    assert "targets (D-103" in out and "servo map: gauge = 0.7475 x command + 11.46 deg" in out
     assert "reserved before each call" in out and "$0.1" in out
     rc = cli.main(["calibrate", "--witness-backend", "vision", "--budget-usd", "0.10"])
     assert rc == 2 and "--witness-dir" in capsys.readouterr().err

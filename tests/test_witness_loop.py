@@ -379,7 +379,8 @@ def test_vision_zone_check_through_the_kernel_enables_on_six_of_six(tmp_path):
     with start(append=AGENT_QUOTAS, com2=True, timeout=200) as c:
         b = BridgeThread(c.s.com2_port, runs_dir(tmp_path, "zc"), [], requests=2)
         w, cam, t, pack = _vision_setup(b, c.sim)
-        script = CalibrationScript(w, checks=True, rounds=zonecheck.ZONE_TARGETS)  # type: ignore[arg-type]
+        rounds = zonecheck.rounds_for()  # the simulated arm follows the command: the identity map
+        script = CalibrationScript(w, checks=True, rounds=rounds)  # type: ignore[arg-type]
         b.client = script
         b.runner.client = script
         b.runner.witness = script.measure
@@ -396,10 +397,13 @@ def test_vision_zone_check_through_the_kernel_enables_on_six_of_six(tmp_path):
         assert "OUTCOME DONE: checks done: 3 witness checks after kernel-allowed moves" in tr, tr
         servo = [x for x in audit_lines(tr) if x["sys"] == "cell_servo"]
         assert servo and all(x["decision"] == "ALLOW" for x in servo)
-    targets = zonecheck.flat_targets()
+    targets = zonecheck.flat_targets(rounds)
     results = [ch.result for _, _, ch in script.results]
     assert [r.commanded_deg for r in results] == list(targets) and len(t.posts) == 6
-    assert _b2k(b).count("ACTION") == 6 + 7  # the moves only: no frame for any of the 6 witness ops
+    assert [r.mapped_mdeg for r in results] == [d * 1000 for d in targets]  # identity map, both logged
+    assert _b2k(b).count("ACTION") == 6 + 5  # the moves only: no frame for any of the 6 witness ops
+    for r in _witness_records(b):
+        assert r["mapped_mdeg"] == r["commanded_deg"] * 1000
     zc = vw.zone_check(results, targets, b.run_dir.name, pack.sha256, hashlib.sha256(
         vw.GEOMETRY_JSON.read_bytes()).hexdigest())  # fmt: skip
     assert zc.ok and zc.passed == 6, zc.message()
@@ -422,4 +426,4 @@ def test_vision_zone_check_through_the_kernel_enables_on_six_of_six(tmp_path):
     held = list(results)
     held[3] = replace(results[3], verdict="CAN'T VERIFY", reason="UNSURE", measured_zone="")
     bad = vw.zone_check(held, targets, "zc-held", pack.sha256, zc.geometry_sha256)
-    assert not bad.ok and bad.passed == 5 and "image 4 (90 deg): CAN'T VERIFY UNSURE" in bad.reason
+    assert not bad.ok and bad.passed == 5 and "image 4 (130 deg): CAN'T VERIFY UNSURE" in bad.reason

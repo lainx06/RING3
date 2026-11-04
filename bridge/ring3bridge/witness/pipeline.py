@@ -44,6 +44,7 @@ class WitnessResult:
     pack_sha256: str = ""  # vision: SHA-256 of the witness context pack sent as instructions
     arm_visible: int | None = None  # vision: the reply's arm_visible (1/0), None when no reply parsed
     vision_reply: bytes = b""  # vision: the model's reply body as received (scrubbed), for the run's blobs
+    mapped_mdeg: int | None = None  # vision: the commanded angle through the servo map (D-103), millidegrees
 
 
 @dataclass

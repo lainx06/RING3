@@ -58,6 +58,18 @@ def commanded_zone(deg: int) -> str:
     return _zone(deg * 1000)
 
 
+def zone_of_mdeg(mdeg: int, what: str = "commanded") -> str:
+    """Like ``commanded_zone`` for an integer millidegree angle (T-16: the servo-mapped command)."""
+    if type(mdeg) is not int or not 30_000 <= mdeg <= 150_000:
+        raise CantVerify(COMMAND_RANGE, f"{what} {mdeg / 1000:.1f} deg is outside 30-150")
+    e = _in_band(mdeg)
+    if e is not None:
+        raise CantVerify(
+            COMMAND_BOUNDARY, f"{what} {mdeg / 1000:.1f} deg is within 5 deg of the {e // 1000} deg edge"
+        )
+    return _zone(mdeg)
+
+
 @dataclass(frozen=True)
 class Judgement:
     verdict: str  # PASS | FAIL (CAN'T VERIFY is raised)

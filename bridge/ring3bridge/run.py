@@ -490,7 +490,8 @@ class Runner:
                         reason=r.reason, detail=r.detail, dial_mdeg=r.dial_mdeg,
                         calibrated_mdeg=r.calibrated_mdeg, crop_sha256=r.image_sha256,
                         spend_uusd=r.spend_uusd, tele_servo=self.tele_servo, pack_sha256=r.pack_sha256,
-                        arm_visible=r.arm_visible, ms=int((time.monotonic() - t0) * 1000),
+                        arm_visible=r.arm_visible, mapped_mdeg=r.mapped_mdeg,
+                        ms=int((time.monotonic() - t0) * 1000),
                         **blobs)  # fmt: skip
         out = witness_output(r)
         req.results.append(("witness", 0))

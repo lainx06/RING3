@@ -113,13 +113,15 @@ def _sam_setup():
 
 
 def _vision_setup():
-    """(vision config, gauge geometry, geometry.json SHA-256, witness context pack); no key, no network."""
+    """(vision config, gauge geometry, geometry.json SHA-256, witness context pack, servo map); no key, no
+    network."""
     from ring3bridge.config import load_vision_config
     from ring3bridge.witness.dial import GEOMETRY_JSON, load_geometry
+    from ring3bridge.witness.servomap import load_servo_map
     from ring3bridge.witness.vision import PACK_NAME
 
     return (load_vision_config(), load_geometry(), hashlib.sha256(GEOMETRY_JSON.read_bytes()).hexdigest(),
-            context_pack.load(PACK_NAME))  # fmt: skip
+            context_pack.load(PACK_NAME), load_servo_map())  # fmt: skip
 
 
 def _vision_reservation(cfg, pack) -> tuple[int, int]:  # noqa: ANN001
@@ -181,7 +183,7 @@ def cmd_run(a: argparse.Namespace) -> int:
             f"  project cap {fmt_usd(load_project_cap())}",
         ]
         if a.witness_dir and a.witness_backend == "vision":
-            vcfg, _, _, vpack = _vision_setup()
+            vcfg, _, _, vpack, vmap = _vision_setup()
             if vcfg.price is None:
                 lines.append("  witness: vision price unset in config/models.toml: every call refused")
             else:
@@ -192,6 +194,7 @@ def cmd_run(a: argparse.Namespace) -> int:
                     f"tokens = {fmt_usd(per)} reserved per call; pack {vpack.name} sha256 "
                     f"{vpack.sha256[:16]}...; zone check {a.calibration or 'none'}"
                 )
+                lines.append(f"  {vmap.describe()}")
         elif a.witness_dir:
             sam_cfg, _, _ = _sam_setup()
             per = sam_cfg.price_uusd_per_image
@@ -282,19 +285,22 @@ def _run_vision_witness(a, log, transport, ledger, run_id, budget, witness_dir):
     from ring3bridge.witness.service import FolderCamera
     from ring3bridge.zonecheck import ZoneCheckError, load_zonecheck
 
-    cfg, geom, geom_sha, pack = _vision_setup()
+    cfg, geom, geom_sha, pack, servo_map = _vision_setup()
     zc, source, file_sha = vw.NONE, "", ""
     if a.calibration:
         try:
-            zc, doc, file_sha = load_zonecheck(_run_dir(a.calibration), pack.sha256, geom_sha)
+            zc, doc, file_sha = load_zonecheck(_run_dir(a.calibration), pack.sha256, geom_sha, servo_map)
             source = str(doc.get("run_id", ""))
         except (ZoneCheckError, OSError, ValueError, KeyError) as e:
             zc = vw.ZoneCheck(False, f"zone check {a.calibration} not usable: {e}")
     log.append("zonecheck", source_run=source, file_sha256=file_sha, ok=int(zc.ok), reason=zc.reason,
-               passed=zc.passed, n=zc.n, pack_sha256=pack.sha256, geometry_sha256=geom_sha)  # fmt: skip
+               passed=zc.passed, n=zc.n, pack_sha256=pack.sha256, geometry_sha256=geom_sha,
+               servo_gain_ppm=servo_map.gain_ppm, servo_offset_mdeg=servo_map.offset_mdeg,
+               servo_map_source=servo_map.source_run)  # fmt: skip
     print(f"witness: {zc.message()}")
+    print(f"witness: {servo_map.describe()}")
     client = VisionClient(cfg, transport, ledger, log, run_id, budget)
-    return vw.VisionWitness(FolderCamera(witness_dir), client, geom, pack, zc).check
+    return vw.VisionWitness(FolderCamera(witness_dir), client, geom, pack, zc, servo_map).check
 
 
 def _cmd_zone_check(a: argparse.Namespace) -> int:
@@ -302,9 +308,11 @@ def _cmd_zone_check(a: argparse.Namespace) -> int:
     console requests: 50, 90, 130 then 90, 50, 130), one Muse Spark image each, reserved before each call.
     The vision backend is enabled for later runs only on 6 of 6 PASS; the result is saved like a
     calibration (``zonecheck.json`` + a ``zonecheck`` record)."""
-    from ring3bridge.zonecheck import ZONE_TARGETS, flat_targets
+    from ring3bridge.witness.vision import zone_targets
+    from ring3bridge.zonecheck import flat_targets, rounds_for
 
-    cfg, geom, geom_sha, pack = _vision_setup()
+    cfg, geom, geom_sha, pack, servo_map = _vision_setup()
+    zone_rounds = rounds_for(servo_map)
     budget = usd_to_uusd(a.budget_usd)
     if cfg.price is None:
         print(
@@ -312,16 +320,20 @@ def _cmd_zone_check(a: argparse.Namespace) -> int:
         )
         return 2
     tin, per = _vision_reservation(cfg, pack)
-    targets = flat_targets(ZONE_TARGETS)
+    targets = flat_targets(zone_rounds)
     n = len(targets)
-    rounds = " then ".join(", ".join(str(d) for d in r) for r in ZONE_TARGETS)
+    rounds = " then ".join(", ".join(str(d) for d in r) for r in zone_rounds)
     print("ring3 calibrate --witness-backend vision: zone check"
           + (" --dry-run (no network, no key read)" if a.dry_run else ""))  # fmt: skip
     print(f"  {cfg.id} at {cfg.endpoint}; pack {pack.name} sha256 {pack.sha256[:16]}...")
     p_in, p_out = cfg.price.input_uusd_per_mtok / 1e6, cfg.price.output_uusd_per_mtok / 1e6
     print(f"  price: ${p_in:.2f} / 1M in, ${p_out:.2f} / 1M out ({cfg.price.source}, checked "
           f"{cfg.price.checked}), estimate")  # fmt: skip
-    print(f"  targets: {rounds} ({n} images, 2 per zone, {len(ZONE_TARGETS)} console requests; moves of at "
+    print(f"  {servo_map.describe()}")
+    print("  targets (D-103, commands whose mapped angles are the zone centres, clamped to 30-150): "
+          + ", ".join(f"{zone} {cmd} deg -> {mapped / 1000:.1f} on the gauge"
+                      for zone, cmd, mapped in zone_targets(servo_map)))  # fmt: skip
+    print(f"  order: {rounds} ({n} images, 2 per zone, {len(zone_rounds)} console requests; moves of at "
           f"most 30 deg through the kernel)")  # fmt: skip
     print(f"  reservation: {tin} input tokens ({cfg.image_tokens_reserve} image ceiling + text) + "
           f"{cfg.max_output_tokens} max output tokens = {fmt_usd(per)} per call, reserved before each call; "
@@ -355,8 +367,8 @@ def _cmd_zone_check(a: argparse.Namespace) -> int:
     log = eventlog.EventLog(run_dir)
     ledger = Ledger(load_project_cap(), DEFAULT_LEDGER)
     client = VisionClient(cfg, transport, ledger, log, run_id, budget)
-    witness = vw.VisionWitness(FolderCamera(witness_dir), client, geom, pack, vw.CHECKING)
-    script = CalibrationScript(witness, checks=True, rounds=ZONE_TARGETS)  # type: ignore[arg-type]
+    witness = vw.VisionWitness(FolderCamera(witness_dir), client, geom, pack, vw.CHECKING, servo_map)
+    script = CalibrationScript(witness, checks=True, rounds=zone_rounds)  # type: ignore[arg-type]
     name = "scripted-zone-check"
     script_pack = ContextPack(name, "", hashlib.sha256(b"").hexdigest())
     kernel = Path(a.kernel) if Path(a.kernel).is_absolute() else REPO / a.kernel
@@ -367,14 +379,14 @@ def _cmd_zone_check(a: argparse.Namespace) -> int:
         f"zone check {run_id}: connecting to COM2 at {a.host}:{a.port} (budget {fmt_usd(budget)}, estimate)"
     )
     link.connect(a.connect_timeout)
-    print(f"type {len(ZONE_TARGETS)} requests at the RING3 console, e.g. zone check 1 / zone check 2 "
+    print(f"type {len(zone_rounds)} requests at the RING3 console, e.g. zone check 1 / zone check 2 "
           "(keep hands away from the sensor and the arm)")  # fmt: skip
     runner = Runner(link, script, log, script_pack, seed, timeline=_timeline, witness=script.measure,
                     max_actions=script.max_actions())  # fmt: skip
     script.runner = runner
     zc = vw.NONE
     try:
-        runner.serve(requests=len(ZONE_TARGETS), idle_s=a.idle)
+        runner.serve(requests=len(zone_rounds), idle_s=a.idle)
     except KeyboardInterrupt:
         print("interrupted by the operator")
         if runner.request is not None:
@@ -384,7 +396,7 @@ def _cmd_zone_check(a: argparse.Namespace) -> int:
                 pass
     finally:
         results = [ch.result for _, _, ch in script.results]
-        zc = vw.zone_check(results, targets, run_id, pack.sha256, geom_sha)
+        zc = vw.zone_check(results, targets, run_id, pack.sha256, geom_sha, servo_map)
         doc = zonecheck_doc(zc)
         sha = write_zonecheck(run_dir, doc)
         log.append("zonecheck", **{k: v for k, v in doc.items() if k != "results"}, file_sha256=sha,
@@ -393,12 +405,16 @@ def _cmd_zone_check(a: argparse.Namespace) -> int:
         link.close()
     if script.note:
         print(f"  script ended early: {script.note}")
-    print("  image | request | commanded | verdict | reason | zone | arm_visible | crop sha256")
+    print(
+        "  image | request | commanded -> mapped (expected) | verdict | reason | zone | arm_visible | "
+        "crop sha256"
+    )
     for i, (idx, _text, ch) in enumerate(script.results, 1):
         r = ch.result
         vis = "-" if r.arm_visible is None else str(r.arm_visible)
-        print(f"  {i} | {idx} | {r.commanded_deg} {r.commanded_zone} | {r.verdict} | {r.reason} | "
-              f"{r.measured_zone or '-'} | {vis} | {r.image_sha256[:16]}")  # fmt: skip
+        mapped = "?" if r.mapped_mdeg is None else f"{r.mapped_mdeg / 1000:.1f}"
+        print(f"  {i} | {idx} | {r.commanded_deg} -> {mapped} ({r.commanded_zone or '-'}) | {r.verdict} | "
+              f"{r.reason} | {r.measured_zone or '-'} | {vis} | {r.image_sha256[:16]}")  # fmt: skip
     print(f"  {zc.passed} of {zc.n} PASS")
     print(zc.message())
     print(f"zone check {run_id}: {run_dir.relative_to(REPO)}/zonecheck.json; "

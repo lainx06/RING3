@@ -11,7 +11,7 @@ the builder:** fake transports, synthetic frames, the simulated cell in QEMU; no
 |---|---|---|---|
 | A1 | Step-2 offline tests fail before and pass after; full suite passes; policy hash unchanged | **PASS.** Before: both test files error at import (`pytest-before.txt`). After: `tests/witness/test_vision.py` 64 + `tests/bridge/test_vision_secrets.py` 1 = **65 passed**; 2 QEMU tests on the simulated cell (`test_witness_loop.py::*vision*`) passed; full default suite **980 passed, 6 skipped (hardware tests, 2 by design), 221 s, 0 PANIC** (`suite.txt`; run while the last QEMU test edit was pending, the two vision loop tests re-run afterwards: 2 passed); policy hash `4101a8cc305078722afb56a4eb09e2b4c3705e2d2c697b418c7ef02885cdef0b` (= T-15); `git diff --stat 76ad29f -- kernel user firmware abi` empty | `pytest-before.txt`, `pytest-after.txt`, `sim-vision-loop.txt`, `sim-vision-zonecheck.txt`, `step5.txt` |
 | A2 | Request shape matches the official docs, quoted | **PASS.** See "Docs extract" and "Request shape"; `test_request_shape_matches_the_documented_fields` pins every field | this file, `bridge/ring3bridge/models/vision.py` docstring |
-| A3 | Hardware zone check by the user, N/6 with every reply logged | **3 of 6 PASS** on `zc-20261104-153656` (every reply logged; table below). Not 6/6: the two 130 images show the arm on the 110 boundary band (servo travel ~0.75 of the command, measured), one 50 image read UNSURE. v2 pack proposed under the once-only rule; second attempt pending the lead | "Zone check", `zc-153656/` |
+| A3 | Hardware zone check by the user, N/6 with every reply logged | **3 of 6 PASS** on `zc-20261104-153656` (every reply logged; table below). Not 6/6: the two 130 images show the arm on the 110 boundary band (servo travel ~0.75 of the command, measured), one 50 image read UNSURE. v2 pack (accepted, D-103) and the servo map in place; re-test pending the user | "Zone check", `zc-153656/` |
 | A4 | If 6/6: live runs (b) and (c) with verdicts and the agent's next action | **OPEN: after A3** | to fill: "Live runs" |
 | A5 | Commits only this card's paths; worktree; "ready to merge" reported, merged only on the user's word | PASS for the builder's part: branch `t16`, paths listed under "Files"; not merged | `git log t16` |
 
@@ -222,6 +222,34 @@ arm is blurred, hidden or doubled, or more than one bar is attached to the hub. 
 line and the nearest band is a definite zone, not UNSURE" (image 1). A band still gives UNSURE: a band belongs
 to no zone and the card makes it CAN'T VERIFY. Re-test reservation: 6,020 input tokens + 2,048 = $0.016229
 per call, 6 images at most $0.097374 (`--budget-usd 0.10` still fits).
+
+## Servo map (D-103, lead, after zc-153656)
+`config/servo_map.toml`: `gauge = 0.7475 x command + 11.46 deg` (gain 747500 ppm, offset 11458 mdeg), the
+least-squares line through the six measured arm angles above (stored as the points; the loader re-fits them
+and refuses a file whose numbers differ; worst residual 3.23 deg: the two 90 points sit 3 deg under the line).
+Provenance in the file: run `zc-20261104-153656`, this README, 2026-11-04, the measurement method.
+`witness/servomap.py`; used by the vision backend only (`VisionWitness(servo_map=...)`): the expected zone and
+the boundary band are judged on the mapped angle (`expected_zone`; a band gives `COMMAND_BOUNDARY: commanded
+130 deg maps to 108.6 deg, within 5 deg of the 110 edge`, no frame, no call), every witness record logs
+`commanded_deg` and `mapped_mdeg`, and the zone-check targets are the commands whose mapped angles are the
+zone centres, clamped to the kernel's 30-150 and reached in steps of <= 30 deg:
+
+| zone | centre | command | mapped angle | margin to the nearest band edge |
+|---|---|---|---|---|
+| LOW | 50 | 52 | 50.3 | 15.3 deg (65) |
+| MID | 90 | 105 | 89.9 | 14.9 deg (75 / 105) |
+| HIGH | 130 | 150 (clamped) | 123.6 | 8.6 deg (115) |
+
+Order 52, 105, 150 then 150, 105, 52 (round 2 starts with a zero-length move the kernel still decides, then
+approaches MID and LOW from above); 6 and 5 moves per request. The zone-check file records the map and a run
+with another map refuses it. The SAM backend never reads the map (`test_sam_backend_never_reads_the_map`).
+Tests: `tests/witness/test_servomap.py` (6) + the updated zone-check tests; QEMU sim-cell tests run with the
+identity map (the simulated arm follows the command) and assert both angles in every record.
+**For the live runs:** the agent pack agent-v3 still tells the model to command 50 / 90 / 130; through this map
+90 lands at 78.7 (MID, 3.7 deg clear of the band) and **130 lands on the 110 band**, so a "move to HIGH and
+confirm" request answers CAN'T VERIFY: COMMAND_BOUNDARY (detail names both angles) instead of FAIL. The
+D-29 moment (c) therefore needs a request that commands 150 (e.g. "move the gauge to 150 and confirm it with
+the camera") or a pack change, the lead's call.
 
 ## Live runs (A4) — to fill
 | run | request | moves | witness verdict | agent's next action | outcome |

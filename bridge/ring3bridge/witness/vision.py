@@ -3,9 +3,10 @@
 One check (``VisionWitness.check``), cheap and offline first so a check that cannot succeed takes no frame
 and spends nothing:
 
-  commanded zone (``verdict.commanded_zone``: a command inside a boundary band or outside 30-150 is CAN'T
-  VERIFY before anything else) -> the session gate (``ZoneCheck``: enabled only by a 6-of-6 zone check, else
-  CAN'T VERIFY: CALIBRATION) -> a fresh frame (the camera raises STALE_FRAME, D-80) -> the 4 markers and the
+  expected zone (``expected_zone``: the command through the servo map, D-103; a mapped angle inside a
+  boundary band or outside 30-150 is CAN'T VERIFY before anything else) -> the session gate
+  (``ZoneCheck``: enabled only by a 6-of-6 zone check, else CAN'T VERIFY: CALIBRATION) -> a fresh frame
+  (the camera raises STALE_FRAME, D-80) -> the 4 markers and the
   rectified dial crop (``dial``, then ``mask_markers``: the dial alone, 920 x 570 px, the marker squares
   painted over, no desk) -> one Muse Spark call
   through the injected ``ZoneModel`` (the adapter in ``models/vision.py``: it reserves spend first and raises
@@ -48,7 +49,8 @@ from ring3bridge.witness import (
 from ring3bridge.witness.dial import GEOMETRY_JSON, Geometry, encode_jpeg, find_dial
 from ring3bridge.witness.pipeline import WitnessResult
 from ring3bridge.witness.service import Camera, Checked
-from ring3bridge.witness.verdict import Judgement, commanded_zone
+from ring3bridge.witness.servomap import IDENTITY, ServoMap
+from ring3bridge.witness.verdict import Judgement, commanded_zone, zone_of_mdeg
 
 __all__ = ["GEOMETRY_JSON"]  # re-exported for the CLI and tests (the geometry the zone check is tied to)
 
@@ -161,10 +163,22 @@ def parse_zone(text: str) -> tuple[str, bool]:
     return zone, visible
 
 
-def judge_zone(commanded_deg: int, zone: str, arm_visible: bool) -> Judgement:
-    """The card's verdict table. Raises ``CantVerify`` (COMMAND_RANGE, COMMAND_BOUNDARY, NOT_VISIBLE,
-    UNSURE); returns PASS (ZONE_MATCH), FAIL (WRONG_ZONE) or FAIL (OUT_OF_SCALE)."""
-    cz = commanded_zone(commanded_deg)
+def expected_zone(commanded_deg: int, servo_map: ServoMap = IDENTITY) -> tuple[str, int]:
+    """(expected zone, mapped millidegrees) of a command through the servo map (D-103): the zone and the
+    boundary band are judged on the mapped angle; COMMAND_RANGE / COMMAND_BOUNDARY name both angles."""
+    if type(commanded_deg) is not int or not 30 <= commanded_deg <= 150:
+        commanded_zone(commanded_deg)  # raises COMMAND_RANGE with the command's own words
+    mapped = servo_map.mapped_mdeg(commanded_deg)
+    if servo_map.identity:
+        return commanded_zone(commanded_deg), mapped
+    what = f"commanded {commanded_deg} deg maps to"
+    return zone_of_mdeg(mapped, what), mapped
+
+
+def judge_zone(commanded_deg: int, zone: str, arm_visible: bool, servo_map: ServoMap = IDENTITY) -> Judgement:
+    """The card's verdict table on the mapped angle. Raises ``CantVerify`` (COMMAND_RANGE, COMMAND_BOUNDARY,
+    NOT_VISIBLE, UNSURE); returns PASS (ZONE_MATCH), FAIL (WRONG_ZONE) or FAIL (OUT_OF_SCALE)."""
+    cz, _ = expected_zone(commanded_deg, servo_map)
     if zone not in ZONE_VALUES:
         raise ValueError("zone must be validated first")
     if not arm_visible:
@@ -176,6 +190,30 @@ def judge_zone(commanded_deg: int, zone: str, arm_visible: bool) -> Judgement:
     if zone in OUT_ZONES:
         return Judgement(FAIL, OUT_OF_SCALE, cz, zone)
     return Judgement(FAIL, WRONG_ZONE, cz, zone)
+
+
+# ---- the zone check's targets (D-103): commands whose mapped angles are the zone centres ----
+
+ZONE_CENTRES_MDEG = (("LOW", 50_000), ("MID", 90_000), ("HIGH", 130_000))
+
+
+def zone_targets(servo_map: ServoMap = IDENTITY) -> tuple[tuple[str, int, int], ...]:
+    """(zone, command, mapped mdeg) per zone: the integer command nearest the zone centre through the map,
+    clamped to the kernel's 30-150 (so the HIGH target of a slow servo is 150 and lands where it lands)."""
+    out = []
+    for zone, centre in ZONE_CENTRES_MDEG:
+        cmd = servo_map.command_for(centre)
+        out.append((zone, cmd, servo_map.mapped_mdeg(cmd)))
+    return tuple(out)
+
+
+def zone_check_rounds(servo_map: ServoMap = IDENTITY) -> tuple[tuple[int, ...], tuple[int, ...]]:
+    """Two console requests, two images per zone: LOW, MID, HIGH then HIGH, MID, LOW (the second round
+    approaches MID and LOW from the other side; its first target repeats the angle the first round ended
+    at, a zero-length move the kernel still decides). Each round must fit the kernel's 8-ACTION request in
+    steps of at most 30 deg; ``calibration.route`` plans the steps."""
+    cmds = {zone: cmd for zone, cmd, _ in zone_targets(servo_map)}
+    return ((cmds["LOW"], cmds["MID"], cmds["HIGH"]), (cmds["HIGH"], cmds["MID"], cmds["LOW"]))
 
 
 # ---- the session gate: the zone check ----
@@ -197,6 +235,7 @@ class ZoneCheck:
     geometry_sha256: str = ""
     targets: tuple[int, ...] = ()
     results: tuple[Row, ...] = ()
+    servo_map: tuple[int, int, str] = (1_000_000, 0, "")  # (gain_ppm, offset_mdeg, source_run) used
 
     def message(self) -> str:
         if self.ok:
@@ -216,6 +255,7 @@ def zone_check(
     run_id: str,
     pack_sha256: str,
     geometry_sha256: str,
+    servo_map: ServoMap = IDENTITY,
 ) -> ZoneCheck:
     """Rows in the order commanded; ok only when each target has a PASS from this backend and pack, in
     order, with nothing missing or extra. Every non-PASS row is named in the reason (reported as measured)."""
@@ -242,7 +282,8 @@ def zone_check(
         problems.append(f"{len(results) - n} result(s) beyond the {n} planned")
     ok = not problems and passed == n and n > 0
     reason = "" if ok else f"{passed} of {n} PASS: " + "; ".join(problems)
-    return ZoneCheck(ok, reason, passed, n, run_id, pack_sha256, geometry_sha256, tuple(targets), rows)
+    return ZoneCheck(ok, reason, passed, n, run_id, pack_sha256, geometry_sha256, tuple(targets), rows,
+                     (servo_map.gain_ppm, servo_map.offset_mdeg, servo_map.source_run))  # fmt: skip
 
 
 # ---- one check ----
@@ -251,28 +292,40 @@ def zone_check(
 class VisionWitness:
     backend = BACKEND
 
-    def __init__(self, camera: Camera, model: ZoneModel, geom: Geometry, pack: Pack, gate: ZoneCheck = NONE):
+    def __init__(
+        self,
+        camera: Camera,
+        model: ZoneModel,
+        geom: Geometry,
+        pack: Pack,
+        gate: ZoneCheck = NONE,
+        servo_map: ServoMap = IDENTITY,
+    ):
         self.camera = camera
         self.model = model
         self.geom = geom
         self.pack = pack
         self.gate = gate
+        self.servo_map = servo_map
 
     def _result(self, verdict: str, reason: str, detail: str, deg: int, cz: str, zone: str, image_sha: str,
-                spend: int, crop: bytes, visible: int | None, body: bytes) -> WitnessResult:  # fmt: skip
+                spend: int, crop: bytes, visible: int | None, body: bytes,
+                mapped: int | None) -> WitnessResult:  # fmt: skip
         return WitnessResult(verdict, reason, detail, deg, cz, zone, None, None, image_sha, "", spend, crop,
-                             b"", BACKEND, self.pack.sha256, visible, body)  # fmt: skip
+                             b"", BACKEND, self.pack.sha256, visible, body, mapped)  # fmt: skip
 
     def check(self, commanded_deg: int) -> Checked:
-        cz = ""
+        cz, mapped = "", None
         try:
-            cz = commanded_zone(commanded_deg)
+            if type(commanded_deg) is int and 30 <= commanded_deg <= 150:
+                mapped = self.servo_map.mapped_mdeg(commanded_deg)  # logged even when it lands in a band
+            cz, mapped = expected_zone(commanded_deg, self.servo_map)
             if not self.gate.ok:
                 raise CantVerify(CALIBRATION, "vision witness disabled: " + self.gate.reason)
             img, jpeg = self.camera()
         except CantVerify as e:
             return Checked(self._result(CANT_VERIFY, e.reason, e.detail, commanded_deg, cz, "", "", 0, b"",
-                                        None, b""), b"")  # fmt: skip
+                                        None, b"", mapped), b"")  # fmt: skip
         image_sha, crop, body, spend, visible = "", b"", b"", 0, None
         try:
             dial = find_dial(img, self.geom)
@@ -292,9 +345,9 @@ class VisionWitness:
                 raise CantVerify(VISION_FORMAT, f"{reply.texts} output texts, expected 1")
             zone, arm_visible = parse_zone(reply.text)
             visible = int(arm_visible)
-            j = judge_zone(commanded_deg, zone, arm_visible)
+            j = judge_zone(commanded_deg, zone, arm_visible, self.servo_map)
         except CantVerify as e:
             return Checked(self._result(CANT_VERIFY, e.reason, e.detail, commanded_deg, cz, "", image_sha,
-                                        spend, crop, visible, body), jpeg)  # fmt: skip
+                                        spend, crop, visible, body, mapped), jpeg)  # fmt: skip
         return Checked(self._result(j.verdict, j.reason, "", commanded_deg, cz, j.measured_zone, image_sha,
-                                    spend, crop, visible, body), jpeg)  # fmt: skip
+                                    spend, crop, visible, body, mapped), jpeg)  # fmt: skip
