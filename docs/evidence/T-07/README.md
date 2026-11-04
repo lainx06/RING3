@@ -377,3 +377,13 @@ parts. "black rectangle" returned the same bands and markers but not the arm. `D
 "black bar" (also the probe's default); test on the recorded reply (`tests/witness/recorded/
 sam-black-bar-upright.json`): exactly one record near the pivot, at 5.5 mm and ~88 deg, and `arm_angle` still
 says SHAPE. Note: the arm's confidence 0.58 is close to the 0.50 floor (`min_conf_ppm`, unchanged).
+
+### Recalibration `cal-20261103-220845` ("black bar", tape over the hub, ~6 mm tail): SHAPE x5 = arm not returned
+Decoded (free): every reply has 10 records, the 8 boundary bands and 2 marker parts; the nearest is 54.6 mm
+from the pivot. **No arm record at any point**, so no shape threshold rejected an arm; the SHAPE verdict is
+"only non-arm records". The crops show the black arm moving correctly (up-right at 60, up-left at 120).
+Geometry check (model: bar 8.6 mm wide as measured in `probe-20261103-220356`, tip 15 mm, parallax 1.098,
+60-120 deg) through the unchanged filter: tail 6 mm -> passes with thin margins (centre >= 4.9 vs 4.0, nearest
+edge <= 7.4 vs 8.0); tail 1-2 mm -> passes with wide ones (centre >= 7.1-7.7, edge <= 3.3-4.3); far side <= 20.7
+vs 25.75 in all cases. No threshold change proposed. Open: SAM's detection of the fully taped arm with
+"black bar" (it found the half-taped arm at c 0.58).
