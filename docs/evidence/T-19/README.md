@@ -216,13 +216,21 @@ guards read the raw output, not the tidied screen. Real kernel: default `h e l p
 ## Acceptance
 | # | Result | Evidence |
 |---|---|---|
-| A1 | **pass**: offline tests pass, guards fail-before, full suite after the rebase 1237 passed / 0 failed (one existing flake on earlier runs, measured above), policy hash below | `suite.txt`, `guards-fail-before.txt`, `checks.txt` |
+| A1 | **pass**: offline tests pass, guards fail-before, full suite on base `cba8465` 1237 passed / 0 failed (one existing flake on earlier runs, measured above), voice tests on the final base 218 passed, policy hash below | `suite.txt`, `guards-fail-before.txt`, `checks.txt` |
 | A2 | **pass**: request shape and price from the official pages | section A2 above; `config/models.toml` `[voice]` |
 | A3 | **pass for the live request** (transcript, decision, spend above); the selftest output was not shown to the builder | `live-run.txt`, section A3 |
-| A4 | **ready to merge**: worktree only, branch `voice` on top of `main`, not merged, nothing pushed; merges on the user's word | `git log main..voice` |
+| A4 | **pass**: built in the worktree, merged into `main` by fast-forward on the user's word, nothing pushed | `git log` |
 
-`suite.txt`: the full suite after the rebase onto `main` (`cba8465`, T-16 merged), with no other suite on the host: **1237
+`suite.txt`: the full suite after the rebase onto `cba8465` (T-16 merged), with no other suite on the host: **1237
 passed, 0 failed, 6 skipped** (hardware and verdict-stage skips).
+
+**Last rebase, onto `da6d3de` (T-18 merged), on the user's instruction:** voice tests and ruff only, 218 passed, 0 failed;
+the final release check runs the full suite. So `suite.txt` and `checks.txt` (commit named there is the pre-rebase
+one) are from the base before it, `cba8465`, and no full suite has run on this exact base yet. Only `docs/STATUS.md`
+conflicted. The rebase did change one thing: T-18 added a console word, `gfxfont` (test image only), and
+`test_the_command_list_matches_the_kernel` failed on it. `voice.py`'s list now has it; the test's expectation is
+unchanged, and `gfxfont` was added to the refused cases. Against `da6d3de`: no change under `kernel/ user/ firmware/
+abi/`, so the policy hash is whatever `main` has.
 
 `checks.txt`: policy hashes unchanged (`4101a8cc...`, permissive `001bceb8...`), no change under `kernel/ user/
 firmware/ abi/` and no existing test changed against `cba8465`, 4 of 4 bundles CHAIN OK + REPLAY MATCH. **Secret scan:**

@@ -87,7 +87,7 @@ def test_empty_is_nothing(raw):
 @pytest.mark.parametrize(
     "raw",
     ["exit", "help", "status", "audit", "objects", "screen", "estop reset", "estop  reset", "run badptr",
-     "RING3, exit", "ring three, estop reset", "tele 50 0", "panic"],
+     "RING3, exit", "ring three, estop reset", "tele 50 0", "panic", "gfxfont"],
 )  # fmt: skip
 def test_a_console_command_is_not_a_request_line(raw):
     """The card: the transcript goes in as a request line. A kernel console word would be a command."""

@@ -38,7 +38,7 @@ REFUSED_TEXT = {
 # kernel/core/console.c dispatch(): a line starting with one of these (exact case, whole word) is no request.
 CONSOLE_WORDS = frozenset(
     {"help", "status", "screen", "audit", "objects", "estop", "exit", "run", "cellmute", "tele", "tape",
-     "teletick", "confirmrace", "confirmgap", "panic", "agent-test", "agent-nocap"}
+     "teletick", "confirmrace", "confirmgap", "panic", "agent-test", "agent-nocap", "gfxfont"}
 )  # fmt: skip
 _ANSWERS = frozenset({"y", "n", "yes", "no"})
 _WAKE = re.compile(r"^(?:hey\s+)?ring[\s-]*(?:3|three)\b[\s,.:;!?-]*", re.IGNORECASE)
