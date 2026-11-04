@@ -441,8 +441,11 @@ def test_vision_config_is_muse_spark_at_the_published_prices():
 
 
 def test_pack_is_pinned_and_asks_for_the_zone_only():
-    assert PACK.name == "witness-vision-v1" and len(PACK.text.encode()) < 4096
-    assert PACK.sha256 == "bf8f6102e35d69ebff2792d75b959f97e7042e857e5ea0bce1a6179d679a126c"
+    assert PACK.name == "witness-vision-v2" and len(PACK.text.encode()) < 4096
+    assert PACK.sha256 == "aa51546543357dd20d1e82d67eabc8de7ba8e7674694ddf962663b3b4b474fad"
+    v1 = context_pack.load("witness-vision-v1")  # the zone-check runs of 2026-11-04 logged this hash
+    assert v1.sha256 == "bf8f6102e35d69ebff2792d75b959f97e7042e857e5ea0bce1a6179d679a126c"
+    assert "thin grey rays" in PACK.text and "shadow is not the arm" in PACK.text  # the v2 changes
     for z in vision_model.ZONE_VALUES:
         assert z in PACK.text
     assert '{"zone": "<Z>", "arm_visible": <true or false>}' in PACK.text
@@ -603,7 +606,7 @@ def test_calibrate_vision_dry_run_prints_six_images_and_the_reservation(capsys, 
     out = capsys.readouterr().out
     assert rc == 0, out
     assert "zone check" in out and "6 images" in out and "muse-spark-1.3" in out
-    assert "witness-vision-v1" in out and PACK.sha256[:16] in out
+    assert PACK.name in out and PACK.sha256[:16] in out
     assert "50, 90, 130" in out and "90, 50, 130" in out
     assert "reserved before each call" in out and "$0.1" in out
     rc = cli.main(["calibrate", "--witness-backend", "vision", "--budget-usd", "0.10"])

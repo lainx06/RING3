@@ -53,7 +53,8 @@ from ring3bridge.witness.verdict import Judgement, commanded_zone
 __all__ = ["GEOMETRY_JSON"]  # re-exported for the CLI and tests (the geometry the zone check is tied to)
 
 BACKEND = "vision"
-PACK_NAME = "witness-vision-v1"  # docs/context-packs/witness-vision-v1.md, SHA-256 logged per call
+PACK_NAME = "witness-vision-v2"  # docs/context-packs/witness-vision-v2.md, SHA-256 logged per call; v2 is the
+# card's once-only prompt revision after zone check zc-20261104-153656 (v1 stays loadable for its runs)
 USER_TEXT = "Which zone does the black arm point at? Reply with the JSON object only."
 ZONE_VALUES = ("OUT_LOW", "LOW", "MID", "HIGH", "OUT_HIGH", "UNSURE")  # = models.vision.ZONE_VALUES
 OUT_ZONES = ("OUT_LOW", "OUT_HIGH")
