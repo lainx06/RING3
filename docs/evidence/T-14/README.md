@@ -140,3 +140,84 @@ Panel rows 12-19 per state (the rest of the screen as above):
 - **Motion**: only the fan frame moves, and only from the reported duty and the tick count; the needle and the
   beam are drawn from the last accepted frame each render (they jump, no easing); nothing else animates. The
   renderer stays pure (no globals, no clock; the tick is a snapshot field) and runs where T-08 put it.
+
+## As built (differences from the plan above)
+- **Fan word when stale:** `STALE`, not `HALTED (LINK)`: with no frame for > 500 ms the panel cannot know the
+  fan stopped, so it doesn't say so. `HALTED (LINK)` is kept for the board's own watchdog flag (`LINK LOST`),
+  where the board halts the fan itself. The rotor is frozen in both.
+- **Frozen = rest frame.** The renderer is pure (no state between renders, as T-08 built it), so the rotor's
+  frame is `(now_tick / ticks_per_frame) mod 4` and a frozen rotor is drawn at frame 0. When the reported duty
+  changes, the rotor can step to a different frame at once (one step, then the new rate). No change outside
+  `kernel/ui/` was needed: the snapshot already carries the duty, angle, distance, button, latch, link and age.
+- **The dial is exactly symmetric:** 91-180 degrees is drawn as the mirror image of 0-89 (integer sine table
+  `sin_q10[0..90]`, x 1024, rounded), so 30 and 150 mirror about column 32.
+- **Needle cells (one-based row, column), light cyan:** 30 degrees `(16,26) (17,27) (17,28) (17,29) (17,30)
+  (18,30) (18,31)`; 90 degrees `(14,32) .. (18,32)` straight up column 32; 150 degrees the mirror of 30
+  (`(16,38) (17,34) (17,35) (17,36) (17,37) (18,33) (18,34)`). Pivot: white bottom pixel of (18,32).
+- **Pixel canvas** 14x50 bytes (700 bytes on the 16 KiB kernel stack), only for the rotor, dial and lamp; the
+  beam is shade characters. The console window is `SCR_CON_ROWS` = 5; `vga.c` sizes its buffers from that
+  constant, so the driver source is unchanged.
+
+## Rotor speed (fixed table, ticks per frame at 100 Hz)
+| reported duty | 0 | 1-29 | 30-49 | 50-59 | 60-69 | 70-79 | 80-100 |
+|---|---|---|---|---|---|---|---|
+| ticks / frame | still | 16 | 12 | 10 | 8 | 7 | 6 |
+
+Frame changes over 960 ticks (`screen_test fan-count 960`, `fan-count.txt`): duty 0: 0; 40 %: 80; 60 %: 120;
+80 %: 160; 80 % latched: 0; 80 % stale: 0; 80 % link lost: 0.
+
+## T-08 golden rows changed (only the rows the panel and the smaller console replaced)
+| State | Rows changed | Why |
+|---|---|---|
+| idle | 7-19 | console now rows 7-11 (shows the last 5 lines; the first fixture line `action 2 servo_set(90)` dropped), panel rule row 12, pictures 13-19 |
+| ask | 7-19 | same; the 5 console lines fit exactly (row 7 is no longer blank) |
+| estop | 8-19 | same; row 7 is blank in both |
+
+Rows 1-6 and 20-25 are byte-identical to T-08's goldens in all three states.
+
+## Test changes (memory rule: cause, diff, expectation)
+| Test | Cause | Change | Expected outcome |
+|---|---|---|---|
+| `test_t08_screen.py` GOLDEN idle/ask/estop | the panel and 5-row console | rows 7-19 (see above) | rows 1-6, 20-25 unchanged |
+| `test_render_colours_idle/ask/estop` | rows moved | prompt and CONFIRM line row 13 -> 11; RELEASED/LINK ok (18, 3-17 / 43-49) -> (17, 52-66 / 18, 52-58); PRESSED, LATCHED (18, 3-25) -> (17, 52-74) | same colours (TEXT, INFO, ASK, ALARM) |
+| `test_render_no_cell_shows_no_values` | the dial and beam replace the bars | `FAN ---` row 15 -> 18; `^` / `█` absence -> `SERVO ---`, `DIST ---` and no beam shades; the missing needle is checked by colour in `test_no_needle_without_data_grey_when_stale` | without telemetry still no reading drawn |
+| `test_t08_vga_buffer` console | the 5-row window has scrolled past `cellcmd: servo 120 -> 0` / `fan 90 -> -200` when it is read | asserts the window shows exactly the newest COM1 lines in order (TAPE/AUDIT left out) and `cellcmd: done`, and that both result lines are on COM1; the ticker still checks both decisions | stronger than before: every window row is compared with COM1 |
+| `test_t08_vga_buffer`, `test_t08_screenshots_sim` rows | rows moved | SERVO row 16 -> 19, E-STOP row 18 -> 17 (`released` -> `RELEASED`), FAN row 15 -> 18, prompt rows 12-13 -> 10-11 | same values |
+| `tests/host/screen_test.c` | console 5 rows; new states | idle fixture drops its first console line; states `fan60`, `presence`, `noecho`, `stale`, `servo=<deg>`, `fan-count <ticks>` added | n/a |
+
+Fixes to my own new tests while writing them (no kernel expectation involved): a column range off by one
+(`TURNING` is columns 8-14); the wording check matched its own docstring (it now checks the card's banned words
+over the new files and franchise/military wording over the rendered states and C literals); the sim run must
+answer `y` to the first fan command (policy `first_fan: ask`); the presence / no echo / stale shots moved
+before the E-stop (the kernel latch stays until `estop reset`, so they showed `E-STOP LATCHED`), and the stale
+shot waits for a 250 mm frame first.
+
+## Render time
+`test_t14_render_time` (`render-time.txt`): test image with `screen` and the simulated cell, the rotor turning
+at 60 % for 2 s while the distance jumps 70 / 250 / no echo / 300 mm. Whole service pass (snapshot + render +
+diff + VGA writes): **avg 34-35 µs, max 498-720 µs, 0 passes ≥ 1 ms** over 343 renders, in four runs. The max
+follows the number of changed cells (~500 emulated VGA stores), as in T-08.
+
+Found while measuring: QEMU monitor commands (`pmemsave`, `screendump`) hold the vCPU while the TSC runs on, so
+a service pass that spans one reads 3-10 ms. Phase by phase (a throwaway diagnostic, not committed): idle,
+presence, silent link and resume: max ≤ 102 µs, 0 over 1 ms; rotor turning 2 s: max 502-603 µs, 0 over 1 ms;
+then 10 `pmemsave`: one pass 3.2 ms in 1 of 3 runs; then 5 `screendump`: one or two passes 9.4-9.5 ms in 2 of 3
+runs. So the timing is measured in its own test with no monitor command, and the screenshot test asserts no
+timing. T-08's `test_t08_vga_buffer` measures after one `pmemsave` and has passed every run so far; it could hit
+the same artifact (not changed: outside this card's need).
+
+## Acceptance
+| # | Result | Evidence |
+|---|---|---|
+| A1 | **pass**: clean build, zero warnings (`-Werror`; kernel, test, ktest, permissive, host images); full default suite in the worktree: **902 passed, 6 skipped** (hw + 2 by design); ruff clean; new goldens (fan60, presence, noecho, stale) and updated T-08 goldens (idle, ask, estop) pass; `make test-kernel` 20/20 | `build.txt`, `pytest.txt`, `golden-tests.txt`, `host-render.txt` |
+| A2 | **pass**: `test_fan_frame_motion` (0 changes at duty 0 / latched / stale / lost; 80 % > 60 % > 40 %), `test_needle_cells[30,90,150]`, `test_needle_mirror_and_marks`; render avg 34-35 µs, max 498-720 µs over four runs, 0 ≥ 1 ms | `fan-count.txt`, `render-time.txt` |
+| A3 | **pass**: `git diff --stat main...t14` = `kernel/ui/screen.c`, `kernel/ui/screen.h`, `tests/host/screen_test.c`, `tests/test_t08_screen.py`, `tests/test_t14_panel.py`, `docs/evidence/T-14/` (+ `docs/STATUS.md` at the end, per CLAUDE.md); policy hash `4101a8cc30507872...` unchanged; `kernel/policy`, `kernel/drivers`, `abi`, `firmware`, `bridge` untouched | this README |
+| A4 | **pass**: sim-cell PNG + exact text of every state: `sim-idle`, `sim-fan60` (rotor turning, checked across 6 reads), `sim-ask` (tainted ASK), `sim-estop` (AUTO HALT, latched, lamp red, rotor halted), `sim-presence` (70 mm), `sim-noecho`, `sim-stale`; mockups above | `sim-*.png`, `sim-*.txt` |
+| A5 | **pass**: commits `T-14: ...` with `Builder: Opus 5.5/high`; "ready to merge" reported, not merged | `git log main..t14` |
+
+## For the lead / filming
+- `docs/video/shots.md` (not in this card's paths) quotes T-08's panel words: `E-STOP released` is now
+  `E-STOP RELEASED`; `PRESENCE YES` is now the beam word `PRESENCE` (and `PRESENCE NO` is `CLEAR`).
+- The console window shows 5 lines instead of 7; long request lines still wrap at 76 columns as before.
+- The real-cell shots come from the filming session (`make run-cell-screen`, `make screendump NAME=<x>`, which
+  writes into `docs/evidence/T-08/`).

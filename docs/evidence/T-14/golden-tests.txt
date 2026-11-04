@@ -1,0 +1,56 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0 -- ~/dev/RING3-t14/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: ~/dev/RING3-t14
+configfile: pyproject.toml
+collecting ... collected 26 items
+
+tests/test_t14_panel.py::test_panel_golden_text[fan60] PASSED            [  3%]
+tests/test_t14_panel.py::test_panel_golden_text[presence] PASSED         [  7%]
+tests/test_t14_panel.py::test_panel_golden_text[noecho] PASSED           [ 11%]
+tests/test_t14_panel.py::test_panel_golden_text[stale] PASSED            [ 15%]
+tests/test_t14_panel.py::test_panel_layout_idle PASSED                   [ 19%]
+tests/test_t14_panel.py::test_fan_colours_follow_the_reported_duty PASSED [ 23%]
+tests/test_t14_panel.py::test_fan_frame_motion PASSED                    [ 26%]
+tests/test_t14_panel.py::test_fan_frames_differ PASSED                   [ 30%]
+tests/test_t14_panel.py::test_needle_cells[30] PASSED                    [ 34%]
+tests/test_t14_panel.py::test_needle_cells[90] PASSED                    [ 38%]
+tests/test_t14_panel.py::test_needle_cells[150] PASSED                   [ 42%]
+tests/test_t14_panel.py::test_needle_mirror_and_marks PASSED             [ 46%]
+tests/test_t14_panel.py::test_no_needle_without_data_grey_when_stale PASSED [ 50%]
+tests/test_t14_panel.py::test_sensor_beam[idle-DIST 320 mm-CLEAR-11-11-72] PASSED [ 53%]
+tests/test_t14_panel.py::test_sensor_beam[presence-DIST 70 mm-PRESENCE-224-14-52] PASSED [ 57%]
+tests/test_t14_panel.py::test_sensor_beam[stale-DIST 250 mm-STALE-79-8-67] PASSED [ 61%]
+tests/test_t14_panel.py::test_sensor_beam[noecho-DIST NO ECHO-NO ECHO-224-None-None] PASSED [ 65%]
+tests/test_t14_panel.py::test_sensor_beam[nocell-DIST ----NO DATA-15-None-None] PASSED [ 69%]
+tests/test_t14_panel.py::test_presence_threshold_matches_the_kernel_constant PASSED [ 73%]
+tests/test_t14_panel.py::test_estop_lamp[idle-8-E-STOP RELEASED-15] PASSED [ 76%]
+tests/test_t14_panel.py::test_estop_lamp[estop-12-E-STOP PRESSED, LATCHED-79] PASSED [ 80%]
+tests/test_t14_panel.py::test_estop_lamp[nocell-8-E-STOP --15] PASSED    [ 84%]
+tests/test_t14_panel.py::test_tainted_ask_panel PASSED                   [ 88%]
+tests/test_t14_panel.py::test_panel_wording PASSED                       [ 92%]
+tests/test_t14_panel.py::test_t14_panel_sim PASSED                       [ 96%]
+tests/test_t14_panel.py::test_t14_render_time PASSED                     [100%]
+
+============================= 26 passed in 11.70s ==============================
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0 -- ~/dev/RING3-t14/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: ~/dev/RING3-t14
+configfile: pyproject.toml
+collecting ... collected 12 items
+
+tests/test_t08_screen.py::test_render_golden_text[idle] PASSED           [  8%]
+tests/test_t08_screen.py::test_render_golden_text[ask] PASSED            [ 16%]
+tests/test_t08_screen.py::test_render_golden_text[estop] PASSED          [ 25%]
+tests/test_t08_screen.py::test_render_colours_idle PASSED                [ 33%]
+tests/test_t08_screen.py::test_render_colours_ask PASSED                 [ 41%]
+tests/test_t08_screen.py::test_render_colours_estop PASSED               [ 50%]
+tests/test_t08_screen.py::test_render_banner_wipe PASSED                 [ 58%]
+tests/test_t08_screen.py::test_render_no_cell_shows_no_values PASSED     [ 66%]
+tests/test_t08_screen.py::test_rendered_text_wording PASSED              [ 75%]
+tests/test_t08_screen.py::test_screen_sources_wording PASSED             [ 83%]
+tests/test_t08_screen.py::test_t08_vga_buffer PASSED                     [ 91%]
+tests/test_t08_screen.py::test_t08_screenshots_sim PASSED                [100%]
+
+============================== 12 passed in 6.42s ==============================

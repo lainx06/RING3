@@ -1,0 +1,25 @@
+╔═ RING3 / KERNEL EXECUTIVE ═══════════════════════════════════════════════════╗
+║ UP 00:00:05   EXEC RUNNING REQ 2        FREE 14780 KiB   LOGGED 63           ║
+║ LAST KERNEL DECISION: AUTO HALT                          TAINTED: YES        ║
+║                                  AUTO HALT                                   ║
+║ E-STOP latched                                                               ║
+╠═ CONSOLE ════════════════════════════════════════════════════════════════════╣
+║ cellcmd: read 1 -> 216                                                       ║
+║ CONFIRM: cellcmd wants cell_fan(60) [tainted]. Allow? [y/N]                  ║
+║ y                                                                            ║
+║ cellcmd: fan 60 -> 0                                                         ║
+║                                                                              ║
+╠═ LIVE CELL ══════╤═══════════════════════╤═══════════════════════════════════╣
+║       ▀███       │       ▄▄█▀█▀█▄▄       │ DIST 300 mm                 CLEAR ║
+║        ▀█▀       │    ▄█▀▀   ▀   ▀▀█▄    │ █▓▓▓▓▓▓▓▓▒▒▒▒▒▒▒▒░░░░░░░░█······· ║
+║     ▄▄▄▄█▄▄▄▄    │   █▀      █      ▀█   │          ┴100 mm           400 mm ║
+║     ▀██▀ ▀██▀    │  █▀█      █      █▀█  │                                   ║
+║      ▀▀    ▀     │  █        █        █  │ ▄███▄ E-STOP PRESSED, LATCHED     ║
+║     FAN 000%     │ █▀        ▀        ▀█ │ ▀███▀ LINK ok                     ║
+║  HALTED (E-STOP) │  SERVO 090° (30-150)  │       TELEMETRY AGE 10 ms         ║
+╠═ LAST 4 KERNEL DECISIONS / OLDEST TO NEWEST ═════════════════════════════════╣
+║ 00:00:03  REQ 2  ALLOW       obj_read(maint_notes)                           ║
+║ 00:00:03  REQ 2  ASK         cell_fan(60): tainted: ask                      ║
+║ 00:00:04  REQ 2  CONFIRMED   cell_fan(60)                                    ║
+║ 00:00:05  REQ 2  AUTO HALT   E-STOP latched                                  ║
+╚══════════════════════════════════════════════════════════════════════════════╝

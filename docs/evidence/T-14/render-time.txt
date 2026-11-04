@@ -1,0 +1,1 @@
+test_t14_render_time: {'renders': 343, 'avg_us': 35, 'max_us': 571, 'over_1ms': 0, 'max_cells_changed': 519, 'tsc_mhz': 3964}

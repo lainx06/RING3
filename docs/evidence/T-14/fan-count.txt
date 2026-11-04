@@ -1,0 +1,7 @@
+duty0 0
+duty40 80
+duty60 120
+duty80 160
+duty80-latched 0
+duty80-stale 0
+duty80-lost 0
