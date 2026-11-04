@@ -66,6 +66,14 @@ The S1 change does not touch these runs: all three have a tape. results.md: only
    spend 3 x 2500 µUSD, the phrases sent, the blobs logged, the chain verifies. Added: the printed lines and
    the events never contain MEASURED.
 
+3. **D-95** (lead, after the release check): `tests/test_inv_13_estop_latch.py::test_inv_13_estop_latch`
+   waits for the ALARM frame and the panel's line-1 frame (both sent after FAN 0, `kernel/drivers/device.c`)
+   before asserting the alarm count and the panel text, as D-89 did for the restart test. Cause: the test
+   asserted the instant the FAN 0 frame arrived; in isolation it failed 4 of 20 and 2 of 20 with alarm 0.
+   Expected values unchanged (`alarm == 2`, `{0: "AUTO HALT fan 60", 1: "E-STOP latched"}`); the waits are
+   bounded (1.0 s) so a missing frame still fails. After the fix: 20 of 20 alone
+   (`d95-estop-latch-20-runs.txt`); the full suite re-run is `full-suite-d95.txt`. Kernel unchanged.
+
 ## Dependencies
 None added.
 

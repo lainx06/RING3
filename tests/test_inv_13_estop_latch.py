@@ -7,7 +7,7 @@ import time
 
 from tests.cellharness import cellcmd, decisions, estop_reset, results, start
 from tests.qemu import EXIT_PASS, audit_lines, record_evidence
-from tests.sim_cell import T_ESTOP_RESET
+from tests.sim_cell import T_ALARM, T_ESTOP_RESET, T_LCD
 
 
 def test_inv_13_estop_latch():
@@ -19,6 +19,9 @@ def test_inv_13_estop_latch():
         c.sim.estop = True
         c.s.expect(r"^AUDIT seq=\d+ tick=\d+ sys=telemetry target=60 decision=AUTO_HALT reason=estop .*$")
         c.sim.wait_fan(0, start=n)
+        # D-95 (as D-89): the ALARM and panel frames land a few ms after FAN 0; wait for both before checking
+        c.sim.wait_frame(lambda f: f.type == T_ALARM, timeout=1.0, start=n)
+        c.sim.wait_frame(lambda f: f.type == T_LCD and f.body[0] == 1, timeout=1.0, start=n)
         assert c.sim.alarm == 2 and c.sim.lcd == {0: "AUTO HALT fan 60", 1: "E-STOP latched"}
         c.s.prompt()
         t = cellcmd(c, "fan 60; servo 100; halt; fan 0; sys 13; sys 7; status")

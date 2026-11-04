@@ -1,0 +1,21 @@
+# D-95: tests/test_inv_13_estop_latch.py::test_inv_13_estop_latch after the wait fix, 20 runs alone (fresh QEMU boot each) at 2726810+fix (2026-11-04T17:36Z)
+run  1: 1 passed in 6.00s
+run  2: 1 passed in 5.95s
+run  3: 1 passed in 5.98s
+run  4: 1 passed in 5.94s
+run  5: 1 passed in 5.95s
+run  6: 1 passed in 5.93s
+run  7: 1 passed in 5.97s
+run  8: 1 passed in 5.93s
+run  9: 1 passed in 5.94s
+run 10: 1 passed in 5.92s
+run 11: 1 passed in 5.95s
+run 12: 1 passed in 5.92s
+run 13: 1 passed in 5.98s
+run 14: 1 passed in 5.97s
+run 15: 1 passed in 5.95s
+run 16: 1 passed in 5.99s
+run 17: 1 passed in 5.94s
+run 18: 1 passed in 5.93s
+run 19: 1 passed in 5.93s
+run 20: 1 passed in 6.00s
