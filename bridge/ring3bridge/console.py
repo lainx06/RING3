@@ -352,7 +352,7 @@ def _voice_setup(a: argparse.Namespace, events: collections.deque):  # noqa: ANN
     from ring3bridge.voice import FolderRecorder, LockedLog, VoiceService
 
     budget = usd_to_uusd(a.budget_usd)
-    folder = a.voice_dir or os.environ.get("RING3_VOICE_DIR", "")
+    folder = a.voice_dir or ""  # an argument: only models/ touches the environment (INV-09)
     if not folder or not Path(folder).is_dir():
         raise SystemExit(
             "console: set --voice-dir or RING3_VOICE_DIR to the helper's folder (start the helper first)"
