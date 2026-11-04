@@ -184,4 +184,10 @@ No new hardware runs for this card: every row is computed from transcripts alrea
 
 ## E7 Camera witness
 
-Not run yet (T-07 Part B writes `docs/evals/raw/e7.json`).
+Closed: CAN'T VERIFY on hardware (D-83): 3 calibrations, 0 of 5 points measured each time; the witness disabled itself; see `docs/evidence/T-07/README.md`.
+
+| Calibration run | Points | Measured | CAN'T VERIFY (reason x points) |
+|---|---|---|---|
+| `cal-20261103-194227` | 5 | 0 | NOT_FOUND x5 |
+| `cal-20261103-220157` | 5 | 0 | NOT_FOUND x5 |
+| `cal-20261103-220845` | 5 | 0 | SHAPE x5 |

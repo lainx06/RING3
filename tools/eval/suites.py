@@ -507,3 +507,40 @@ def e6_cell() -> dict:
             **e6_firmware((ev / "T-06" / "cellctl.txt").read_text("utf-8", "replace")),
         },
     }
+
+
+# ------------------------------------------------------------------------------------------ E7 (witness)
+def e7_witness() -> dict:
+    """E7 (S8, D-90): the camera witness was closed as CAN'T VERIFY on hardware (D-83). The numbers come from
+    the T-07 evidence README's "real-cell runs" table in its Part B closing: one row per `cal-` run whose
+    result column counts its points as `<REASON> xN` (MEASURED would be a measured point)."""
+    src = "docs/evidence/T-07/README.md"
+    text = (REPO / src).read_text("utf-8", "replace")
+    head, sep, closing = text.partition("# Part B closing")
+    if not sep:
+        raise ValueError(f"{src}: no 'Part B closing' section")
+    cals = []
+    for line in closing.splitlines():
+        m = re.match(r"^\| `(cal-[0-9-]+)` \| [^|]* \| ([^|]*) \|", line)
+        if not m:
+            continue
+        counts = {w: int(n) for w, n in re.findall(r"\b([A-Z_]+) x(\d+)\b", m.group(2))}
+        measured = counts.pop("MEASURED", 0)
+        cals.append(
+            {
+                "run": m.group(1),
+                "points": measured + sum(counts.values()),
+                "measured": measured,
+                "cant_verify": counts,
+            }
+        )
+    if not cals:
+        raise ValueError(f"{src}: no calibration rows in the Part B closing table")
+    return {
+        "suite": "E7",
+        "source": src,
+        "decision": "D-83",
+        "closed": True,
+        "witness_disabled": all(c["measured"] == 0 for c in cals),
+        "calibrations": cals,
+    }

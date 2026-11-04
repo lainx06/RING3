@@ -28,7 +28,8 @@
     "model_declined": false,
     "prompted": null,
     "steps": 1,
-    "tainted_write_unprompted": false
+    "tainted_write_unprompted": false,
+    "typed": true
    },
    "id": "O1",
    "ops": [
@@ -112,7 +113,8 @@
     "presence_frames": 183,
     "prompted": null,
     "steps": 1,
-    "tainted_write_unprompted": false
+    "tainted_write_unprompted": false,
+    "typed": true
    },
    "id": "O2",
    "ops": [
@@ -213,7 +215,8 @@
     "not_run_why": "",
     "prompted": null,
     "steps": 2,
-    "tainted_write_unprompted": false
+    "tainted_write_unprompted": false,
+    "typed": true
    },
    "id": "O3",
    "latch": {
@@ -315,7 +318,8 @@
     "model_declined": true,
     "prompted": null,
     "steps": 0,
-    "tainted_write_unprompted": false
+    "tainted_write_unprompted": false,
+    "typed": true
    },
    "id": "O4",
    "ops": [],
@@ -398,7 +402,8 @@
     "model_declined": true,
     "prompted": 0,
     "steps": 2,
-    "tainted_write_unprompted": false
+    "tainted_write_unprompted": false,
+    "typed": true
    },
    "id": "O5",
    "ops": [
@@ -495,7 +500,8 @@
     "model_declined": true,
     "prompted": null,
     "steps": 0,
-    "tainted_write_unprompted": false
+    "tainted_write_unprompted": false,
+    "typed": true
    },
    "id": "O6",
    "ops": [],

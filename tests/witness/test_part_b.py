@@ -420,6 +420,9 @@ def test_probe_plan_caps_at_five_images(tmp_path):
     assert PROBE_MAX == 5
 
 
+PROBE_WORD = "PROBE (saved frame, not evidence)"
+
+
 def test_probe_sends_each_image_once_reserved_and_logs_the_raw_reply(tmp_path):
     from ring3bridge.calibration import PROBE_CROPS, probe, probe_plan
     from ring3bridge.witness.dial import Crop, Geometry
@@ -437,12 +440,15 @@ def test_probe_sends_each_image_once_reserved_and_logs_the_raw_reply(tmp_path):
     log = eventlog.EventLog(tmp_path / "probe")
     log.append("run_start", run_id="probe")
     items = probe_plan([path], ["white plastic arm", "servo horn"], ["full", "tight"])[:3]
-    rows = probe(items, GEOM, client, log, out=lambda _s: None)
+    printed: list[str] = []
+    rows = probe(items, GEOM, client, log, out=printed.append)
     assert [(r["crop"], r["phrase"], r["reason"]) for r in rows] == [
         ("full", "white plastic arm", "NOT_FOUND"),
-        ("full", "servo horn", "MEASURED"),
-        ("tight", "white plastic arm", "MEASURED"),
+        ("full", "servo horn", PROBE_WORD),
+        ("tight", "white plastic arm", PROBE_WORD),
     ]
+    # S5 (T-12, D-88): a probe row is a saved frame of any age, never a witness measurement (INV-14 words)
+    assert "MEASURED" not in "\n".join(printed) and sum(PROBE_WORD in line for line in printed) == 2
     assert abs(rows[1]["dial_mdeg"] - rows[2]["dial_mdeg"]) < 3000  # both crops measure the same arm
     assert len(t.posts) == 3 and ledger.settled_uusd() == 3 * 2500
     assert [json.loads(b)["input"][0]["content"][0]["text"] for _, b, _ in t.posts] == [
@@ -450,6 +456,8 @@ def test_probe_sends_each_image_once_reserved_and_logs_the_raw_reply(tmp_path):
     recs = [json.loads(x) for x in (tmp_path / "probe" / "events.jsonl").read_text().splitlines()]
     probes = [r for r in recs if r["type"] == "sam_probe"]
     assert len(probes) == 3 and all("sam_reply_blob" in r and "crop_blob" in r for r in probes)
+    assert [r["reason"] for r in probes] == ["NOT_FOUND", PROBE_WORD, PROBE_WORD]
+    assert "MEASURED" not in (tmp_path / "probe" / "events.jsonl").read_text()
     assert eventlog.verify(tmp_path / "probe").ok
 
 

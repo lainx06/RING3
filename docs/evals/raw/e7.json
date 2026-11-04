@@ -1,0 +1,33 @@
+{
+ "calibrations": [
+  {
+   "cant_verify": {
+    "NOT_FOUND": 5
+   },
+   "measured": 0,
+   "points": 5,
+   "run": "cal-20261103-194227"
+  },
+  {
+   "cant_verify": {
+    "NOT_FOUND": 5
+   },
+   "measured": 0,
+   "points": 5,
+   "run": "cal-20261103-220157"
+  },
+  {
+   "cant_verify": {
+    "SHAPE": 5
+   },
+   "measured": 0,
+   "points": 5,
+   "run": "cal-20261103-220845"
+  }
+ ],
+ "closed": true,
+ "decision": "D-83",
+ "source": "docs/evidence/T-07/README.md",
+ "suite": "E7",
+ "witness_disabled": true
+}

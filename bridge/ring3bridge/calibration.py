@@ -258,6 +258,9 @@ def load_calibration(run_dir: Path, geom_sha: str) -> tuple[Calibration, dict, s
 # ---- SAM probe (``ring3 calibrate --probe``): saved frames x phrases x crops, at most PROBE_MAX images ----
 
 PROBE_MAX = 5
+#: S5 (D-88): a probe re-reads a saved frame of any age, so its verdict word is outside the INV-14 vocabulary
+#: on purpose: a probe row is never a witness measurement and never evidence
+PROBE_WORD = "PROBE (saved frame, not evidence)"
 #: the pipeline's crop (geometry.json) and a tighter one around the pivot at a higher scale: the 15 mm horn is
 #: ~75 px in the full 920 x 570 crop and ~180 px in the 720 x 504 tight crop (no new detail, a larger object)
 PROBE_CROPS = {"full": None, "tight": (-30.0, 30.0, -12.0, 30.0, 12)}
@@ -274,7 +277,9 @@ def probe_plan(frames: list[Path], phrases: list[str], crops: list[str]) -> list
 
 def probe(items: list[tuple[Path, str, str]], geom, sam, log: eventlog.EventLog, out=print) -> list[dict]:
     """One SAM image per item (reserved first, by ``sam``): markers -> crop -> SAM -> arm filter. Logs a
-    ``sam_probe`` record per item with the raw reply as a blob; never touches the kernel link."""
+    ``sam_probe`` record per item with the raw reply as a blob; never touches the kernel link. A frame the
+    pipeline reads gives ``PROBE_WORD`` (not MEASURED: a saved frame is not evidence, S5), else the
+    CantVerify reason."""
     import cv2
     import numpy as np
 
@@ -293,7 +298,7 @@ def probe(items: list[tuple[Path, str, str]], geom, sam, log: eventlog.EventLog,
             else Geometry(geom.marker_corners, Crop(*PROBE_CROPS[crop_name]))
         )
         ev = Evidence()
-        reason, detail, dial = "MEASURED", "", None
+        reason, detail, dial = PROBE_WORD, "", None
         try:
             if img is None:
                 raise ValueError("frame does not decode")

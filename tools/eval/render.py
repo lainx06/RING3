@@ -511,15 +511,34 @@ def _e4(runs: list[dict]) -> list[str]:
 
 
 def _e7(d: dict | None) -> list[str]:
+    """S8 (D-90): E7 is rendered from `e7.json`, which `make evals` derives from the T-07 evidence (D-83)."""
     out = ["## E7 Camera witness", ""]
     if d is None:
-        return out + ["Not run yet (T-07 Part B writes `docs/evals/raw/e7.json`).", ""]
-    rows = d.get("rows")
-    if isinstance(rows, list) and rows and all(isinstance(r, dict) for r in rows):
-        head = list(rows[0].keys())
-        out += _table(head, [[r.get(h, "") for h in head] for r in rows])
+        return out + ["Not run (no `e7.json`: `make evals` derives it from the T-07 evidence).", ""]
+    cals = d["calibrations"]
+    pts = sorted({c["points"] for c in cals})
+    if len(pts) == 1 and all(c["measured"] == 0 for c in cals):
+        measured = f"0 of {pts[0]} points measured each time"
     else:
-        out += ["```", json.dumps(d, indent=1, sort_keys=True), "```"]
+        measured = "points measured " + ", ".join(f"{c['measured']} of {c['points']}" for c in cals)
+    state = "Closed: CAN'T VERIFY on hardware" if d.get("closed") else "Open"
+    disabled = "; the witness disabled itself" if d.get("witness_disabled") else ""
+    out += [
+        f"{state} ({d['decision']}): {len(cals)} calibrations, {measured}{disabled}; see `{d['source']}`.",
+        "",
+    ]
+    out += _table(
+        ["Calibration run", "Points", "Measured", "CAN'T VERIFY (reason x points)"],
+        [
+            [
+                f"`{c['run']}`",
+                c["points"],
+                c["measured"],
+                ", ".join(f"{k} x{v}" for k, v in c["cant_verify"].items()) or "-",
+            ]
+            for c in cals
+        ],
+    )
     return out + [""]
 
 

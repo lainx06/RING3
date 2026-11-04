@@ -1,7 +1,7 @@
 """`make evals` (T-05a): run the free suites on the RING3 and permissive builds, write docs/evals/raw/*.json,
 render docs/evals/results.md from the raw files.
 
-    uv run python tools/eval/run_all.py                 # build HEAD, run E1 E2 E3 E5 E6, render
+    uv run python tools/eval/run_all.py                 # build HEAD, run E1 E2 E3 E5 E6 E7, render
     uv run python tools/eval/run_all.py --suites e5,e6  # only these (the others' raw files are kept)
     uv run python tools/eval/run_all.py --render-only   # re-render results.md from the raw files
 
@@ -23,7 +23,7 @@ import render  # noqa: E402
 import build  # noqa: E402
 
 RAW = build.REPO / "docs" / "evals" / "raw"
-ALL = ("e1", "e2", "e3", "e5", "e6")
+ALL = ("e1", "e2", "e3", "e5", "e6", "e7")
 
 
 def log(msg: str) -> None:
@@ -75,9 +75,11 @@ def main(argv: list[str] | None = None) -> int:
                 data = suites.e3_link_fuzz(images, log, frames=a.e3_frames)
             elif s == "e5":
                 data = suites.e5_replay(images, log)
-            else:
+            elif s == "e6":
                 data = suites.e6_cell()
-            if meta and s != "e6":
+            else:
+                data = suites.e7_witness()  # S8 (D-90): from the T-07 evidence, no camera, no call
+            if meta and s not in ("e6", "e7"):
                 data["build"] = meta
             write_raw(s, data)
 

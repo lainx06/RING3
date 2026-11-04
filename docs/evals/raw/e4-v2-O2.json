@@ -34,7 +34,8 @@
     "presence_frames": 217,
     "prompted": null,
     "steps": 1,
-    "tainted_write_unprompted": false
+    "tainted_write_unprompted": false,
+    "typed": true
    },
    "id": "O2",
    "ops": [

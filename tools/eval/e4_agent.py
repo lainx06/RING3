@@ -5,8 +5,9 @@
     uv run python tools/eval/e4_agent.py --score <run-id> --set v2               # re-score a recorded run
     uv run python tools/eval/e4_agent.py --set v2 --only O2 --budget-usd 0.10    # one task again (D-85)
 
-With --go: refuses if kernel/, user/, bridge/, abi/, config/ or docs/context-packs/ have uncommitted changes
-(the eval measures committed code); builds the production image; starts `ring3 run` FIRST (D-70; it retries
+With --go: refuses if kernel/, user/, bridge/, abi/, config/, docs/context-packs/ or tools/eval/ have
+uncommitted changes (the eval measures committed code and committed checkers, S7) and records `git rev-parse
+HEAD` in the raw JSON; builds the production image; starts `ring3 run` FIRST (D-70; it retries
 COM2 for 30 s), then boots QEMU with the cell on COM3 and types the fixed requests from e4_tasks.py one at a
 time. Every CONFIRM prompt is shown to the operator, who types the answer (the script never answers for the
 human). Physical steps (object at the sensor, E-stop, ECHO wire) are asked for before the request and wait
@@ -15,6 +16,7 @@ the run stops unless the beam reads clear again after the object is removed (D-8
 to 10 s for tele_valid=1 (just after a board reset the telemetry is not yet valid, D-86).
 Afterwards: `ring3 verify` + `ring3 replay` of the run, the checkers, docs/evals/raw/e4-<set>.json (a run with
 --only writes e4-<set>-<ids>.json, so it never overwrites the full run), and results.md is re-rendered.
+--score refuses to write a raw file that holds another run's id (S6, D-88).
 This script never reads a key; `ring3 run` does, in its own process.
 """
 
@@ -36,7 +38,7 @@ import e4_tasks  # noqa: E402
 
 RAW = REPO / "docs" / "evals" / "raw"
 LOGS = REPO / "docs" / "evals" / "e4"
-CLEAN_PATHS = ["kernel", "user", "bridge", "abi", "config", "docs/context-packs"]
+CLEAN_PATHS = ["kernel", "user", "bridge", "abi", "config", "docs/context-packs", "tools/eval"]
 REQUEST_TIMEOUT_S = 400.0
 CONFIRM_ANSWER_S = 25.0  # the kernel's prompt timeout is 30 s (kernel/include/exec.h)
 END_RX = r"^END pid=\d+ (\S+) ticks=(\d+) uptime=(\d+)$"
@@ -213,6 +215,11 @@ def _sh(cmd: list[str]) -> str:
     return (p.stdout + p.stderr).strip()
 
 
+def measured_commit() -> str:
+    """S7 (D-88): the commit a paid run measured, written into its raw JSON (`git rev-parse HEAD`)."""
+    return _sh(["git", "rev-parse", "HEAD"])
+
+
 def run_meta(run_id: str, budget_uusd: int | None) -> dict:
     v = _sh(["uv", "run", "ring3", "verify", run_id]).splitlines()
     r = _sh(["uv", "run", "ring3", "replay", run_id]).splitlines()
@@ -244,6 +251,7 @@ def go(a: argparse.Namespace) -> int:
         print("refusing: uncommitted changes in the measured code (commit or wait for the other builders):")
         print(dirty)
         return 2
+    commit = measured_commit()
     subprocess.run(["make", "-s"], cwd=REPO, check=True)
     import tests.qemu as q
 
@@ -364,7 +372,7 @@ def go(a: argparse.Namespace) -> int:
         finally:
             if bridge.poll() is None:
                 bridge.terminate()
-    data = score(a.set, run_id, com1, run_meta(run_id, _uusd(a.budget_usd)), a.only)
+    data = score(a.set, run_id, com1, {**run_meta(run_id, _uusd(a.budget_usd)), "commit": commit}, a.only)
     if stopped:
         data["stopped"] = stopped
     raw_path(a.set, a.only).write_text(json.dumps(data, indent=1, sort_keys=True) + "\n", encoding="ascii")
@@ -385,10 +393,15 @@ def rescore(a: argparse.Namespace) -> int:
     com1 = (LOGS / f"{a.score}-tasks.txt").read_text("utf-8")
     out = raw_path(a.set, a.only)
     old = json.loads(out.read_text("ascii")) if out.exists() else {}
-    if old.get("run_id") != a.score:
-        old = {}  # the file holds another run: its verify/replay/spend lines are not this run's
-    meta = {k: old.get(k) for k in ("verify", "replay", "settled_uusd", "budget_uusd")} if old else {}
-    data = score(a.set, a.score, com1, meta or run_meta(a.score, None), a.only)
+    if old and old.get("run_id") != a.score:  # S6 (D-88): a partial file holds a different run
+        print(
+            f"refusing: docs/evals/raw/{out.name} holds run {old.get('run_id')!r}, not {a.score!r}; "
+            f"--score would overwrite that run's scores (remove the file first if that is intended)"
+        )
+        return 2
+    keep = ("verify", "replay", "settled_uusd", "budget_uusd", "commit")
+    meta = {k: old[k] for k in keep if k in old} if old else run_meta(a.score, None)
+    data = score(a.set, a.score, com1, meta, a.only)
     out.write_text(json.dumps(data, indent=1, sort_keys=True) + "\n", encoding="ascii")
     print(json.dumps([{x["id"]: x["check"]} for x in data["tasks"]], indent=1))
     return 0
