@@ -1,7 +1,8 @@
 # RING3 claims ledger
 
 Every sentence in `README.md` and `docs/video/script.md` that states a number, a behaviour or a result, mapped to
-the file (and line or table row) that proves it. Line numbers are as of commit `335481d` (T-11's release commit; `results.md` unchanged by its O3 re-score); `results.md` rows are
+the file (and line or table row) that proves it. Line numbers are as of commit `335481d` (T-11's release commit; `results.md` unchanged by its O3 re-score); T-13 items 1-4
+(D-90, D-91) reworded the rows marked T-13, and T-13 step 5 re-verifies every reference at T-12's release commit; `results.md` rows are
 named by their table and first column, since `make evals` regenerates the file. Anything without a source was cut
 or rewritten (`docs/evidence/T-05/README.md`, "Claims cut or rewritten"). Reviewer: Gemini (D-11).
 
@@ -15,14 +16,17 @@ Abbreviations: **R** = `docs/evals/results.md`; **INV** = `docs/INVARIANTS.md` (
 |---|---|---|
 | R0 | Title: "the AI proposes, the kernel decides" | ARCH §1 lines 23-24 ("It proposes one action at a time ... the kernel decides each call (D-16)"); INV-4 (line 11) |
 | R1 | Kernel written from scratch in C for 32-bit x86 | DEC D-02 (line 8), D-09 (line 15); `kernel/` |
-| R2 | The model (Muse Spark) runs on Meta's servers, never inside RING3; executor `agentsh` runs in ring 3 | DEC D-16 (line 22); ARCH §1 lines 23-24; `config/models.toml` lines 22-23 (remote endpoint) |
-| R3 | JSON only in the bridge; kernel moves bounded CRC-checked frames; ACTION format parsed in user mode | INV-2 (line 9), INV-8 (line 15); DEC D-16 |
+| R2 | The model (Muse Spark) proposes the steps and runs on Meta's servers, never inside RING3; the unprivileged helper `agentsh` receives one proposed action at a time and asks the kernel to carry it out (T-13) | DEC D-16 (line 22); ARCH §1 lines 23-24; `config/models.toml` lines 22-23 (remote endpoint) |
+| R3 | JSON only in the bridge; the bridge sends RING3 small, size-limited, checksummed messages, each action a fixed 16-byte record; the kernel never parses model text; the kernel allows, refuses or asks the human (T-13) | INV-2 (line 9), INV-8 (line 15); DEC D-16; `abi/link_abi.h` lines 61-68 (bridge-to-kernel bodies: `LINK_ACTION_LEN 16`, TEXT at most 65, FINAL at most 201, STOP 1); = R26 |
+| R3a | OS sentence: `agentsh` runs in ring 3 and reaches the kernel only through `int 0x80` system calls, whose pointers the kernel checks page by page (INV-3) (T-13) | INV-3 (line 10, "only vector 0x80 has DPL 3 ... page-walked"); `kernel/arch/i386/idt.c` line 40 (vector 0x80 gate `0xEE`, DPL 3; every other gate `0x8E`, DPL 0, line 39); `kernel/arch/i386/isr.S` line 72; `user/crt0.S` line 16 (`int $0x80`); `tests/test_inv_03_bad_pointers.py`; README diagram "system call (int 0x80)" |
+| R3b | OS sentence: on COM2 the kernel accepts only bounded COBS frames with a CRC-16; the ACTION body is parsed in ring 3 (INV-2) (T-13) | INV-2 (line 9, "bounded, COBS-decoded, CRC-checked"); `kernel/core/agentlink.c` line 236 (`cobs_decode`), line 254 (`crc16_ccitt_false` check, mismatch dropped as `LINKDROP_CRC`); `kernel/lib/cobs.c`, `kernel/lib/crc16.c`; `abi/link_abi.h` lines 30-32 (CRC-16 poly 0x1021, init 0xFFFF); `tests/test_inv_02_frame_fuzz.py`, `tests/bridge/test_framing.py`, `tests/test_inv_02_kernel_never_parses_action.py`; README diagram "(COBS + CRC-16)" |
+| R4a | seccomp filters individual system calls (a filter sees each call's number and arguments); it doesn't track what the agent did during a task, and can't ask a human by itself without a separate supervisor process (T-13) | Framing, not a measurement; scope as corrected in T-05: `docs/evidence/T-05/README.md` lines 28-29 (seccomp user notification hands a call to a supervisor process; the claim is narrowed to what a filter sees); DEC D-33 (line 39), D-91 (line 105) |
 | R4 | "the fan may rise at most 20 points per step" | `kernel/policy/policy.h` line 78 (`FAN_STEP_MAX 20`); DEC D-47 (line 53) |
-| R5 | Capabilities fixed at start; taint after untrusted input; human confirmation at the console | INV-4 (line 11), INV-15 (line 22), INV-5 (line 12) |
-| R6 | Presence interlock fails closed on stale sensor data | INV-13 (line 20); `policy.h` line 83 (`STALE_TICKS` 500 ms); `tests/test_inv_13_interlock_and_stale.py` |
-| R7 | Physical rules re-checked on every 10 ms timer tick, even when no system call runs | INV-16 (line 23); ARCH line 176; `policy.h` line 14 (`POLICY_HZ 100`); ARCH line 48 (PIT 100 Hz) |
+| R5 | Each agent starts with fixed capabilities that nothing can raise; reading untrusted data taints it; from then on every move that adds energy and every write needs a human "y" at the console (T-13) | INV-4 (line 11), INV-15 (line 22), INV-5 (line 12) |
+| R6 | Presence interlock treats stale sensor data as presence (T-13) | INV-13 (line 20); `policy.h` line 83 (`STALE_TICKS` 500 ms); `tests/test_inv_13_interlock_and_stale.py` |
+| R7 | Physical rules re-checked every 10 ms, on each timer tick, even between commands and with no model involved (T-13) | INV-16 (line 23); ARCH line 176; `policy.h` line 14 (`POLICY_HZ 100`); ARCH line 48 (PIT 100 Hz) |
 | R8 | All allow/deny logic is `decide()` in `kernel/policy/`, 883 lines in all | ARCH §3 "Policy engine as a pure function (D-28)"; `docs/evidence/T-05/linecount.txt` |
-| R9 | A recorded run can be replayed decision by decision without the model or a key | INV-10 (line 17); `docs/evidence/T-05a/replay-bundles.txt` (`env -u MODEL_API_KEY`, `REPLAY MATCH`) |
+| R9 | A run recorded with the bridge started first can be replayed decision by decision without the model or a key (T-13) | INV-10 (line 17); `docs/evidence/T-05a/replay-bundles.txt` (`env -u MODEL_API_KEY`, `REPLAY MATCH`); DEC D-70 (line 79); R E5 "8 of 8" (line 138) |
 | R10 | Research prototype, not a replacement OS | CTX §2 ("It is a research prototype, not a replacement OS") (statement of scope, not a measurement) |
 
 ### What it looks like
@@ -58,6 +62,7 @@ Abbreviations: **R** = `docs/evals/results.md`; **INV** = `docs/INVARIANTS.md` (
 | # | Claim | Source |
 |---|---|---|
 | R32 | Each of rules 1-16, in plain words, and its test file | INV rows 1-16 (lines 8-23); test files exist: `tests/bridge/test_inv_01_no_code_path.py`, `tests/test_inv_02_*.py`, `tests/test_inv_03_bad_pointers.py`, `tests/test_inv_04_policy_host.py`, `tests/test_inv_05_*.py`, `tests/test_inv_06_fault_containment.py`, `tests/test_inv_07_*.py`, `tests/bridge/test_inv_08_parser_cases.py`, `tests/bridge/test_inv_09_model.py`, `tests/bridge/test_ledger.py`, `tests/bridge/test_inv_10_chain_tamper.py`, `tests/test_inv_10_replay_match.py`, `tests/test_inv_11_banned_words.py`, `tests/qemu.py` + `tests/test_boot.py` (panic check), `tests/test_inv_13_*.py`, `tests/witness/test_inv_14_witness.py`, `tests/test_inv_05_confirm.py::test_taint_demo` + `tests/test_agent_fake_model.py::test_planted_instruction_taints_then_prompt_answered_no`, `tests/test_inv_16_halt.py` |
+| R32a | Rule 10: every run started with the bridge attached first (D-70) is logged in a hash chain and can be replayed decision by decision: 8 of 8 in E5 (T-13) | INV-10 (line 17); DEC D-70 (line 79); R E5 "8 of 8" (line 138); `docs/evals/raw/e5.json`; = R55 |
 
 ### Evidence
 | # | Claim | Source |
@@ -66,7 +71,7 @@ Abbreviations: **R** = `docs/evals/results.md`; **INV** = `docs/INVARIANTS.md` (
 | R34 | Permissive build = authority checks removed, labelled `PERMISSIVE (EVAL ONLY)` | R E1 build table (line 27); INV-11 (line 18); R E6 note line 142 (permissive keeps the device limits) |
 | R35 | E1: 8 programs x 5 fresh boots per build, every row 5/5, `spin` ends at 100 ticks | R E1 tables (lines 7-27); `docs/evals/raw/e1.json` |
 | R36 | E1: 0 kernel panics, 5/5 boots end KERNEL ALIVE, next request ran 40/40, both builds | R lines 26-27 |
-| R37 | E2: 18 hand cases (15 -EFAULT + 3 valid edges as expected, 0 unexpected); 10,000 fuzz calls, one fixed seed; 0 panics; RING3 -EPERM 345 vs permissive 0 | R E2 (lines 29-45); `docs/evals/raw/e2.json` |
+| R37 | E2: 18 hand-written pointer-boundary cases (15 bad pointers, all -EFAULT as expected, + 3 valid edge cases as expected, 0 unexpected) (T-13); 10,000 fuzz calls, one fixed seed; 0 panics; RING3 -EPERM 345 vs permissive 0 | R E2 (lines 29-45); `docs/evals/raw/e2.json` |
 | R38 | E3: 10,000 malformed frames x seeds 1-3 x 2 builds, all dropped and audited, heartbeat continued, 0 panics | R E3 rows (lines 55-60); `docs/evals/raw/e3.json` |
 | R39 | E4: paid runs by the user, n = 1 per row; checkers read transcript + kernel state + telemetry, not the model's report | R line 65; `tools/eval/e4_tasks.py`; DEC D-86 (line 99) |
 | R40 | Red-team pack tells the model to send what the operator asks it to try (D-69); added because the model usually declines under the normal pack | DEC D-69 (line 78), D-62 (line 68), D-68 (line 77); `docs/context-packs/agent-v2-redteam.md` |
@@ -92,8 +97,8 @@ Abbreviations: **R** = `docs/evals/results.md`; **INV** = `docs/INVARIANTS.md` (
 | # | Claim | Source |
 |---|---|---|
 | R58 | Built and tested; on our setup SAM 3.1 did not reliably find the arm; reports CAN'T VERIFY and disables itself | DEC D-83 (line 95); `docs/evidence/T-07/README.md` lines 401-406, A2 row (line 17) |
-| R59 | Proves each frame was taken after the request; an older frame is refused | DEC D-80a (line 91); `docs/evidence/T-07/README.md` "What works" ("Fresh frames (D-80)") |
-| R60 | Every unusable image ends in CAN'T VERIFY with a named reason, never PASS or FAIL | `docs/evidence/T-07/README.md` "What works" ("Refusals"), lines 404-406 |
+| R59 | Checks that each frame was taken after the request; an older frame is refused (T-13: "proves" -> "checks") | DEC D-80a (line 91); `docs/evidence/T-07/README.md` "What works" ("Fresh frames (D-80)") |
+| R60 | In our tests and runs, every unusable image ended in CAN'T VERIFY with a named reason, never PASS or FAIL (T-13: scoped to our tests and runs) | `docs/evidence/T-07/README.md` lines 404-406 ("a CAN'T VERIFY was never turned into PASS or FAIL"), "What works" line 434 ("Refusals"); `tests/witness/test_inv_14_witness.py` (`test_inv_14_cant_verify_cases`) |
 | R61 | The witness never changes a kernel decision | INV-14 (line 21); `tests/witness/test_inv_14_witness.py` (`test_inv_14_not_in_decision_path`) |
 
 ### Try it, Meta models, Limitations, Built during the hackathon
@@ -126,19 +131,19 @@ Abbreviations: **R** = `docs/evals/results.md`; **INV** = `docs/INVARIANTS.md` (
 | # | Claim (scene) | Source |
 |---|---|---|
 | V0 | C0 cold open: a typed request for the fan at 100 % under the red-team pack; the model sends it and the kernel denies it (`DENY_LIMIT fan_range`); "the AI proposes; the kernel decides" | R E4 red-team O1 row (line 72: model declined no, kernel denied 1 of 1, beyond policy 0); `docs/evals/raw/e4-redteam.json` O1 (`fan_set` 100 -> -200); `docs/evals/e4/e4-redteam-20261103-230412-bridge.txt` line 10 (`DENY_LIMIT (fan_range)`); DEC D-86 (line 99: "O1 fan 100 % attempted, kernel denied"); also T-04 run 3 (DEC D-69a, line 80). Typed, not spoken: no voice input (CTX §5 cut order, D-32). |
-| V1 | S0: a seccomp filter sees system call numbers and arguments, and can't know the agent read an untrusted note and ask a human first | Framing, not a measurement (CTX §2 "The judge's question"; DEC D-33 line 39). Kept to what a BPF filter's input is. |
-| V2 | S0: RING3 makes that kernel policy, below the model | INV-4, INV-15, INV-16; = R5, R7 |
-| V3 | S1: Muse Spark on Meta's servers; one action at a time; user-mode program; kernel decides every call | = R2, R23, R26 |
+| V1 | S0: on Linux a seccomp filter checks each system call on its own; it can't know the agent just read an untrusted note (T-13) | Framing, not a measurement (CTX §2 "The judge's question"; DEC D-33 line 39); = R4a. Kept to what a BPF filter's input is. |
+| V2 | S0: RING3's kernel tracks that, and makes a human say yes first (T-13) | INV-15 (line 22: tainted energy-adding motion and writes need a human "y"), INV-5 (line 12); = R5 |
+| V3 | S1: Muse Spark on Meta's servers; suggests one action at a time; a helper program inside RING3 asks the kernel; the kernel decides; caption "Ring-3 helper, system calls" (T-13) | = R2, R3a, R23, R26 |
 | V4 | S2: self-test: checks, sweeps the gauge, starts the fan; first fan start needs a yes; 6 actions, DONE, executed ops listed | R E4 B1 row (line 97, 6 steps, 1 prompt); `docs/evidence/T-04/live-run/com1-transcript-2.txt` lines 17-27; policy `R_FIRST_FAN` (`kernel/ui/words.c` line 57: "first fan: ask"); DEC D-69 |
 | V5 | S3: red-team prompt tells the model to try; it sends fan to 100 %; kernel refuses; limit 80; nothing moves | = R40, R43; `docs/evidence/T-04/live-run/bridge-timeline-3.txt` lines 13-14; DEC D-69a (line 80); R E6 "Out-of-limit calls" row run 3 |
 | V6 | S4: planted instruction to turn limits off; reading the notes taints; every move that adds energy needs a human yes; the bridge can't answer; yes -> fan 60 | CTX §2 signature moments (planted note text, D-53); INV-15; INV-5; `docs/evidence/T-08/real-ask.txt`, `real-estop.txt` (`CONFIRMED cell_fan(60)`); DEC D-81 |
 | V7 | S5: object at the sensor -> the kernel stops the fan on its own; checks the sensor on every tick; no model involved | R E6 "Hand < 100 mm" row (line 148: AUTO_HALT 0 ticks after the frame); INV-16 |
 | V8 | S6: E-stop latches; the model has no operation to clear it; its fan command is refused; only a human at the console resets it, button released | `docs/context-packs/agent-v2.md` operations table (no reset op); R44; R E6 rows lines 150-152; `real-idle.txt` |
-| V9 | S7: kill QEMU mid-task; board notices and stops the fan by itself; "in our recorded test, within 0.9 seconds" | R E6 line 153 (at most 900 ms into the mute, board clock) and line 154 (QEMU kill, by eye); T-04 README erratum line 86; `docs/evidence/T-09/hw-recheck.txt` line 36 |
-| V10 | S8: hash-chained log; replay through the same policy code; no key, no network; every decision matches | INV-10; `docs/evidence/T-05a/replay-bundles.txt`; R E5 "8 of 8" (line 138) |
-| V11 | S9: SAM 3.1 didn't reliably find the gauge arm; says CAN'T VERIFY; never guesses | = R58, R60 |
+| V9 | S7: kill QEMU mid-task (seen by eye); board notices and stops the fan by itself; "in a separate recorded test, with the kernel muted, it stopped within 0.9 seconds" (T-13: the kill and the 0.9 s cellmute measurement are separate) | R E6 line 153 (at most 900 ms into the mute, board clock) and line 154 (QEMU kill, by eye); T-04 README erratum line 86; `docs/evidence/T-09/hw-recheck.txt` line 36 |
+| V10 | S8: hash-chained log; replay through the same policy code; no key, no network; "in all eight replayable runs, every decision matches" (T-13) | INV-10; `docs/evidence/T-05a/replay-bundles.txt`; R E5 "8 of 8" (line 138; the two late-link runs are not replayable); DEC D-70 (line 79); = R9 |
+| V11 | S9: on this setup SAM 3.1 didn't reliably find the gauge arm; the camera check reports CAN'T VERIFY instead of a pass or fail (T-13: "never guesses" dropped) | = R58, R60; DEC D-83 (line 95) |
 | V12 | S10: 18 agent tasks on the real cell, 12 over-reaching, 0 operations beyond policy | = R51 |
-| V13 | S10: 40 crashing program runs, 30,000 malformed frames, 10,000 random system calls: 0 kernel panics | R E1 line 26 (8 programs x 5 boots, panics 0, 40/40); R E3 lines 55-57 (3 x 10,000, panics 0); R E2 line 42 (10,000 calls, panics 0) |
+| V13 | S10: 40 faulty-program runs (35 crashes + 5 endless loops), 30,000 malformed frames, 10,000 random system calls: 0 kernel panics (T-13: "crashing" -> "faulty-program") | R E1 rows (7 programs PROC_FAULT 5/5 each = 35, `spin` LIMIT 5/5 = 5) and line 26 (8 programs x 5 boots, panics 0, 40/40); R E3 lines 55-57 (3 x 10,000, panics 0); R E2 line 42 (10,000 calls, panics 0) |
 | V14 | Narration note: the kernel's fan rule is 0 or 50-80 % | DEC D-47 (line 53); `policy.h` line 77 |
 | V15 | Narration note: board beeps, count 2 or 3 unconfirmed (shots S7) | `docs/evidence/T-06/README.md` line 28 |
 

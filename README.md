@@ -3,23 +3,34 @@
 **A small x86 kernel, written from scratch in C, whose shell takes plain-English requests. An AI model proposes
 the actions; the kernel, not the AI, decides what actually happens, down to a fan motor on a real work cell.**
 
-RING3 is a hobby kernel with a hardware-isolated executor for actions proposed by a remote AI model. The model,
-Meta's Muse Spark, runs on Meta's servers, never inside RING3. What runs in ring 3 (the CPU's user mode) is the
-executor, `agentsh`, which turns each proposal into ordinary system calls. JSON is handled only by a host-side
-bridge program; the kernel only moves bounded, CRC-checked binary frames; the binary action format is parsed in
-user mode, never in the kernel.
+You type a request in plain English at the RING3 console. An AI model, Meta's Muse Spark, proposes the steps; it
+runs on Meta's servers, never inside RING3. Inside RING3, an unprivileged helper program (`agentsh`)
+receives one proposed action at a time and asks the kernel to carry it out. A bridge program on the host PC handles
+the model's JSON replies and sends RING3 small, size-limited, checksummed messages (each action is a fixed 16-byte
+record), so the kernel never parses model text. For every action, the kernel allows it, refuses it, or asks the
+human at the keyboard.
+
+For OS readers: `agentsh` runs in ring 3 (the CPU's user mode) and reaches the kernel only through `int 0x80`
+system calls, whose pointers the kernel checks page by page; on the COM2 link the kernel accepts only bounded
+COBS frames with a CRC-16, and the ACTION body is parsed in ring 3, never in ring 0.
 
 ## Why a new kernel, not Linux + seccomp?
 
-Linux with seccomp isolates processes and filters system calls, but the rules that matter for an AI agent driving
-a machine are not process permissions: "this agent just read an untrusted note, so its next fan command needs a
-human 'y'", "the fan may rise at most 20 points per step", "nothing moves while something is in front of the
-sensor". RING3 makes them kernel policy and decides every action the model proposes on its own, with capabilities
-fixed at start, taint after untrusted input and a human confirmation at the console. The physical rules (limits,
-ramp rates, a presence interlock that fails closed on stale sensor data, an E-stop latch) are re-checked on every
-10 ms timer tick, below the model, even when no system call is running. All allow/deny logic is one pure C
-function, `decide()`, in `kernel/policy/` (883 lines in all), small enough to read, and a recorded run can be replayed decision by
-decision without the model or a key. **RING3 is a research prototype, not a replacement operating system.**
+Standard Linux sandboxes such as seccomp filter individual system calls: a filter sees each call's number and
+arguments. It doesn't track what the agent has done during a task, and it can't ask a human by itself without a
+separate supervisor process. But the rules that matter for an AI agent driving a machine are about exactly that
+kind of task state:
+- "it just read an untrusted note, so its next fan command needs a human 'y'";
+- "the fan may rise at most 20 points per step";
+- "nothing moves while something is in front of the sensor".
+
+RING3 makes those rules part of the kernel. Each agent starts with a fixed set of permissions (capabilities) that
+nothing can raise; reading untrusted data taints it, and from then on every move that adds energy and every write
+needs a human "y" at the console. The physical rules (limits, ramp rates, a presence interlock that treats stale sensor data as presence, an E-stop latch)
+are re-checked every 10 ms, on each timer tick, even between commands and with no model involved. All allow/deny
+logic is one pure C function, `decide()`, in `kernel/policy/` (883 lines in all), small enough to read, and a run
+recorded with the bridge started first can be replayed decision by decision without the model or a key. **RING3 is
+a research prototype, not a replacement operating system.**
 
 ## What it looks like
 
@@ -96,7 +107,7 @@ Each rule is in `docs/INVARIANTS.md` with the code that enforces it; each has a 
 | 7 | The agent is bounded: 8 actions per request, time quotas, two invalid replies stop the request. | [`tests/test_inv_07_step_limit.py`](tests/test_inv_07_step_limit.py), [`tests/test_inv_07_quotas.py`](tests/test_inv_07_quotas.py) |
 | 8 | Model replies are validated exactly, with no lenient parsing or repair. | [`tests/bridge/test_inv_08_parser_cases.py`](tests/bridge/test_inv_08_parser_cases.py) |
 | 9 | Spending is reserved before every model call and capped; the API key never reaches a log or the screen. | [`tests/bridge/test_inv_09_model.py`](tests/bridge/test_inv_09_model.py), [`tests/bridge/test_ledger.py`](tests/bridge/test_ledger.py) |
-| 10 | Every run is logged in a hash chain and can be replayed decision by decision. | [`tests/bridge/test_inv_10_chain_tamper.py`](tests/bridge/test_inv_10_chain_tamper.py), [`tests/test_inv_10_replay_match.py`](tests/test_inv_10_replay_match.py) |
+| 10 | Every run started with the bridge attached first (D-70) is logged in a hash chain and can be replayed decision by decision: 8 of 8 in E5. | [`tests/bridge/test_inv_10_chain_tamper.py`](tests/bridge/test_inv_10_chain_tamper.py), [`tests/test_inv_10_replay_match.py`](tests/test_inv_10_replay_match.py) |
 | 11 | Never claim more than the evidence shows; outcomes are DONE / REFUSED / STOPPED / ERROR. | [`tests/test_inv_11_banned_words.py`](tests/test_inv_11_banned_words.py) |
 | 12 | A kernel panic is always a failure. | checked by the harness in every QEMU test ([`tests/qemu.py`](tests/qemu.py), [`tests/test_boot.py`](tests/test_boot.py)) |
 | 13 | Physical limits are enforced twice, by the kernel and by the firmware: ranges, ramp rates, presence interlock (stale or missing data counts as presence), E-stop latch. | [`tests/test_inv_13_limits.py`](tests/test_inv_13_limits.py), [`tests/test_inv_13_interlock_and_stale.py`](tests/test_inv_13_interlock_and_stale.py), [`tests/test_inv_13_estop_latch.py`](tests/test_inv_13_estop_latch.py), real cell: [`tests/test_inv_13_hw.py`](tests/test_inv_13_hw.py) |
@@ -133,7 +144,8 @@ removed (always labelled `PERMISSIVE (EVAL ONLY)`), to show what the checks chan
 
 ### E2 System-call boundary ([raw](docs/evals/raw/e2.json))
 
-18 hand-written bad-pointer cases and 10,000 random system calls (one fixed seed) per build.
+18 hand-written pointer-boundary cases (15 bad pointers, 3 valid edge cases) and 10,000 random system calls (one
+fixed seed) per build.
 
 | Build | Hand cases | -EFAULT as expected | valid edge as expected | Unexpected | DENY_FAULT audits | all -14 uaccess | no PROC_FAULT | Kernel panics |
 |---|---|---|---|---|---|---|---|---|
@@ -278,9 +290,9 @@ The board-alone checks (firmware without the kernel, `tools/cellctl.py`) are in 
 A webcam over the printed gauge was meant to check, with SAM 3.1, that the needle really reached the commanded
 zone, and report PASS, FAIL or CAN'T VERIFY back to the model. It is built and tested, but on our setup SAM 3.1 did
 not reliably find the small gauge arm, so it reports **CAN'T VERIFY** and disables itself (D-83). What works: it
-proves each camera frame was taken after the request (an older frame is refused), and every unusable image ends
-in CAN'T VERIFY with a named reason, never in PASS or FAIL. The witness never changes a kernel decision.
-Details: `docs/evidence/T-07/README.md` ("Part B closing").
+checks that each camera frame was taken after the request (an older frame is refused), and in our tests and runs
+every unusable image ended in CAN'T VERIFY with a named reason, never in PASS or FAIL. The witness never changes a
+kernel decision. Details: `docs/evidence/T-07/README.md` ("Part B closing").
 
 ## Try it
 
