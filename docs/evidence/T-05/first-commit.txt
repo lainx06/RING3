@@ -1,0 +1,1 @@
+2f22947 2026-11-01 13:15:07 -0500 T-01: planning docs (context, workflow, architecture, invariants, decisions, cards)

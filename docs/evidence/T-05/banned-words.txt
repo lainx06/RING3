@@ -1,0 +1,6 @@
+$ uv run pytest -q tests/test_inv_11_banned_words.py   # scans README.md (TEXT_FILES), kernel/user/firmware/bridge strings, context packs
+2 passed in 0.24s
+
+$ manual scan: the test regex \b(success\w*|secure\w*|safe|safely|real-?time)\b plus a scrub pattern (home paths, user names, banned-topic words) over README.md, docs/video/*.md, docs/claims/*.md, docs/evidence/T-05/*.md
+scanned: README.md, docs/video/script.md, docs/video/shots.md, docs/claims/claims.md, docs/evidence/T-05/README.md
+0 hit(s)

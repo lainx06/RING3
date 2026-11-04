@@ -1,0 +1,15 @@
+# wc -l at commit 7dc4ad4 (comments and blank lines included; cloc is not installed)
+$ find kernel -name "*.[chS]" | xargs cat | wc -l
+6827
+$ wc -l kernel/policy/*
+  660 kernel/policy/policy.c
+  209 kernel/policy/policy.h
+    6 kernel/policy/variant_default.h
+    8 kernel/policy/variant_permissive.h
+  883 total
+$ find user -name "*.[chS]" | xargs cat | wc -l
+1268
+$ cat firmware/ring3cell/*.ino firmware/ring3cell/*.h | wc -l
+884
+$ find bridge/ring3bridge -name "*.py" | xargs cat | wc -l
+5643
