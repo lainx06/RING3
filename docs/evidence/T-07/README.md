@@ -311,3 +311,17 @@ the upright servo. Each frame carried its own request nonce, so the old protocol
   bounded even with a bad clock (a hang found while writing the tests, fixed).
 **The Windows helper must be restarted** to pick this up (it is a long-running Windows Python process that
 reads the script once); until then every capture is `STALE_FRAME` ("nonce-only frame from an old helper").
+
+### Hub readout v2: the screw hole (lead request after `witness-frame-20261103-213006`)
+On the real upright frames the white hub merges with the surrounding white plastic into a ~15 mm irregular
+blob, so the round-cap test said `not found` everywhere. `find_hub` now finds the **dark screw hole** in the
+middle of the hub (= the shaft centre): a 3 mm black-hat of the brightness, threshold 40, then candidates of
+0.5-2 mm equivalent radius (the thresholded core of a ~1-1.5 mm blurred hole is ~0.7 mm), circularity >= 0.6,
+within 6 mm of the printed pivot, and >= 70 % white plastic in the ring 0.5-2 mm outside it (rules out the dark
+lines at the horn's edges). Same rule: exactly one candidate, else `not found`, never OK. **Real frame 213006:
+`hub offset: dx -2.3 mm, dy -0.1 mm, 2.26 mm MOVE: move servo RIGHT 2.3 mm, UP 0.1 mm`** (lead's hand
+measurement about -2.4 / 0.0). The other upright frames of that session (211814...212913) and the side-mount
+fixture still say `not found` (fails safe; not tuned further, time-box). Test-program change 8: the synthetic
+hub scene draws the screw hole (r 1.2 mm) every real horn has; the negative cases became no hole / two hubs /
+hub 9 mm away / no hub; the recorded side-mount frame's expected text follows the new reason; new test on the
+real frame (committed as `tests/witness/recorded/frame-upright-213006.jpg`).

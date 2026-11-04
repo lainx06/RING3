@@ -53,10 +53,11 @@ def no_move(commanded_deg: int, detail: str) -> WitnessResult:
 AXIS_OK_MM = 5.0  # (prov.) camera axis within this of the pivot; Part A: 22 mm off moved readings ~10 deg
 HUB_OK_MM = 0.5  # D-79: shaft within this of the PIVOT mark (1 mm costs ~2.6 deg after the calibration fit)
 PIVOT_ZOOM = Crop(-30.0, 30.0, -12.0, 30.0, 20)  # pivot.jpg: gauge mm, 20 px/mm, dial on top
-HUB_R_MM = (2.0, 5.0)  # white hub cap radius range
-HUB_SEARCH_MM = 6.0  # cap centre must be this close to the printed pivot
-HUB_MIN_CIRCULARITY = 0.75
-HUB_MIN_FILL = 0.70  # blob area / its enclosing circle
+HOLE_R_MM = (0.5, 2.0)  # thresholded core of the hub's dark screw hole = the shaft centre (D-79)
+HUB_SEARCH_MM = 6.0  # hole centre must be this close to the printed pivot
+HOLE_MIN_CIRCULARITY = 0.6
+HOLE_RING_MM = (0.5, 2.0)  # the ring just outside the hole ...
+HOLE_RING_WHITE = 0.70  # ... must be mostly white plastic (rules out dark gaps at the edge of the horn)
 
 
 @dataclass(frozen=True)
@@ -83,36 +84,44 @@ class HubReading:
 
 
 def find_hub(zoom: np.ndarray) -> tuple[HubReading | None, str]:
-    """The white hub cap in the pivot zoom (``PIVOT_ZOOM``): white = bright and unsaturated; candidates must
-    not touch the zoom border (the white paper does), be hub-sized and round, and lie near the pivot. Exactly
-    one candidate -> its centroid; none or several -> None with the reason (never a guess)."""
+    """The shaft centre in the pivot zoom (``PIVOT_ZOOM``): the dark screw hole of the horn hub. Dark spots
+    come from a black-hat of the brightness (darker than their surroundings within ~1.5 mm); a candidate must
+    be hole-sized, roughly round, within ``HUB_SEARCH_MM`` of the printed pivot, and enclosed by white plastic
+    (bright, unsaturated) in the ring just outside it. Exactly one candidate -> its centroid; none or
+    several -> None with the reason (never a guess)."""
     s = PIVOT_ZOOM.px_per_mm
     hsv = cv2.cvtColor(zoom, cv2.COLOR_BGR2HSV)
-    v, sat = hsv[..., 2].astype(np.int32), hsv[..., 1].astype(np.int32)
+    v, sat = hsv[..., 2], hsv[..., 1].astype(np.int32)
     paper = float(np.percentile(v, 95))
-    white = ((v >= 0.85 * paper) & (sat <= 60)).astype(np.uint8)
-    white = cv2.morphologyEx(white, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
-    n, lab, st, cen = cv2.connectedComponentsWithStats(white)
-    zh, zw = white.shape
+    white = (v.astype(np.int32) >= 0.75 * paper) & (sat <= 60)
+    k = int(round(3 * s)) | 1
+    hat = cv2.morphologyEx(v, cv2.MORPH_BLACKHAT, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k)))
+    dark = (hat >= 40).astype(np.uint8)
+    dark = cv2.morphologyEx(dark, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    n, lab, st, cen = cv2.connectedComponentsWithStats(dark)
     px0, py0 = PIVOT_ZOOM.mm_to_px(0.0, 0.0)
-    a_lo, a_hi = (np.pi * (r * s) ** 2 for r in HUB_R_MM)
+    a_lo, a_hi = (np.pi * (r * s) ** 2 for r in HOLE_R_MM)
+    yy, xx = np.mgrid[0 : zoom.shape[0], 0 : zoom.shape[1]]
     found = []
     for i in range(1, n):
-        x, y, w, h, area = st[i]
-        if x == 0 or y == 0 or x + w >= zw or y + h >= zh or not a_lo * 0.7 <= area <= a_hi:
+        area = st[i, cv2.CC_STAT_AREA]
+        if not a_lo <= area <= a_hi:
             continue
         cx, cy = cen[i]
         if np.hypot(cx - px0, cy - py0) > HUB_SEARCH_MM * s:
             continue
         cnts, _ = cv2.findContours((lab == i).astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         per = cv2.arcLength(cnts[0], True)
-        circ = 4 * np.pi * area / (per * per) if per else 0.0
-        (_, _), rad = cv2.minEnclosingCircle(cnts[0])
-        fill = area / (np.pi * rad * rad) if rad else 0.0
-        if circ >= HUB_MIN_CIRCULARITY and fill >= HUB_MIN_FILL:
-            found.append((cx, cy, rad / s))
+        if not per or 4 * np.pi * area / (per * per) < HOLE_MIN_CIRCULARITY:
+            continue
+        r = np.sqrt(area / np.pi)
+        d = np.hypot(xx - cx, yy - cy)
+        ring = (d >= r + HOLE_RING_MM[0] * s) & (d <= r + HOLE_RING_MM[1] * s)
+        if ring.any() and white[ring].mean() >= HOLE_RING_WHITE:
+            found.append((cx, cy, r / s))
     if len(found) != 1:
-        return None, "no round white cap near the PIVOT mark" if not found else f"{len(found)} candidates"
+        return None, "no dark screw hole in a white hub near the PIVOT mark" if not found else (
+            f"{len(found)} candidates")  # fmt: skip
     cx, cy, r = found[0]
     x_mm, y_mm = PIVOT_ZOOM.px_to_mm(cx, cy)
     return HubReading(x_mm, y_mm, r, (cx, cy)), ""

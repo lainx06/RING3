@@ -475,7 +475,9 @@ def test_calibrate_probe_dry_run_and_cap(capsys, monkeypatch, tmp_path):
 # ---- D-79: hub-offset readout in ring3 witness-frame (local image analysis, no SAM) ----
 
 
-def _hub_scene(shaft=(0.0, 0.0), cap=True, body=True, extra_caps=(), quad="flat", light="even", cap_r=3.5):
+def _hub_scene(
+    shaft=(0.0, 0.0), cap=True, body=True, extra_caps=(), quad="flat", light="even", cap_r=3.5, hole=True
+):
     """A rendered camera frame with the D-78 mount drawn in gauge mm through the detected homography: blue
     servo body on its back around the shaft, the blackened horn pointing at 90, a white cap at the shaft."""
     frame, _, _ = synth.render(Scene([], quad=quad, light=light))
@@ -500,6 +502,8 @@ def _hub_scene(shaft=(0.0, 0.0), cap=True, body=True, extra_caps=(), quad="flat"
     )
     for c in ([(sx, sy)] if cap else []) + list(extra_caps):
         cv2.fillPoly(frame, [circle(c[0], c[1], cap_r)], (238, 238, 238))
+        if hole:  # the screw hole in the middle of the hub = the shaft centre (what D-79's readout finds)
+            cv2.fillPoly(frame, [circle(c[0], c[1], 1.2)], (45, 45, 45))
     frame = cv2.GaussianBlur(frame, (0, 0), 1.0)
     return cv2.imdecode(cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 88])[1], cv2.IMREAD_COLOR)
 
@@ -534,10 +538,10 @@ def test_hub_offset_per_direction(shaft, word, variant):
 @pytest.mark.parametrize(
     "kw,why",
     [
-        ({"cap": False}, "no round white cap"),  # horn and body only
-        ({"body": False, "shaft": (0.0, -4.0)}, "no round white cap"),  # cap merges with the white paper
-        ({"extra_caps": [(3.0, 3.0)]}, None),  # two caps near the pivot (merged or 2 candidates)
-        ({"shaft": (9.0, 0.0)}, "no round white cap"),  # cap far from the pivot: not searched for
+        ({"cap": False}, "no dark screw hole"),  # horn and body only
+        ({"hole": False}, "no dark screw hole"),  # a white hub without a visible screw hole
+        ({"extra_caps": [(3.0, 3.0)]}, "2 candidates"),  # two hubs near the pivot
+        ({"shaft": (9.0, 0.0)}, "no dark screw hole"),  # hub far from the pivot: not searched for
     ],
 )
 def test_hub_offset_never_ok_when_unsure(kw, why):
@@ -555,5 +559,16 @@ def test_recorded_frames_say_not_found():
     from ring3bridge.witness.service import frame_report
 
     rep = frame_report(cv2.imread(str(RECORDED_FRAME)), GEOM)
-    assert rep.lines[-1] == "hub offset: not found (no round white cap near the PIVOT mark)"
+    assert rep.lines[-1] == "hub offset: not found (no dark screw hole in a white hub near the PIVOT mark)"
     assert rep.pivot_img is not None and rep.pivot_img.shape[:2] == (840, 1200)
+
+
+def test_hub_offset_on_the_real_upright_frame():
+    """witness-frame-20261103-213006 (D-78 remount, servo on its back): the screw hole is the shaft centre;
+    the lead measured it at about dx -2.4 mm, dy 0.0 mm by hand."""
+    from ring3bridge.witness.service import frame_report
+
+    rep = frame_report(cv2.imread(str(Path(__file__).parent / "recorded" / "frame-upright-213006.jpg")), GEOM)
+    assert rep.hub is not None, rep.lines[-1]
+    assert abs(rep.hub.dx_mm - -2.4) <= 0.3 and abs(rep.hub.dy_mm - 0.0) <= 0.3, rep.lines[-1]
+    assert "MOVE: move servo RIGHT 2.3 mm" in rep.lines[-1] and not rep.ok
