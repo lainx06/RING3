@@ -10,13 +10,15 @@ T-12 (branch `t12`): S1, S2, S5, S6, S7, S8 fixed with tests that failed before 
 tests before, 30 passing after, `before/pytest.txt`, `after/pytest.txt`); S3 and S4 recorded as known
 limitations (S4 deferred by D-93). Both E4 runs and the O2 partial re-scored: **no published number changed**
 (`rescore/number-diff.txt`); results.md changed only in E7, which is now generated from the T-07 evidence.
-Release check: see "Release check" below (filled in at the final commit).
+Release check at `985f0d5`: all steps pass except one flaky test in the full suite (E-stop latch alarm wait,
+D-89 kind, test unchanged; 887 of 887 in a re-run); E3 10000 of 10000 on every seed; replays 3 of 3; policy
+hash unchanged; secret scan 0 hits. Measured E1-E3 + E7 raw files and results.md committed.
 
 ## Acceptance
 | A | Check | Result | Evidence |
 |---|---|---|---|
 | A1 | S1, S2, S4, S5, S6, S7, S8 each have a test that failed before and passes after | **pass for S1, S2, S5, S6, S7, S8** (9 failed before, 30 passed after); **S4 not done: deferred by D-93**, recorded as a known limitation below | `before/pytest.txt`, `after/pytest.txt`, the per-finding table |
-| A2 | Full suite, E1-E3 and replays pass; policy hash unchanged; secret scan 0 hits | see "Release check" | `release-check.txt` |
+| A2 | Full suite, E1-E3 and replays pass; policy hash unchanged; secret scan 0 hits | **pass except one flaky test in the suite run of the release check** (the E-stop latch alarm wait, D-89 kind; 887 of 887 in a third run; lead to decide); E1-E3 pass with E3 at 10000 of 10000; replays 3 of 3; hash unchanged; scan 0 hits | `release-check.txt`, `full-suite-run3.txt`, `estop-latch-test-20-runs*.txt` |
 | A3 | Re-rendered results.md committed, with any number change listed | **pass: no change.** The three E4 raw files gained one field per task (`typed`); every other value is identical to the committed file. results.md differs from the committed one only in the E7 section | `rescore/number-diff.txt`, `rescore/*.txt`, `git diff` of the first T-12 commit |
 | A4 | Commits only this card's paths, real `Builder:` trailer; STATUS line | **pass except the STATUS line, which D-93 moves into this README** (the lead edits STATUS when `t12` is merged) | `git log t12` |
 
@@ -85,5 +87,23 @@ None added.
 - `uv run pytest tests/evals tests/witness tests/bridge` passed 811 / 0 failed / 2 skipped at the fixed tree
   before the release check (23 s, no QEMU).
 
-## Release check
-(filled in at the final commit; see `release-check.txt`)
+## Release check (`release-check.txt`, card item 4; same steps as T-11 item 6)
+**At `985f0d5`** (the last code-bearing commit; the commit after it adds only this evidence and the measured
+eval files), in a clean detached worktree with no key in the environment:
+- pass: clean build 0 warnings; host policy; policy hash `4101a8cc30507872...` unchanged; kernel/policy, abi,
+  firmware unchanged since 747fa2d and kernel, user, firmware unchanged since T-11's `6fd1e0e`; 3 of 3 replay
+  bundles CHAIN OK + REPLAY MATCH with no key and no network; secret scan 0 hits (76 files); every flagged
+  token in this evidence is a pytest test id; check-paths OK; ruff; `git status` clean before and after.
+- pass: `make evals` E1-E3 + E7, no must-pass failure; **E3 counted 10000 of 10000 on all 6 seed/build rows**
+  (the D-92 shortfall did not recur). Its raw files and results.md (measured build `985f0d5`) are committed;
+  only the commit field and one E1 tick (6 -> 7) differ from the e8de3f2 numbers.
+- **FAIL then pass: the full default suite.** In the release check 886 passed, 1 failed:
+  `tests/test_inv_13_estop_latch.py::test_inv_13_estop_latch` (alarm 0 instead of 2 right after the fan-0
+  frame: the test asserts before the ALARM/LCD frames can arrive; a D-89-kind wait gap in the test, kernel
+  unchanged). Alone: 18 of 20, then 16 of 20 (all 4 the same assertion). A third full run at the same
+  commit: **887 passed, 0 failed**. The first release check (at `b1f6d80`) had a different single flake
+  (the capture freshness test, 20 of 20 alone afterwards). **Lead decision needed:** both are test timing
+  gaps; nothing was changed. The release-check verdict line reads "1 FAILURE(S)" for this reason.
+
+Release candidate for Gate B: the head of `t12` (this commit, rebased onto main). The main tree is untouched;
+`t12` fast-forwards main on the user's word (D-93).

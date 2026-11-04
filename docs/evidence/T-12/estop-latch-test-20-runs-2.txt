@@ -1,0 +1,109 @@
+# tests/test_inv_13_estop_latch.py::test_inv_13_estop_latch, second series of 20 runs alone at 985f0d5 (2026-11-04T17:30Z), every failure's output kept
+run  1: 1 failed in 0.94s
+---- failure output of run 1 ----
+F                                                                        [100%]
+=================================== FAILURES ===================================
+___________________________ test_inv_13_estop_latch ____________________________
+    def test_inv_13_estop_latch():
+        with start() as c:
+            t = cellcmd(c, "fan 60; wait 20", answers=["y"])
+            assert results(t)[0] == ("fan 60", 0)
+            c.sim.wait_fan(60)
+            n = len(c.sim.frames)
+            c.sim.estop = True
+            c.s.expect(r"^AUDIT seq=\d+ tick=\d+ sys=telemetry target=60 decision=AUTO_HALT reason=estop .*$")
+            c.sim.wait_fan(0, start=n)
+>           assert c.sim.alarm == 2 and c.sim.lcd == {0: "AUTO HALT fan 60", 1: "E-STOP latched"}
+E           AssertionError: assert (0 == 2)
+E            +  where 0 = SimCell(port=37935, period_s=0.05, boot_t_ms=16, prev_boot_frames=0, prev_boot_repeat=1, cut_prefix=b'', distance=300,..., errors=[], states_sent=14, fan_history=[(2583.25999526, 16, 0), (2583.562158183, 316, 60), (2583.911376961, 666, 0)]).alarm
+E            +    where SimCell(port=37935, period_s=0.05, boot_t_ms=16, prev_boot_frames=0, prev_boot_repeat=1, cut_prefix=b'', distance=300,..., errors=[], states_sent=14, fan_history=[(2583.25999526, 16, 0), (2583.562158183, 316, 60), (2583.911376961, 666, 0)]) = Cell(s=<tests.qemu.Session object at 0x767aee2453a0>, sim=SimCell(port=37935, period_s=0.05, boot_t_ms=16, prev_boot_f... errors=[], states_sent=14, fan_history=[(2583.25999526, 16, 0), (2583.562158183, 316, 60), (2583.911376961, 666, 0)])).sim
+tests/test_inv_13_estop_latch.py:22: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_inv_13_estop_latch.py::test_inv_13_estop_latch - AssertionE...
+1 failed in 0.94s
+---- end ----
+run  2: 1 passed in 5.94s
+run  3: 1 passed in 5.94s
+run  4: 1 passed in 5.93s
+run  5: 1 passed in 5.89s
+run  6: 1 passed in 5.95s
+run  7: 1 passed in 5.96s
+run  8: 1 failed in 0.95s
+---- failure output of run 8 ----
+F                                                                        [100%]
+=================================== FAILURES ===================================
+___________________________ test_inv_13_estop_latch ____________________________
+    def test_inv_13_estop_latch():
+        with start() as c:
+            t = cellcmd(c, "fan 60; wait 20", answers=["y"])
+            assert results(t)[0] == ("fan 60", 0)
+            c.sim.wait_fan(60)
+            n = len(c.sim.frames)
+            c.sim.estop = True
+            c.s.expect(r"^AUDIT seq=\d+ tick=\d+ sys=telemetry target=60 decision=AUTO_HALT reason=estop .*$")
+            c.sim.wait_fan(0, start=n)
+>           assert c.sim.alarm == 2 and c.sim.lcd == {0: "AUTO HALT fan 60", 1: "E-STOP latched"}
+E           AssertionError: assert (0 == 2)
+E            +  where 0 = SimCell(port=52773, period_s=0.05, boot_t_ms=16, prev_boot_frames=0, prev_boot_repeat=1, cut_prefix=b'', distance=300,... errors=[], states_sent=14, fan_history=[(2620.777931732, 16, 0), (2621.079801672, 316, 60), (2621.428401362, 666, 0)]).alarm
+E            +    where SimCell(port=52773, period_s=0.05, boot_t_ms=16, prev_boot_frames=0, prev_boot_repeat=1, cut_prefix=b'', distance=300,... errors=[], states_sent=14, fan_history=[(2620.777931732, 16, 0), (2621.079801672, 316, 60), (2621.428401362, 666, 0)]) = Cell(s=<tests.qemu.Session object at 0x7fd4fff58f80>, sim=SimCell(port=52773, period_s=0.05, boot_t_ms=16, prev_boot_f...errors=[], states_sent=14, fan_history=[(2620.777931732, 16, 0), (2621.079801672, 316, 60), (2621.428401362, 666, 0)])).sim
+tests/test_inv_13_estop_latch.py:22: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_inv_13_estop_latch.py::test_inv_13_estop_latch - AssertionE...
+1 failed in 0.95s
+---- end ----
+run  9: 1 passed in 5.94s
+run 10: 1 passed in 5.91s
+run 11: 1 passed in 5.95s
+run 12: 1 passed in 5.98s
+run 13: 1 failed in 0.95s
+---- failure output of run 13 ----
+F                                                                        [100%]
+=================================== FAILURES ===================================
+___________________________ test_inv_13_estop_latch ____________________________
+    def test_inv_13_estop_latch():
+        with start() as c:
+            t = cellcmd(c, "fan 60; wait 20", answers=["y"])
+            assert results(t)[0] == ("fan 60", 0)
+            c.sim.wait_fan(60)
+            n = len(c.sim.frames)
+            c.sim.estop = True
+            c.s.expect(r"^AUDIT seq=\d+ tick=\d+ sys=telemetry target=60 decision=AUTO_HALT reason=estop .*$")
+            c.sim.wait_fan(0, start=n)
+>           assert c.sim.alarm == 2 and c.sim.lcd == {0: "AUTO HALT fan 60", 1: "E-STOP latched"}
+E           AssertionError: assert (0 == 2)
+E            +  where 0 = SimCell(port=41953, period_s=0.05, boot_t_ms=16, prev_boot_frames=0, prev_boot_repeat=1, cut_prefix=b'', distance=300,... errors=[], states_sent=14, fan_history=[(2646.194796792, 16, 0), (2646.496967146, 316, 60), (2646.844878454, 666, 0)]).alarm
+E            +    where SimCell(port=41953, period_s=0.05, boot_t_ms=16, prev_boot_frames=0, prev_boot_repeat=1, cut_prefix=b'', distance=300,... errors=[], states_sent=14, fan_history=[(2646.194796792, 16, 0), (2646.496967146, 316, 60), (2646.844878454, 666, 0)]) = Cell(s=<tests.qemu.Session object at 0x7ed0e5460e60>, sim=SimCell(port=41953, period_s=0.05, boot_t_ms=16, prev_boot_f...errors=[], states_sent=14, fan_history=[(2646.194796792, 16, 0), (2646.496967146, 316, 60), (2646.844878454, 666, 0)])).sim
+tests/test_inv_13_estop_latch.py:22: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_inv_13_estop_latch.py::test_inv_13_estop_latch - AssertionE...
+1 failed in 0.95s
+---- end ----
+run 14: 1 passed in 5.93s
+run 15: 1 passed in 5.91s
+run 16: 1 passed in 5.89s
+run 17: 1 passed in 5.94s
+run 18: 1 failed in 0.93s
+---- failure output of run 18 ----
+F                                                                        [100%]
+=================================== FAILURES ===================================
+___________________________ test_inv_13_estop_latch ____________________________
+    def test_inv_13_estop_latch():
+        with start() as c:
+            t = cellcmd(c, "fan 60; wait 20", answers=["y"])
+            assert results(t)[0] == ("fan 60", 0)
+            c.sim.wait_fan(60)
+            n = len(c.sim.frames)
+            c.sim.estop = True
+            c.s.expect(r"^AUDIT seq=\d+ tick=\d+ sys=telemetry target=60 decision=AUTO_HALT reason=estop .*$")
+            c.sim.wait_fan(0, start=n)
+>           assert c.sim.alarm == 2 and c.sim.lcd == {0: "AUTO HALT fan 60", 1: "E-STOP latched"}
+E           AssertionError: assert (0 == 2)
+E            +  where 0 = SimCell(port=46341, period_s=0.05, boot_t_ms=16, prev_boot_frames=0, prev_boot_repeat=1, cut_prefix=b'', distance=300,... errors=[], states_sent=14, fan_history=[(2671.468685773, 16, 0), (2671.769269038, 316, 60), (2672.120148798, 666, 0)]).alarm
+E            +    where SimCell(port=46341, period_s=0.05, boot_t_ms=16, prev_boot_frames=0, prev_boot_repeat=1, cut_prefix=b'', distance=300,... errors=[], states_sent=14, fan_history=[(2671.468685773, 16, 0), (2671.769269038, 316, 60), (2672.120148798, 666, 0)]) = Cell(s=<tests.qemu.Session object at 0x7ea40c049130>, sim=SimCell(port=46341, period_s=0.05, boot_t_ms=16, prev_boot_f...errors=[], states_sent=14, fan_history=[(2671.468685773, 16, 0), (2671.769269038, 316, 60), (2672.120148798, 666, 0)])).sim
+tests/test_inv_13_estop_latch.py:22: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_inv_13_estop_latch.py::test_inv_13_estop_latch - AssertionE...
+1 failed in 0.93s
+---- end ----
+run 19: 1 passed in 5.98s
+run 20: 1 passed in 5.92s

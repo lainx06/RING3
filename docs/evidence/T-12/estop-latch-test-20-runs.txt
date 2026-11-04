@@ -1,0 +1,21 @@
+# tests/test_inv_13_estop_latch.py::test_inv_13_estop_latch, 20 runs alone (fresh QEMU boot each) at 985f0d5 (2026-11-04T17:23Z); it failed once in the full suite of the second release check (985f0d5): sim.alarm 0 == 2 right after wait_fan(0)
+run  1: 1 passed in 5.93s
+run  2: 1 failed in 0.95s
+run  3: 1 passed in 5.95s
+run  4: 1 passed in 5.91s
+run  5: 1 passed in 5.98s
+run  6: 1 passed in 5.93s
+run  7: 1 passed in 5.93s
+run  8: 1 failed in 0.95s
+run  9: 1 passed in 5.96s
+run 10: 1 passed in 5.95s
+run 11: 1 passed in 5.95s
+run 12: 1 passed in 5.98s
+run 13: 1 passed in 5.96s
+run 14: 1 passed in 5.95s
+run 15: 1 passed in 5.94s
+run 16: 1 passed in 5.94s
+run 17: 1 passed in 5.93s
+run 18: 1 passed in 5.95s
+run 19: 1 passed in 5.94s
+run 20: 1 passed in 5.96s
