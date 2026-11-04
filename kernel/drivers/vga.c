@@ -56,6 +56,9 @@ static uint32_t tsc_mhz;                  /* 0 until calibrated: no figures reco
 static uint64_t cal_tsc;
 static uint32_t cal_tick;
 static uint32_t n_renders, max_us, sum_us, over_1ms, max_cells, max_gross_us;
+#define HIST_STEP_US 100u                  /* pass durations in 100 us buckets, the last one is 4 ms and over */
+#define HIST_N 41
+static uint32_t hist[HIST_N];
 
 int vga_on(void) { return on; }
 int vga_gfx_on(void) { return gfx; }
@@ -320,6 +323,7 @@ void vga_service(void)
             over_1ms++;
         if (us >= 2000u)
             over_2ms++;
+        hist[us / HIST_STEP_US < HIST_N - 1 ? us / HIST_STEP_US : HIST_N - 1]++;
         if (cells > max_cells)
             max_cells = cells;
     }
@@ -338,6 +342,10 @@ void vga_print_stats(void)
            " max_gross_us=%u\n",
            n_renders, n_renders ? sum_us / n_renders : 0, max_us, over_1ms, max_cells, tsc_mhz, gfx, over_2ms,
            max_gross_us);
+    printk("screen-hist: step_us=%u", HIST_STEP_US);     /* the distribution: p99 and the like come from here */
+    for (uint32_t i = 0; i < HIST_N; i++)
+        printk("%s%u", i ? "," : " ", hist[i]);
+    printk("\n");
 }
 
 void vga_print_font(void)

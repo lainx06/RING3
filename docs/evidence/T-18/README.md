@@ -92,25 +92,75 @@ inside the rotor's rectangle.
 - `test_t18_fallback_without_vga_device`: `-vga none` + `gfx=1`: `gfx: no QEMU standard VGA (PCI 1234:1111)
   on bus 0: text mode`, the prompt comes up, `screen` reports `gfx=0`, exit 33.
 
-## Render time (`render-time.txt`, `render-time-boot.txt`)
+## D-105: the tick lease under rendering (replaces the "max <= 2 ms" assertion)
 
-Whole service pass (snapshot + render + rectangle copies), TSC-measured, interrupts that land inside a pass
-taken out (`max_gross_us` keeps them in; in every run the two were equal, so interrupts were not the cause of
-the maxima). Idle boot with the sim cell: avg 160-176 µs, max 381-722 µs. Rotor turning at 60 % for 2 s with
-the beam and the needle jumping (the T-14 scenario): **avg 215-240 µs, max 1,402-1,816 µs, 0 passes ≥ 2 ms in
-8 of 13 runs**; the other 5 runs had one pass of 2,146-3,403 µs (`over_2ms=1`).
+### (a) Where rendering runs and what can preempt it
 
-What those outliers are: the native cost of the most expensive region is about 12 µs (host benchmark of the
-same code: rotor 10.6 µs, two banner strips 12.3 µs, needle 9.6 µs, beam 8.9 µs); the per-tick budget caps a
-pass at the rotor plus the age line, or one banner strip, or the needle; the typical worst pass under TCG is
-1.4-1.8 ms, and a 3.4 ms pass with the same work and no interrupt inside is the emulated CPU stalling (host /
-hypervisor scheduling on WSL2), not drawing. **The test asserts `over_2ms == 0` as the card says and is
-therefore flaky on this host (passes about 60 % of runs); it was not weakened.** Options for the lead: accept
-the measured steady-state figure (max 1.4-1.8 ms) with the budget as the control, lower the budget further
-(it cannot remove host stalls), or measure under `-icount` (deterministic virtual time, immune to host
-stalls) in a second test. `GFX_TICK_BUDGET` is 66,000 pixel units (area drawn + area copied) per tick.
+`vga_service()` (`kernel/drivers/vga.c`) is the whole pass: snapshot, render, rectangle copies. It is called
+from exactly two places in `kernel/core/audit.c`:
 
-Text mode is unchanged: the T-08 / T-14 render-time tests still assert < 1 ms and pass.
+1. **`audit_flush()`, `audit.c:160`**, reached from the kernel's own wait loops. All IDT gates are interrupt
+   gates (`kernel/arch/i386/idt.c:1-2, 39`), so the interrupt state is whatever the loop set:
+   - the console loop (`console.c:66-76`: `audit_flush(1)` then `sti(); hlt()`), the confirmation prompt loop
+     (`confirm.c:83-91`) and `exec.c:150`: **interrupts enabled** after the first `sti`, so the timer tick
+     (`audit_on_tick`, `audit.c:207`) and the COM3 interrupt (`device_on_irq`) preempt a render in progress.
+   - the executor's `agent_recv` wait (`syscall.c:120-123`: `audit_flush(1); sti(); hlt(); cli();`): the
+     syscall gate runs with **interrupts off** (F1, D-50) and only opens them for the `hlt`; a render there is
+     not preempted, the pending tick and COM3 interrupts are taken right after it, at the `sti`.
+2. **`audit_on_tick()`, `audit.c:231`**, when the tick interrupted ring 3 (the kernel's context is parked). It
+   runs **inside the tick handler, interrupts off**, after that tick's lease check (`audit_feed(EV_TICK)` and
+   `device_auto_halt`, `audit.c:220-222`) and the bounded audit drain. The next tick is delayed by at most the
+   pass; a COM3 frame arriving during it is taken at the `iret`, and the tick's poll backstop
+   (`device_on_tick`, `audit.c:213`) would read it on the next tick anyway.
+
+So the claim is not "rendering is always preemptible"; it is: the lease check of a tick is never behind a
+render (site 1 is preempted by it; at site 2 the check comes first), and where a render is not preemptible
+(site 2, the `agent_recv` wait) the hazard path is delayed by at most one pass, which the per-tick budget
+bounds (`GFX_TICK_BUDGET` 66,000 pixel units; measured p99 at or under 1.3 ms, a tick is 10 ms). The text
+screen has the same two sites with a 35 µs pass.
+
+### (b) Hazard -> AUTO_HALT -> FAN 0 under continuous redraw (`latency.txt`)
+
+`test_t18_halt_latency_under_redraw`: the same trials first in a text-mode (`screen`) session, then in a
+`gfx=1` session with the rotor at 60 % (a redraw every tick, the age line too). Hazard = the hand at 50 mm sent
+as one STATE frame at once (`emit_state`); latency = host time from that frame to the board's FAN 0, and the
+kernel-internal gap = ticks from the frame's tape record to the AUTO_HALT record. Two scenarios: the executor
+running in ring 3 (`cellcmd ... wait 300`, render site 2) six times, and the executor blocked in
+`agent_recv` for a slow scripted model (test_inv_16_halt's scenario, the interrupts-off wait) once.
+
+| run | text, ring 3 (6 trials) | gfx, ring 3 (6 trials) | text, agent_recv | gfx, agent_recv | internal gap |
+|---|---|---|---|---|---|
+| 1 | median 27.5 ms, max 50.2 | median 26.4 ms, max 45.4 (5 ticks) | - | - | 0 ticks, all |
+| 2 | median 34.1, max 45.3 | median 21.1, max 33.5 (4 ticks) | - | - | 0 ticks, all |
+| 3 | median 41.7, max 48.2 | median 29.4, max 44.1 (5 ticks) | - | - | 0 ticks, all |
+| 4 | median 27.1, max 36.4 | median 30.8, max 45.6 (5 ticks) | 4.0 ms | 1.0 ms (1 tick) | 0 ticks, all |
+
+The host-side figures carry the host's socket and scheduling jitter in both modes (single trials from 1 to
+50 ms, the sim thread and QEMU's chardev in the path); the two modes are indistinguishable. The assertions:
+every gfx trial within the bound text mode is tested against (`test_inv_16_halt`: FAN 0 within 250 ms = 25
+ticks of the hand), the `agent_recv` scenario within the same bound, and the kernel-internal gap 0 ticks in
+both modes and both scenarios. No `max <= 2 ms` assertion remains; the host-stall outliers are reported, not
+hidden.
+
+### (c) Render time as measured (`render-time.txt`)
+
+Whole service pass, TSC, interrupt-handler time inside a pass taken out (`max_gross_us` keeps it; equal in
+every run). From the latency test's gfx session (2,500-2,800 passes, rotor turning throughout, seven hazard
+cycles with decisions, console lines and ticker updates):
+
+| session | avg | p99 (100 µs buckets, upper edge) | max | passes >= 1 ms | passes >= 2 ms |
+|---|---|---|---|---|---|
+| run 1 | 244 µs | <= 1.3 ms | 1.52 ms | 131 / 2523 | 0 |
+| run 2 | 237 µs | <= 1.3 ms | 2.03 ms | 130 / 2529 | 1 |
+| run 3 | 247 µs | <= 1.3 ms | 2.18 ms | 141 / 2539 | 1 |
+| run 4 (with the bridge thread) | 253 µs | <= 1.3 ms | 3.54 ms | 159 / 2819 | 6 |
+| text mode, same trials | 33-34 µs | - | 183-318 µs | 0 | 0 |
+
+The histogram (`screen-hist:` line of the `screen` command) is in `latency.txt`. The passes above 2 ms are
+0.0-0.2 % of passes; their work is the same as the 1.3 ms ones (the budget caps a pass at the rotor plus the
+age line, one banner strip, or the needle; the native cost of any region is about 10 µs), so they are the
+emulated CPU stalling on the host, as the earlier runs showed. Idle boot with the sim cell: avg 160-176 µs,
+max 381-722 µs (`render-time-boot.txt`).
 
 ## Sim-cell PNGs (A4)
 
@@ -118,19 +168,22 @@ Text mode is unchanged: the T-08 / T-14 render-time tests still assert < 1 ms an
 `sim-fan60.png` (+ `-1..-3`), `sim-estop.png`, `sim-after-fault.png`; host renders `host-*.png`. No banned
 words (INV-11 scans `kernel/ui/gfx.c` and the tests); original shapes, no franchise symbols or fonts.
 
-## Checkpoint (2 h)
+## Checkpoint (2 h) and D-105
 
 `make run-cell-gfx` composes the same QEMU line as `run-cell-screen` with `-vga std` and `-append "gfx=1"`;
 the screen shows the real sim-cell data with readable text (the PNGs above are that screen, taken headless
 through the same monitor). The real board was not attached in this session; the GTK window was not opened
-here (no filming run), the command is in the Makefile for the user.
+here (no filming run), the command is in the Makefile for the user. The lead's D-105 (continue; replace the
+flaky "max <= 2 ms" assertion with the lease property; rebase; "ready to merge") is the section above. The
+measurement change stays: `max_us` leaves out interrupt-handler time, `max_gross_us` keeps it, and the
+`screen` command prints a 100 µs histogram (`screen-hist:`) for the percentiles.
 
 ## Acceptance
 
 | | Result | Evidence |
 |---|---|---|
 | A1 | **pass**: full default suite on this branch **978 passed, 6 skipped** (946 before + 32 T-18; text mode default; replay-match tests inside); policy hash `4101a8cc...` unchanged; ruff clean; `check-paths` OK | `pytest.txt` |
-| A2 | golden-image and fan tests pass; render: steady-state max 1.4-1.8 ms, outliers from host stalls, see above | `render-time.txt`, `host-*.png` |
+| A2 | **pass** (D-105 form): golden-image, damage and fan tests pass; hazard -> FAN 0 latency under continuous redraw within text mode's tested bound in both scenarios, internal gap 0 ticks; render avg 0.24-0.25 ms, p99 <= 1.3 ms, max 1.5-3.5 ms as measured; per-tick budget kept | `latency.txt`, `render-time.txt`, `host-*.png` |
 | A3 | `fbpoke` / `bbpoke`: PROC_FAULT vector 14 at the window address, 0 PANIC; `-vga none` falls back to text | `sim-after-fault.png`, test transcript |
 | A4 | sim-cell PNGs of every state; no banned words; original design | `sim-*.png` |
 | A5 | worktree `gfx` only; not merged | this README |

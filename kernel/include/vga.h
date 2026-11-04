@@ -19,5 +19,5 @@ void vga_note_decision(const struct pol_event *ev, const struct pol_decision *d,
 void vga_putc(char c);               /* COM1 mirror into the console window */
 void vga_backspace(void);            /* the console line editor removed a character */
 void vga_service(void);              /* render + write changed cells; at most once per tick */
-void vga_print_stats(void);          /* console `screen`: render time per tick, measured with the TSC */
+void vga_print_stats(void);          /* console `screen`: render time per tick, measured with the TSC, + histogram */
 #endif

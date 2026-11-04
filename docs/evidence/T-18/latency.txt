@@ -1,0 +1,8 @@
+hazard (hand at 50 mm, one STATE frame) -> AUTO_HALT -> FAN 0 on COM3, host ms per trial:
+  text mode (screen): [4.0, 16.1, 18.2, 21.0, 24.9, 28.3]  median 21.0 ms, max 28.3 ms
+  gfx=1 rotor at 60 %: [4.0, 30.5, 39.1, 40.8, 46.3, 49.1]  median 40.8 ms, max 49.1 ms = 5 ticks (bound 25)
+  kernel ticks from the frame's acceptance to AUTO_HALT: text [0, 0, 0, 0, 0, 0], gfx [0, 0, 0, 0, 0, 0]
+the same hazard while agentsh waits in agent_recv for a slow model (render with interrupts off): text 1.9 ms / 0 ticks internal, gfx 46.1 ms = 5 ticks / 0 ticks internal (bound 25)
+render (gfx session, whole service pass): renders=2824 avg_us=253 p99_us<=1300 max_us=1595 max_gross_us=1595 over_1ms=161 over_2ms=0 max_px_copied=32800
+  histogram (100 us buckets, last = 4 ms and over): [0, 2250, 227, 23, 4, 7, 4, 44, 39, 65, 89, 28, 20, 16, 5, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  text session for comparison: avg_us=36 max_us=314

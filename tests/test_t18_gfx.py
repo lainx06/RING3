@@ -5,7 +5,8 @@ tests/fixtures/vga-font-8x16.hex: the bytes the kernel read from VGA plane 2, du
 image's `gfxfont` command); the rotor motion rules; the damage rectangles. QEMU tests: the font the kernel
 reads equals the fixture; a `gfx=1` boot with the simulated cell gives a 1024x768 screendump whose pictures
 match the host render pixel for pixel; a ring-3 write to either window is PROC_FAULT (vector 14) with the
-screen still drawn afterwards; the render time stays under 2 ms per tick with the rotor turning; without a
+screen still drawn afterwards; the hazard -> FAN 0 latency under continuous redraw is no worse than text
+mode's (D-105); without a
 VGA device the kernel stays in text mode. PNGs of every state from the simulated cell go to
 build/test-logs/T-18/ (docs/evidence/T-18/ with RING3_EVIDENCE=1). Text mode is untouched: every other test
 boots without `gfx=1`.
@@ -23,6 +24,7 @@ import cv2
 import numpy as np
 import pytest
 
+from tests.agentbridge import AGENT_QUOTAS, BridgeThread, call, done, runs_dir
 from tests.cellharness import CONFIRM, END, Cell, cellcmd, wait_fresh
 from tests.qemu import EXIT_PASS, REPO, Session, evidence_dir
 from tests.sim_cell import NO_ECHO, SimCell
@@ -219,11 +221,18 @@ def test_every_state_has_its_word_in_the_source():
 
 
 # ---- QEMU -----------------------------------------------------------------------------------------------
-def start_gfx(tmp_path: Path, quotas: str) -> tuple[Cell, Monitor, str]:
+def start_gfx(tmp_path: Path, quotas: str, com2: bool = False) -> tuple[Cell, Monitor, str]:
     """The test image booted with gfx=1, the simulated cell on COM3, a monitor socket; returns the kernel's
-    `gfx:` boot line too."""
+    `gfx:` boot line too. `com2`: a bridge link too (the scripted model of tests/agentbridge.py)."""
+    tmp_path.mkdir(parents=True, exist_ok=True)
     sock = tmp_path / "mon.sock"
-    s = Session(append=f"{quotas} gfx=1", com3=True, timeout=60.0, monitor=f"unix:{sock},server=on,wait=off")
+    s = Session(
+        append=f"{quotas} gfx=1",
+        com2=com2,
+        com3=True,
+        timeout=90.0,
+        monitor=f"unix:{sock},server=on,wait=off",
+    )
     m = s.expect(r"^gfx: .*$")
     s.expect(r"^cell: COM3 present.*$")
     sim = SimCell(s.com3_port).start()
@@ -232,6 +241,19 @@ def start_gfx(tmp_path: Path, quotas: str) -> tuple[Cell, Monitor, str]:
     c = Cell(s, sim)
     wait_fresh(c)
     return c, Monitor(sock), m.group(0)
+
+
+def start_cell_screen(tmp_path: Path, append: str, com2: bool = False) -> Cell:
+    """The test image with the given options (text-mode `screen` for the latency comparison), sim on COM3."""
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    s = Session(append=append, com2=com2, com3=True, timeout=90.0)
+    s.expect(r"^cell: COM3 present.*$")
+    sim = SimCell(s.com3_port).start()
+    s.expect(r"^AUDIT seq=\d+ tick=\d+ sys=telemetry target=\d+ decision=BOARD_BOOT reason=board_boot .*$")
+    s.prompt()
+    c = Cell(s, sim)
+    wait_fresh(c)
+    return c
 
 
 def shot(mon: Monitor, folder: Path, name: str) -> np.ndarray:
@@ -261,8 +283,8 @@ def test_t18_font_fixture_is_what_the_kernel_reads():
 
 def test_t18_gfx_screendump_and_ring3_fault(tmp_path):
     """A2/A3: the screendump of a gfx=1 boot with the simulated cell matches the host render of `simboot`
-    in every picture (fan at rest, dial at 90, beam at 300 mm, lamp off) and the title; the measured render
-    time stays under 2 ms; a ring-3 write to the framebuffer window and to the back buffer window each give
+    in every picture (fan at rest, dial at 90, beam at 300 mm, lamp off) and the title; a ring-3 write to the
+    framebuffer window and to the back buffer window each give
     PROC_FAULT vector 14 at that address with 0 PANIC, and the screen is still drawn afterwards."""
     folder = evidence_dir("T-18")
     c, mon, gfx_line = start_gfx(tmp_path, "taction=500 trequest=3000 tconfirm=1500")
@@ -276,7 +298,7 @@ def test_t18_gfx_screendump_and_ring3_fault(tmp_path):
         time.sleep(0.6)  # figures start after the 0.5 s TSC calibration
         settle()
         st = screen_stats(c)  # before any monitor command (a screendump holds the vCPU mid-tick)
-        assert st["gfx"] == 1 and st["renders"] > 50 and st["over_2ms"] == 0 and st["max_us"] < 2000, st
+        assert st["gfx"] == 1 and st["renders"] > 50 and st["avg_us"] < 1000, st
         (folder / "render-time-boot.txt").write_text(f"test_t18_gfx_screendump_and_ring3_fault: {st}\n")
         _, host = render("simboot")
         img = shot(mon, folder, "boot")
@@ -320,26 +342,150 @@ def test_t18_gfx_screendump_and_ring3_fault(tmp_path):
     assert run.exit_code == EXIT_PASS and not run.has_panic()
 
 
-def test_t18_render_time(tmp_path):
-    """A2: render <= 2 ms per tick worst case with the rotor turning at 60 %, the beam and the needle jumping.
-    No monitor command during the measurement (T-14: a screendump holds the vCPU while the TSC runs on)."""
-    c, mon, _ = start_gfx(tmp_path, "taction=500 trequest=3000 tconfirm=1500")
-    with c:
-        time.sleep(0.6)
-        c.s.send("run cellcmd servo 120; fan 60; wait 300")
+def percentile(hist: list[int], step: int, q: float) -> int:
+    """The upper edge (µs) of the bucket holding the q-quantile of the pass durations."""
+    total = sum(hist)
+    seen = 0
+    for i, n in enumerate(hist):
+        seen += n
+        if seen >= q * total:
+            return (i + 1) * step
+    return len(hist) * step
+
+
+def screen_hist(c: Cell) -> tuple[dict[str, int], list[int], int]:
+    """`screen`: the figures, the histogram and its bucket width."""
+    c.s.send("screen")
+    m = c.s.expect(r"^screen: (renders=.*)$")
+    st = {k: int(v) for k, v in re.findall(r"(\w+)=(\d+)", m.group(1))}
+    h = c.s.expect(r"^screen-hist: step_us=(\d+) ([0-9,]+)$")
+    c.s.prompt()
+    return st, [int(v) for v in h.group(2).split(",")], int(h.group(1))
+
+
+def halt_latency_trials(c: Cell, n: int) -> list[tuple[float, int]]:
+    """n times: fan 60 % confirmed and running (the rotor turning: a redraw every tick with gfx=1), then the
+    hand at 50 mm in one STATE frame sent at once; returns (host ms from that frame to the board's FAN 0,
+    kernel ticks from the frame's acceptance to the AUTO_HALT record) per trial."""
+    out = []
+    for _ in range(n):
+        c.s.send("run cellcmd fan 60; wait 300")
         c.s.expect(CONFIRM)
         c.s.send("y")
         c.sim.wait_fan(60)
-        for d in (70, 250, NO_ECHO, 300):
-            c.sim.distance = d
-            time.sleep(0.5)
+        time.sleep(0.3)
+        k = len(c.sim.frames)
+        pos = len(c.s.output)
+        c.sim.distance = 50
+        t0 = time.monotonic()
+        c.sim.emit_state()
+        halt = c.sim.wait_fan(0, timeout=2.0, start=k)
+        ms = (halt.t - t0) * 1000
+        m = c.s.expect(
+            r"^AUDIT seq=\d+ tick=(\d+) sys=telemetry target=\d+ decision=AUTO_HALT reason=presence .*$"
+        )
+        t_halt = int(m.group(1))
+        rx = re.findall(r"^TAPE k=7 s=\d+ f=\d+ t=(\d+) nr=\d+ a0=50 ", c.s.output[pos:], re.M)
+        assert rx, "the hazard frame's tape record"
+        out.append((ms, t_halt - int(rx[0])))
         c.s.expect(END, 20)
         c.s.prompt()
-        st = screen_stats(c)
-        assert st["gfx"] == 1 and st["renders"] > 250 and st["over_2ms"] == 0 and st["max_us"] < 2000, st
-        (evidence_dir("T-18") / "render-time.txt").write_text(f"test_t18_render_time: {st}\n")
+        c.sim.distance = 300
+        wait_fresh(c)
+        time.sleep(1.1)  # FAN_MIN_GAP: 1 s between fan increases
+    return out
+
+
+def halt_while_waiting_for_the_model(c: Cell, tmp_path: Path, tag: str) -> tuple[float, int]:
+    """test_inv_16_halt's scenario: agentsh blocked in agent_recv for a slow model (the kernel's wait loop
+    there runs with interrupts off between its sti/hlt, so a render inside it is not preempted), the fan at
+    60 % (rotor turning), then the hand in one STATE frame. Returns (host ms to FAN 0, kernel ticks from the
+    frame's acceptance to AUTO_HALT)."""
+
+    def slow_halt() -> str:
+        time.sleep(2.0)
+        return call("halt")
+
+    replies = [call("fan_set", duty=60), slow_halt, done("fan ran at 60 for a moment, then halted")]
+    b = BridgeThread(c.s.com2_port, runs_dir(tmp_path, tag), replies).start()
+    c.s.send("spin the fan at 60 % for a moment, then halt")
+    c.s.expect(r"CONFIRM: agentsh wants cell_fan\(60\)\. Allow\? \[y/N\] ")
+    c.s.send("y")
+    c.sim.wait_fan(60)
+    k = len(c.sim.frames)
+    time.sleep(0.5)  # the executor is now waiting in agent_recv; with gfx=1 the rotor redraws every tick
+    pos = len(c.s.output)
+    c.sim.distance = 50
+    t0 = time.monotonic()
+    c.sim.emit_state()
+    halt = c.sim.wait_fan(0, timeout=2.0, start=k)
+    ms = (halt.t - t0) * 1000
+    m = c.s.expect(
+        r"^AUDIT seq=\d+ tick=(\d+) sys=telemetry target=\d+ decision=AUTO_HALT reason=presence .*$"
+    )
+    rx = re.findall(r"^TAPE k=7 s=\d+ f=\d+ t=(\d+) nr=\d+ a0=50 ", c.s.output[pos:], re.M)
+    assert rx, "the hazard frame's tape record"
+    c.s.expect(END, 40)
+    b.join()
+    c.s.prompt()
+    c.sim.distance = 300
+    wait_fresh(c)
+    return ms, int(m.group(1)) - int(rx[0])
+
+
+def test_t18_halt_latency_under_redraw(tmp_path):
+    """D-105 (b): the hazard -> AUTO_HALT -> FAN 0 latency with the pixel screen redrawing every tick (rotor
+    at 60 %) is no worse than text mode's: the same trials in a text-mode session first, then in a gfx=1
+    session, with the executor running in ring 3 (the render then runs at the tail of the tick handler) and
+    once with it blocked in agent_recv (the render runs in that wait loop with interrupts off); every trial
+    stays inside the bound text mode is tested against (test_inv_16_halt: FAN 0 within 250 ms = 25 ticks of
+    the hand) and the kernel-internal gap (hazard frame accepted -> AUTO_HALT) is 0 ticks in both modes; the
+    host-side medians are reported side by side (both carry the host's socket and scheduling jitter, 1-50 ms
+    in either mode). D-105 (c): the render average, p99 and max of the gfx session as measured, the per-tick
+    budget kept."""
+    folder = evidence_dir("T-18")
+    text = start_cell_screen(tmp_path / "text", f"{AGENT_QUOTAS} screen", com2=True)
+    with text:
+        t_trials = halt_latency_trials(text, 6)
+        t_wait = halt_while_waiting_for_the_model(text, tmp_path, "text")
+        t_st, _, _ = screen_hist(text)
+        text.close()
+    c, mon, _ = start_gfx(tmp_path / "gfx", AGENT_QUOTAS, com2=True)
+    with c:
+        time.sleep(0.6)
+        g_trials = halt_latency_trials(c, 6)
+        g_wait = halt_while_waiting_for_the_model(c, tmp_path, "gfx")
+        st, hist, step = screen_hist(c)
         mon.close()
         c.close()
+    t_ms = sorted(ms for ms, _ in t_trials)
+    g_ms = sorted(ms for ms, _ in g_trials)
+    ticks = [int(-(-ms // 10)) for ms in g_ms]
+    med = lambda v: v[len(v) // 2]  # noqa: E731
+    p99 = percentile(hist, step, 0.99)
+    lines = [
+        "hazard (hand at 50 mm, one STATE frame) -> AUTO_HALT -> FAN 0 on COM3, host ms per trial:",
+        f"  text mode (screen): {[round(v, 1) for v in t_ms]}  median {med(t_ms):.1f} ms,"
+        f" max {t_ms[-1]:.1f} ms",
+        f"  gfx=1 rotor at 60 %: {[round(v, 1) for v in g_ms]}  median {med(g_ms):.1f} ms,"
+        f" max {g_ms[-1]:.1f} ms = {ticks[-1]} ticks (bound 25)",
+        f"  kernel ticks from the frame's acceptance to AUTO_HALT: text {[t for _, t in t_trials]},"
+        f" gfx {[t for _, t in g_trials]}",
+        "the same hazard while agentsh waits in agent_recv for a slow model (render with interrupts off):"
+        f" text {t_wait[0]:.1f} ms / {t_wait[1]} ticks internal, gfx {g_wait[0]:.1f} ms"
+        f" = {int(-(-g_wait[0] // 10))} ticks / {g_wait[1]} ticks internal (bound 25)",
+        f"render (gfx session, whole service pass): renders={st['renders']} avg_us={st['avg_us']}"
+        f" p99_us<={p99} max_us={st['max_us']} max_gross_us={st['max_gross_us']} over_1ms={st['over_1ms']}"
+        f" over_2ms={st['over_2ms']} max_px_copied={st['max_cells_changed']}",
+        f"  histogram ({step} us buckets, last = 4 ms and over): {hist}",
+        f"  text session for comparison: avg_us={t_st['avg_us']} max_us={t_st['max_us']}",
+    ]
+    (folder / "latency.txt").write_text("\n".join(lines) + "\n")
+    (folder / "render-time.txt").write_text(lines[5] + "\n" + lines[6] + "\n")
+    assert all(t == 0 for _, t in t_trials) and all(t == 0 for _, t in g_trials), lines[3]
+    assert ticks[-1] <= 25, lines[2]
+    assert g_wait[0] < 250 and g_wait[1] == 0 and t_wait[1] == 0, lines[4]
+    assert st["gfx"] == 1 and st["renders"] > 300 and st["avg_us"] < 1000, st
 
 
 def test_t18_fallback_without_vga_device():
