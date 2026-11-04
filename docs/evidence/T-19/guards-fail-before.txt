@@ -1,0 +1,81 @@
+=== G1 CONFIRM guard off: F2 and the send no longer look at the console state, a CONFIRM does not end voice
+ 1 file changed, 2 insertions(+), 6 deletions(-)
+-        if self.state != self.PASS and self.watch.confirm_open:
++        if False:
+-        if not self.watch.at_prompt or self.watch.confirm_open:
+-            return False
+-        elif self.watch.confirm_open:
+-            self._say("a CONFIRM is open: keyboard only")
+-        elif not self.watch.at_prompt:
++        elif False:
+FAILED tests/voice/test_console_core.py::test_f2_refused_while_a_confirm_prompt_is_open
+FAILED tests/voice/test_console_core.py::test_f2_refused_while_a_request_runs_or_a_line_is_part_typed
+FAILED tests/voice/test_console_core.py::test_a_blank_line_never_turns_something_else_into_the_prompt[typed-break]
+FAILED tests/voice/test_console_core.py::test_a_blank_line_never_turns_something_else_into_the_prompt[break-typed]
+FAILED tests/voice/test_console_core.py::test_a_blank_line_never_turns_something_else_into_the_prompt[break-typed-break]
+FAILED tests/voice/test_console_core.py::test_a_blank_line_never_turns_something_else_into_the_prompt[confirm-break]
+FAILED tests/voice/test_console_core.py::test_a_blank_line_never_turns_something_else_into_the_prompt[confirm-2-breaks]
+FAILED tests/voice/test_console_core.py::test_a_blank_line_never_turns_something_else_into_the_prompt[req]
+FAILED tests/voice/test_console_core.py::test_a_blank_line_never_turns_something_else_into_the_prompt[outcome]
+FAILED tests/voice/test_console_core.py::test_a_confirm_split_across_chunks_is_seen
+FAILED tests/voice/test_console_core.py::test_a_confirm_arriving_in_any_voice_phase_drops_voice_and_returns_the_keyboard[starting]
+FAILED tests/voice/test_console_core.py::test_a_confirm_arriving_in_any_voice_phase_drops_voice_and_returns_the_keyboard[recording]
+FAILED tests/voice/test_console_core.py::test_a_confirm_arriving_in_any_voice_phase_drops_voice_and_returns_the_keyboard[transcribing]
+FAILED tests/voice/test_console_core.py::test_a_confirm_arriving_in_any_voice_phase_drops_voice_and_returns_the_keyboard[heard]
+FAILED tests/voice/test_console_core.py::test_enter_refused_when_the_prompt_went_away_while_the_transcript_was_shown
+FAILED tests/voice/test_console_core.py::test_send_line_itself_refuses_at_the_last_step
+FAILED tests/test_t19_console_qemu.py::test_a_spoken_request_end_to_end_with_the_kernels_decisions
+17 failed, 163 passed in 35.86s
+
+=== G2 bare-answer guard off: is_bare_answer always False
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+-    words = re.findall(r"[a-z0-9]+", text.lower())
+-    return bool(words) and ("".join(words) in _ANSWERS or all(w in _ANSWERS for w in words))
++    return False
+FAILED tests/voice/test_console_core.py::test_send_line_itself_refuses_at_the_last_step
+FAILED tests/voice/test_console_core.py::test_a_bare_answer_is_shown_and_never_offered[y]
+FAILED tests/voice/test_console_core.py::test_a_bare_answer_is_shown_and_never_offered[Yes.]
+FAILED tests/voice/test_console_core.py::test_a_bare_answer_is_shown_and_never_offered[NO!]
+FAILED tests/voice/test_console_core.py::test_a_bare_answer_is_shown_and_never_offered[RING3, yes]
+FAILED tests/voice/test_text_guards.py::test_bare_confirmation_words_are_never_a_line[y]
+FAILED tests/voice/test_text_guards.py::test_bare_confirmation_words_are_never_a_line[Y]
+FAILED tests/voice/test_text_guards.py::test_bare_confirmation_words_are_never_a_line[n]
+FAILED tests/voice/test_text_guards.py::test_bare_confirmation_words_are_never_a_line[N]
+FAILED tests/voice/test_text_guards.py::test_bare_confirmation_words_are_never_a_line[yes]
+FAILED tests/voice/test_text_guards.py::test_bare_confirmation_words_are_never_a_line[YES]
+FAILED tests/voice/test_text_guards.py::test_bare_confirmation_words_are_never_a_line[Yes.]
+FAILED tests/voice/test_text_guards.py::test_bare_confirmation_words_are_never_a_line[no]
+FAILED tests/voice/test_text_guards.py::test_bare_confirmation_words_are_never_a_line[No!]
+FAILED tests/voice/test_text_guards.py::test_bare_confirmation_words_are_never_a_line[NO?]
+FAILED tests/voice/test_text_guards.py::test_bare_confirmation_words_are_never_a_line[ y ]
+FAILED tests/voice/test_text_guards.py::test_bare_confirmation_words_are_never_a_line[y.]
+FAILED tests/voice/test_text_guards.py::test_bare_confirmation_words_are_never_a_line["yes"]
+FAILED tests/voice/test_text_guards.py::test_bare_confirmation_words_are_never_a_line[(no)]
+FAILED tests/voice/test_text_guards.py::test_bare_confirmation_words_are_never_a_line[y e s]
+FAILED tests/voice/test_text_guards.py::test_bare_confirmation_words_are_never_a_line[yes, yes]
+FAILED tests/voice/test_text_guards.py::test_bare_confirmation_words_are_never_a_line[no no]
+FAILED tests/voice/test_text_guards.py::test_bare_confirmation_words_are_never_a_line[Y!!!]
+FAILED tests/voice/test_text_guards.py::test_bare_confirmation_words_are_never_a_line[RING3, yes.]
+FAILED tests/voice/test_text_guards.py::test_bare_confirmation_words_are_never_a_line[ring three, N]
+FAILED tests/voice/test_text_guards.py::test_bare_confirmation_words_are_never_a_line[yes\n]
+FAILED tests/voice/test_text_guards.py::test_bare_confirmation_words_are_never_a_line[\tno\r\n]
+FAILED tests/voice/test_text_guards.py::test_bare_confirmation_words_are_never_a_line[ye\x1bs]
+FAILED tests/voice/test_text_guards.py::test_bare_confirmation_words_are_never_a_line[y\xe9]
+FAILED tests/test_t19_console_qemu.py::test_a_spoken_request_end_to_end_with_the_kernels_decisions
+30 failed, 150 passed in 37.02s
+
+=== G3 Enter guard off: the transcript is sent as soon as it arrives
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+-        self.state = self.HEARD
+-        self._say(f'heard: "{c.text}"  Enter = send, Esc = discard')
++        self.state = self.HEARD
++        self._enter()
+FAILED tests/voice/test_console_core.py::test_enter_refused_when_the_prompt_went_away_while_the_transcript_was_shown
+FAILED tests/voice/test_console_core.py::test_a_transcript_waits_for_enter
+FAILED tests/voice/test_console_core.py::test_newline_also_counts_as_enter_once
+FAILED tests/voice/test_console_core.py::test_escape_discards_the_transcript
+FAILED tests/voice/test_console_core.py::test_an_arrow_key_does_not_count_as_escape_or_enter
+FAILED tests/voice/test_console_core.py::test_a_stale_prompt_line_is_redrawn_after_a_voice_message
+FAILED tests/test_t19_console_qemu.py::test_a_spoken_request_end_to_end_with_the_kernels_decisions
+7 failed, 173 passed in 34.72s
+
