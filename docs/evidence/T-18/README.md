@@ -134,9 +134,11 @@ running in ring 3 (`cellcmd ... wait 300`, render site 2) six times, and the exe
 | 2 | median 34.1, max 45.3 | median 21.1, max 33.5 (4 ticks) | - | - | 0 ticks, all |
 | 3 | median 41.7, max 48.2 | median 29.4, max 44.1 (5 ticks) | - | - | 0 ticks, all |
 | 4 | median 27.1, max 36.4 | median 30.8, max 45.6 (5 ticks) | 4.0 ms | 1.0 ms (1 tick) | 0 ticks, all |
+| 5 (evidence run, `latency.txt`) | see file | see file | 1.9 ms | 46.1 ms (5 ticks) | 0 ticks, all |
 
 The host-side figures carry the host's socket and scheduling jitter in both modes (single trials from 1 to
-50 ms, the sim thread and QEMU's chardev in the path); the two modes are indistinguishable. The assertions:
+50 ms in either mode and either scenario, the sim thread and QEMU's chardev in the path); the two modes are
+indistinguishable. The assertions:
 every gfx trial within the bound text mode is tested against (`test_inv_16_halt`: FAN 0 within 250 ms = 25
 ticks of the hand), the `agent_recv` scenario within the same bound, and the kernel-internal gap 0 ticks in
 both modes and both scenarios. No `max <= 2 ms` assertion remains; the host-stall outliers are reported, not
@@ -154,6 +156,7 @@ cycles with decisions, console lines and ticker updates):
 | run 2 | 237 µs | <= 1.3 ms | 2.03 ms | 130 / 2529 | 1 |
 | run 3 | 247 µs | <= 1.3 ms | 2.18 ms | 141 / 2539 | 1 |
 | run 4 (with the bridge thread) | 253 µs | <= 1.3 ms | 3.54 ms | 159 / 2819 | 6 |
+| run 5 (evidence run) | 253 µs | <= 1.3 ms | 1.60 ms | 161 / 2824 | 0 |
 | text mode, same trials | 33-34 µs | - | 183-318 µs | 0 | 0 |
 
 The histogram (`screen-hist:` line of the `screen` command) is in `latency.txt`. The passes above 2 ms are
@@ -182,7 +185,7 @@ measurement change stays: `max_us` leaves out interrupt-handler time, `max_gross
 
 | | Result | Evidence |
 |---|---|---|
-| A1 | **pass**: full default suite on this branch **978 passed, 6 skipped** (946 before + 32 T-18; text mode default; replay-match tests inside); policy hash `4101a8cc...` unchanged; ruff clean; `check-paths` OK | `pytest.txt` |
+| A1 | **pass**: full default suite on this branch, rebased onto main `a639f42`, **978 passed, 6 skipped** on a quiet host (two earlier runs while another session's suite shared the host each had one text-mode timing flake, listed in `pytest.txt`; both pass 3/3 alone) (946 before + 32 T-18; text mode default; replay-match tests inside); policy hash `4101a8cc...` unchanged; ruff clean; `check-paths` OK | `pytest.txt` |
 | A2 | **pass** (D-105 form): golden-image, damage and fan tests pass; hazard -> FAN 0 latency under continuous redraw within text mode's tested bound in both scenarios, internal gap 0 ticks; render avg 0.24-0.25 ms, p99 <= 1.3 ms, max 1.5-3.5 ms as measured; per-tick budget kept | `latency.txt`, `render-time.txt`, `host-*.png` |
 | A3 | `fbpoke` / `bbpoke`: PROC_FAULT vector 14 at the window address, 0 PANIC; `-vga none` falls back to text | `sim-after-fault.png`, test transcript |
 | A4 | sim-cell PNGs of every state; no banned words; original design | `sim-*.png` |
