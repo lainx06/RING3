@@ -366,3 +366,14 @@ reference, non-waiting grabs, changing frames -> the helper does not write at a 
 frame it writes passes `capture.proof_ok`. Test-program change: `test_helper_counts_live_grabs...` gave the
 helper a constant wall clock (`wall_ns=lambda: 5`); with the proof now on recorded fields that can never show
 capture after seen, so it gets a wall clock that follows its fake time (expectation unchanged).
+
+### Phrase "black bar" (probe `probe-20261103-220356`, upright mount, arm taped black)
+Calibration `cal-20261103-220157`: NOT_FOUND x5 with "white plastic arm". The probe on the latest frame:
+"black bar" and "black rectangle" -> 11 records each, "black stick" / "black lever" -> 0. Decoded (free):
+"black bar" record **id 4** (c 0.58) is the arm: x -3.9..+4.7, y +5.5..+20.7 mm, centre direction 88.3 deg,
+near end **5.5 mm** from the pivot (the tape stopped at the white hub), so the unchanged pivot-in-box filter
+refuses it (SHAPE). The other 10 are the 8 black boundary bands (~55 mm out, two per zone edge) and two marker
+parts. "black rectangle" returned the same bands and markers but not the arm. `DEFAULT_PROMPT` is now
+"black bar" (also the probe's default); test on the recorded reply (`tests/witness/recorded/
+sam-black-bar-upright.json`): exactly one record near the pivot, at 5.5 mm and ~88 deg, and `arm_angle` still
+says SHAPE. Note: the arm's confidence 0.58 is close to the 0.50 floor (`min_conf_ppm`, unchanged).

@@ -269,3 +269,34 @@ def test_recorded_square_reply_lands_on_the_printed_markers():
         m0 = expected(0)
         assert m0[0] <= x0 and x1 <= m0[2] and m0[1] <= y0 and y1 <= m0[3] + 0.2
         assert abs((x1 - x0) - 5.0) <= 0.4
+
+
+def test_recorded_black_bar_reply_holds_the_arm_and_the_filter_stays_strict():
+    """probe-20261103-220356 (upright mount, arm taped black at 90 deg): with "black bar", exactly one of the
+    11 records lies near the pivot and points at ~90 deg: the arm. Its near end is 5.5 mm out (the tape
+    stopped at the white hub), so the pivot-in-box filter still refuses it: SHAPE, not relaxed."""
+    import math
+
+    from ring3bridge.witness import SHAPE
+    from ring3bridge.witness.angle import arm_angle, box_mm
+    from ring3bridge.witness.dial import load_geometry
+    from ring3bridge.witness.sam import DEFAULT_PROMPT
+
+    assert DEFAULT_PROMPT == "black bar"
+    crop = load_geometry().crop
+    recs = _recorded("sam-black-bar-upright.json")
+    assert len(recs) == 11
+
+    def gap(b):  # distance from the pivot to the box (0 when inside)
+        dx = b[0] if b[0] > 0 else (-b[2] if b[2] < 0 else 0.0)
+        dy = b[1] if b[1] > 0 else (-b[3] if b[3] < 0 else 0.0)
+        return math.hypot(dx, dy)
+
+    near = [(r, box_mm(r, crop)) for r in recs if gap(box_mm(r, crop)) < 10.0]
+    assert len(near) == 1  # the bands and markers are all >= 54 mm away
+    r, b = near[0]
+    assert r.obj_id == 4 and abs(gap(b) - 5.5) < 0.3
+    assert abs(math.degrees(math.atan2((b[1] + b[3]) / 2, (b[0] + b[2]) / 2)) - 88.3) < 1.0
+    with pytest.raises(CantVerify) as e:
+        arm_angle(recs, crop)
+    assert e.value.reason == SHAPE and "4: pivot not inside the box" in e.value.detail

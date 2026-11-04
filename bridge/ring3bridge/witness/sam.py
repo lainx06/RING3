@@ -43,7 +43,7 @@ from ring3bridge.ledger import BudgetRefused, Ledger, Reservation
 from ring3bridge.models.transport import Transport, TransportError
 from ring3bridge.witness import SAM_FORMAT, CantVerify
 
-DEFAULT_PROMPT = "white plastic arm"
+DEFAULT_PROMPT = "black bar"  # taped horn; probe-20261103-220356 found the arm with it (T-07 README)
 MAX_PROMPT = 64
 MAX_IMAGE_BYTES = 4 << 20
 MAX_LINE = 1 << 20

@@ -264,7 +264,9 @@ def _cmd_probe(a: argparse.Namespace, sam_cfg, geom, budget: int, per: int) -> i
     from ring3bridge.calibration import PROBE_MAX, probe, probe_plan
 
     frames = [Path(f) for f in a.probe]
-    phrases = [p.strip() for p in a.phrases.split(";") if p.strip()]
+    from ring3bridge.witness.sam import DEFAULT_PROMPT
+
+    phrases = [p.strip() for p in (a.phrases or DEFAULT_PROMPT).split(";") if p.strip()]
     crops = [c.strip() for c in a.crops.split(",") if c.strip()]
     try:
         items = probe_plan(frames, phrases, crops)
@@ -542,7 +544,7 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument(
         "--probe", nargs="+", help="saved camera frames (JPEG) to re-send to SAM: no kernel, <= 5 images"
     )
-    c.add_argument("--phrases", default="white plastic arm", help="--probe: noun phrases separated by ';'")
+    c.add_argument("--phrases", help="--probe: noun phrases separated by ';' (default: the witness phrase)")
     c.add_argument(
         "--crops", default="full", help="--probe: full (the pipeline's crop) and/or tight, comma-separated"
     )
