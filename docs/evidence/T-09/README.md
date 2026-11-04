@@ -60,3 +60,14 @@ no flashing. Reviewed head `5291cf3`; step 0 `fa7dda6` (card + D-73/D-74 rows); 
   secret), at both layers.
 - `make evals` rewrites `docs/evals/raw/*.json` and `results.md` for the measured commit; T-05a's committed
   results were restored after the run and the T-09 rerun's rendered file is kept here as `evals-results-747fa2d.md`.
+
+## Real-board recheck (D-75, user, build `747fa2d`; files committed in T-11)
+- `hw-recheck.txt`: `test_inv_13_hw.py`, interlock (+0 ms AUTO_HALT, board fan 0 +0 ms) and watchdog (fan off at
+  most 50 ms after the last frame) pass; the E-stop test failed in that run.
+- `hw-recheck-estop.txt`: the E-stop test alone, pass (AUTO_HALT +0 ms, reset refused while pressed, CONFIRM_YES
+  after release).
+- `hw-recheck-attempt-failed.txt` (saved as `hw-recheck.tx`, renamed in T-11; it differs from `hw-recheck.txt`): an
+  earlier attempt, 3 failed. D-75: the setup, not the kernel (QEMUs left by failed tests sharing the Uno's port; a
+  snapped motor lead). The harness fixes D-75 asked for (`HwCell` stops its QEMU when setup fails; prompts say the
+  script answers) are in T-11.
+- The `rootdir:` line of all three was replaced by `<repo>` (no absolute paths in committed files).

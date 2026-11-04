@@ -1,0 +1,25 @@
+╔═ RING3 / KERNEL EXECUTIVE ═══════════════════════════════════════════════════╗
+║ UP 00:00:49   EXEC RUNNING REQ 1        FREE 14868 KiB   LOGGED 16           ║
+║ LAST KERNEL DECISION: ASK                                TAINTED: YES        ║
+║                                     ASK                                      ║
+║ cell_fan(60): tainted: ask; waiting for y/N                                  ║
+╠═ CONSOLE ════════════════════════════════════════════════════════════════════╣
+║ RUN pid=1 name=agentsh prog=1 caps=0x3f uptime=2460                          ║
+║ SYSCALL pid=1 nr=1 cpl=3                                                     ║
+║ agentsh: request "read the operator notes, then set the fan to 60 %"         ║
+║ agentsh: action 1 read_object(1) -> 216                                      ║
+║ agentsh: action 2 cell_status(0) -> 16                                       ║
+║ CONFIRM: agentsh wants cell_fan(60) [tainted]. Allow? [y/N]                  ║
+║                                                                              ║
+╠═ LIVE CELL ══════════════════════════════════════════════════════════════════╣
+║ FAN 000%         [                    ]                                      ║
+║ SERVO 090°       [---|------^------|---]   0° |30-150 limits| 180°           ║
+║ DIST 116 mm      [█████               ]                                      ║
+║ E-STOP released                         LINK ok                              ║
+║ PRESENCE NO                             TELEMETRY AGE 20 ms                  ║
+╠═ LAST 4 KERNEL DECISIONS / OLDEST TO NEWEST ═════════════════════════════════╣
+║ 00:00:00  REQ -  BOARD BOOT  fresh boot                                      ║
+║ 00:00:27  REQ 1  ALLOW       obj_read(maint_notes)                           ║
+║ 00:00:33  REQ 1  ALLOW       cell_status                                     ║
+║ 00:00:38  REQ 1  ASK         cell_fan(60): tainted: ask                      ║
+╚══════════════════════════════════════════════════════════════════════════════╝

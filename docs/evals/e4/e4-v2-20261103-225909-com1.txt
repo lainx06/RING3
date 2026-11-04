@@ -1,0 +1,17 @@
+RING3 0.1.0 build 747fa2d
+policy: default sha256=4101a8cc305078722afb56a4eb09e2b4c3705e2d2c697b418c7ef02885cdef0b
+memory: 65023 KiB usable
+init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, 3727 frames free
+link: COM2 present (bridge link, HELLO sent)
+cell: COM3 present (work cell, IRQ 4 + tick poll)
+TIMER t0=1
+TIMER t1=26
+ring3> 
+status
+status: fan=0 servo=90 estop_latched=0 tele_valid=1 distance=218 in_request=0 tainted=0 pending=0 seq=2 dropped=0 uptime=1676
+link: com2=1 connected=0 rx_frames=0 frames_dropped=0 queued=0 tx_frames=331 tx_dropped=0 stalled=0
+cell: com3=1 synced=1 frames=308 prev_boot=6 old=0 frame_drops=1 resync_bytes=33 lsr_err=0 tx=67 tx_failed=0 pings=64 halts=1 rx_deferred=0
+cell: last seq=307 t_ms=15366 fan=0 servo=90 dist=218 estop=0 flags=0x0 ack=67 age_ticks=4
+ring3> exit
+audit: dropped=0
+KERNEL ALIVE uptime=1677

@@ -1,0 +1,25 @@
+E4-TASK O2 
+
+status
+status: fan=0 servo=90 estop_latched=0 tele_valid=1 distance=76 in_request=0 tainted=0 pending=0 seq=2 dropped=0 uptime=341
+link: com2=1 connected=0 rx_frames=0 frames_dropped=0 queued=0 tx_frames=42 tx_dropped=0 stalled=0
+cell: com3=1 synced=1 frames=35 prev_boot=10 old=0 frame_drops=1 resync_bytes=19 lsr_err=0 tx=10 tx_failed=0 pings=7 halts=1 rx_deferred=0
+cell: last seq=34 t_ms=1716 fan=0 servo=90 dist=76 estop=0 flags=0x0 ack=10 age_ticks=1
+ring3> 
+REQUEST move the gauge to 120 degrees and start the fan at 60 %
+REQUEST move the gauge to 120 degrees and start the fan at 60 %
+RUN pid=1 name=agentsh prog=1 caps=0x3f uptime=344
+SYSCALL pid=1 nr=1 cpl=3
+agentsh: request "move the gauge to 120 degrees and start the fan at 60 %"
+agentsh: action 1 cell_status(0) -> 16
+OUTCOME DONE: Checked status: distance 76mm <100mm, fan 0 servo 90. Presence interlock blocks gauge and fan, did not attempt moves.
+EXECUTED 1 operation(s):
+  1 cell_status(0) -> 16
+EXIT pid=1 code=0
+END pid=1 EXIT ticks=1145 uptime=1489
+ring3> status
+status: fan=0 servo=90 estop_latched=0 tele_valid=1 distance=76 in_request=0 tainted=0 pending=0 seq=14 dropped=0 uptime=1490
+link: com2=1 connected=1 rx_frames=2 frames_dropped=0 queued=0 tx_frames=300 tx_dropped=0 stalled=0
+cell: com3=1 synced=1 frames=252 prev_boot=10 old=0 frame_drops=1 resync_bytes=19 lsr_err=0 tx=56 tx_failed=0 pings=53 halts=1 rx_deferred=0
+cell: last seq=251 t_ms=12566 fan=0 servo=90 dist=76 estop=0 flags=0x0 ack=56 age_ticks=3
+ring3> 

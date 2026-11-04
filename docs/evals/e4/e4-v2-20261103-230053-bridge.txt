@@ -1,0 +1,4 @@
+run e4-v2-20261103-230053: connecting to COM2 at 127.0.0.1:53543 (budget $0.150000, estimate)
+23:00:55 HELLO from the kernel: ABI 1, policy default, build 747fa2d, policy hash prefix 4101a8cc30507872 (matches the policy sources in this checkout)
+23:00:57 kernel decision #1: telemetry target=0 -> BOARD_BOOT (board_boot) result=0
+23:01:00 HELLO from the kernel: ABI 1, policy default, build 747fa2d, policy hash prefix 4101a8cc30507872 (matches the policy sources in this checkout)

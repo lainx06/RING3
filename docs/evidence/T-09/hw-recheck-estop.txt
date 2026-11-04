@@ -1,0 +1,27 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0
+rootdir: <repo>
+configfile: pyproject.toml
+collected 1 item
+
+tests/test_inv_13_hw.py 
+>>> waiting for the board's boot (the port open resets it) ...
+
+>>> BOARD_BOOT at tick 49
+
+>>> keep the sensor clear; the fan starts at 60 % after you answer y on this console
+
+>>> the fan runs: press the E-stop within 10 s and keep it pressed
+
+>>> button seen at t_ms 7316; AUTO_HALT at tick 772 (+0 ms); board fan 0 at t_ms 7316 (+0 ms, flags 0x08)
+
+>>> button still pressed: the reset must be refused; answer y to the next prompt
+
+>>> estop reset while pressed -> DENY_ESTOP estop_button
+
+>>> release the E-stop now; the reset is asked again in 3 s: answer y
+
+>>> estop reset released -> CONFIRM_YES estop_reset (ESTOP_RESET sent)
+.
+
+============================== 1 passed in 22.50s ==============================

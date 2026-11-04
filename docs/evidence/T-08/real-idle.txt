@@ -1,0 +1,25 @@
+╔═ RING3 / KERNEL EXECUTIVE ═══════════════════════════════════════════════════╗
+║ UP 00:02:27   EXEC IDLE                 FREE 14900 KiB   LOGGED 29           ║
+║ LAST KERNEL DECISION: CONFIRMED                          TAINTED: NO         ║
+║                                  CONFIRMED                                   ║
+║ estop reset                                                                  ║
+╠═ CONSOLE ════════════════════════════════════════════════════════════════════╣
+║ CONFIRM: console wants estop_reset (button released, fresh telemetry). Allow ║
+║ ? [y/N]                                                                      ║
+║ y                                                                            ║
+║                                                                              ║
+║ estop reset: CONFIRM_YES estop_reset (ESTOP_RESET sent)                      ║
+║ ring3>                                                                       ║
+║                                                                              ║
+╠═ LIVE CELL ══════════════════════════════════════════════════════════════════╣
+║ FAN 000%         [                    ]                                      ║
+║ SERVO 090°       [---|------^------|---]   0° |30-150 limits| 180°           ║
+║ DIST 116 mm      [█████               ]                                      ║
+║ E-STOP released                         LINK ok                              ║
+║ PRESENCE NO                             TELEMETRY AGE 50 ms                  ║
+╠═ LAST 4 KERNEL DECISIONS / OLDEST TO NEWEST ═════════════════════════════════╣
+║ 00:00:57  REQ 1  CONFIRMED   cell_fan(60)                                    ║
+║ 00:01:07  REQ -  AUTO HALT   E-STOP latched                                  ║
+║ 00:02:14  REQ -  ASK         estop reset: console reset                      ║
+║ 00:02:17  REQ -  CONFIRMED   estop reset                                     ║
+╚══════════════════════════════════════════════════════════════════════════════╝

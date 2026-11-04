@@ -1,0 +1,41 @@
+run e4-v2-20261103-230255: connecting to COM2 at 127.0.0.1:54459 (budget $0.150000, estimate)
+23:02:57 HELLO from the kernel: ABI 1, policy default, build 747fa2d, policy hash prefix 4101a8cc30507872 (matches the policy sources in this checkout)
+23:02:57 kernel decision #1: telemetry target=1 -> FRAME_DROP (bad_frame) result=0
+23:02:59 kernel decision #2: telemetry target=0 -> BOARD_BOOT (board_boot) result=0
+23:03:00 kernel decision #3: exec_start target=1 -> ALLOW (exec_start) result=0
+23:03:00 REQUEST 1: "move the gauge to 120 degrees and start the fan at 60 %"
+23:03:00 model call 1 (reserving spend first)
+23:03:02 model action 1: cell_status() -> sent as ACTION
+23:03:03 HELLO from the kernel: ABI 1, policy default, build 747fa2d, policy hash prefix 4101a8cc30507872 (matches the policy sources in this checkout)
+23:03:03 kernel decision #7: cell_status target=1073754852 -> ALLOW (none) result=16
+23:03:03 observation 1: result 16, 16 output byte(s)
+23:03:03 model call 2 (reserving spend first)
+23:03:12 model done: "Checked status: distance 76mm <100mm, fan 0 servo 90. Presence interlock blocks gauge and fan, did not attempt moves." -> sent FINAL
+23:03:14 kernel decision #14: exec_end target=0 -> ALLOW (exec_end) result=0
+23:03:14 request 1 end: DONE after 1 action(s); executor exit code 0
+run e4-v2-20261103-230255: 1 request(s); log runs/e4-v2-20261103-230255/events.jsonl
+RING3 spend (estimate, not billing)
+  settled:              $0.421967
+  reserved, unsettled:  $0.000000
+  total:                $0.421967 of project cap $30.000000
+  requests: 129 reserved, 129 settled, runs: 19
+    20261102-122431: $0.039660
+    20261102-124918: $0.030520
+    20261102-125614: $0.027759
+    20261103-153922: $0.053352
+    20261103-154507: $0.032945
+    20261103-160104: $0.026987
+    20261103-160343: $0.011942
+    20261103-214504: $0.015853
+    cal-20261103-194227: $0.012500
+    cal-20261103-220157: $0.012500
+    cal-20261103-220845: $0.012500
+    e4-v2-20261103-222929: $0.092091
+    e4-v2-20261103-230255: $0.008358
+    probe-20261103-202522: $0.010000
+    probe-20261103-202557: $0.005000
+    probe-20261103-220132: $0.005000
+    probe-20261103-220356: $0.010000
+    probe-20261103-221556: $0.010000
+    probe-20261103-222636: $0.005000
+CHAIN OK: 681 records, 6 blobs

@@ -1,0 +1,7 @@
+run e4-v2-20261103-225909: connecting to COM2 at 127.0.0.1:41223 (budget $0.150000, estimate)
+22:59:11 HELLO from the kernel: ABI 1, policy default, build 747fa2d, policy hash prefix 4101a8cc30507872 (matches the policy sources in this checkout)
+22:59:11 kernel decision #1: telemetry target=1 -> FRAME_DROP (bad_frame) result=0
+22:59:12 kernel decision #2: telemetry target=0 -> BOARD_BOOT (board_boot) result=0
+22:59:15 HELLO from the kernel: ABI 1, policy default, build 747fa2d, policy hash prefix 4101a8cc30507872 (matches the policy sources in this checkout)
+22:59:20 HELLO from the kernel: ABI 1, policy default, build 747fa2d, policy hash prefix 4101a8cc30507872 (matches the policy sources in this checkout)
+22:59:25 HELLO from the kernel: ABI 1, policy default, build 747fa2d, policy hash prefix 4101a8cc30507872 (matches the policy sources in this checkout)

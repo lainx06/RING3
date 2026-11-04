@@ -1,0 +1,494 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0
+rootdir: <repo>
+configfile: pyproject.toml
+collected 3 items
+
+tests/test_inv_13_hw.py 
+>>> waiting for the board's boot (the port open resets it) ...
+
+>>> BOARD_BOOT at tick 300
+F
+>>> waiting for the board's boot (the port open resets it) ...
+F
+>>> waiting for the board's boot (the port open resets it) ...
+F
+
+=================================== FAILURES ===================================
+________________________ test_inv_13_hw_interlock_stop _________________________
+
+    def test_inv_13_hw_interlock_stop():
+        """Fan at 60 % -> a hand in front of the sensor -> AUTO_HALT; the fan stops; new motion is denied."""
+>       with HwCell() as hw:
+             ^^^^^^^^
+
+tests/test_inv_13_hw.py:98: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_inv_13_hw.py:73: in __init__
+    self.status()
+tests/test_inv_13_hw.py:77: in status
+    self.s.expect(r"^status: .*$")
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <tests.qemu.Session object at 0x6ffc3a81fdd0>, pattern = '^status: .*$'
+timeout = None
+
+    def expect(self, pattern: str, timeout: float | None = None) -> re.Match[str]:
+        """Waits until `pattern` (regex, multiline) matches output not yet consumed; consumes through it."""
+        deadline = time.monotonic() + (timeout if timeout is not None else self.timeout)
+        rx = re.compile(pattern, re.M)
+        while True:
+            text = self.output
+            m = rx.search(text, self.pos)
+            if m and pattern.endswith("$") and m.end() == len(text) and not text.endswith("\n"):
+                m = None  # a line-anchored pattern matched a partially arrived line: wait for the rest
+            if m:
+                self.pos = m.end()
+                return m
+            if "PANIC:" in text[self.pos :]:
+                raise AssertionError(f"unexpected PANIC (INV-12):\n{text}")
+            if self._eof.is_set() or time.monotonic() > deadline:
+>               raise AssertionError(f"timeout waiting for {pattern!r}; output so far:\n{text}")
+E               AssertionError: timeout waiting for '^status: .*$'; output so far:
+E               RING3 0.1.0 build 747fa2d
+E               policy: default sha256=4101a8cc305078722afb56a4eb09e2b4c3705e2d2c697b418c7ef02885cdef0b
+E               memory: 65023 KiB usable
+E               init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, 3705 frames free
+E               link: COM2 present (bridge link, HELLO sent)
+E               cell: COM3 present (work cell, IRQ 4 + tick poll)
+E               TIMER t0=1
+E               TIMER t1=26
+E               test image: quotas action=100 request=6000 confirm=3000 ticks
+E               ring3> 
+E               TAPE k=7 s=0 f=3 t=300 nr=0 a0=253 a1=542769152 a2=6181 a3=309066
+E               AUDIT seq=1 tick=300 sys=telemetry target=0 decision=BOARD_BOOT reason=board_boot result=0 tainted=0
+E               TAPE k=7 s=0 f=3 t=301 nr=0 a0=253 a1=542769152 a2=6182 a3=309116
+E               TAPE k=7 s=0 f=3 t=301 nr=0 a0=253 a1=542769152 a2=6183 a3=309166
+E               TAPE k=7 s=0 f=3 t=301 nr=0 a0=253 a1=542769152 a2=6184 a3=309216
+E               TAPE k=7 s=0 f=3 t=301 nr=0 a0=253 a1=542769152 a2=6185 a3=309266
+E               TAPE k=7 s=0 f=3 t=301 nr=0 a0=253 a1=542769152 a2=6186 a3=309316
+E               TAPE k=7 s=0 f=3 t=301 nr=0 a0=253 a1=542769152 a2=6187 a3=309366
+E               TAPE k=7 s=0 f=3 t=301 nr=0 a0=253 a1=542769152 a2=6188 a3=309416
+E               TAPE k=7 s=0 f=3 t=301 nr=0 a0=253 a1=542769152 a2=6189 a3=309466
+E               TAPE k=7 s=0 f=3 t=302 nr=0 a0=253 a1=542769152 a2=6190 a3=309516
+E               TAPE k=7 s=0 f=3 t=302 nr=0 a0=253 a1=542769152 a2=6191 a3=309566
+E               TAPE k=7 s=0 f=3 t=302 nr=0 a0=253 a1=542769152 a2=6192 a3=309616
+E               TAPE k=7 s=0 f=3 t=302 nr=0 a0=253 a1=542769152 a2=6193 a3=309666
+E               TAPE k=7 s=0 f=3 t=302 nr=0 a0=253 a1=542769152 a2=6194 a3=309716
+E               TAPE k=7 s=0 f=3 t=302 nr=0 a0=253 a1=542769152 a2=6195 a3=309766
+E               TAPE k=7 s=0 f=3 t=302 nr=0 a0=253 a1=542769152 a2=6196 a3=309816
+E               TAPE k=7 s=0 f=3 t=302 nr=0 a0=253 a1=542769152 a2=6197 a3=309866
+E               TAPE k=7 s=0 f=3 t=303 nr=0 a0=253 a1=542769152 a2=6198 a3=309916
+E               TAPE k=7 s=0 f=3 t=303 nr=0 a0=253 a1=542769152 a2=6199 a3=309966
+E               TAPE k=7 s=0 f=3 t=303 nr=0 a0=253 a1=542769152 a2=6200 a3=310016
+E               TAPE k=7 s=0 f=3 t=303 nr=0 a0=253 a1=542769152 a2=6201 a3=310066
+E               TAPE k=7 s=0 f=3 t=303 nr=0 a0=253 a1=542769152 a2=6202 a3=310116
+E               TAPE k=7 s=0 f=3 t=303 nr=0 a0=253 a1=542769152 a2=6203 a3=310166
+E               TAPE k=7 s=0 f=3 t=303 nr=0 a0=253 a1=542769152 a2=6204 a3=310216
+E               TAPE k=7 s=0 f=3 t=303 nr=0 a0=253 a1=542769152 a2=6205 a3=310266
+E               TAPE k=7 s=0 f=3 t=304 nr=0 a0=253 a1=542769152 a2=6206 a3=310316
+E               TAPE k=7 s=0 f=3 t=304 nr=0 a0=253 a1=542769152 a2=6207 a3=310366
+E               TAPE k=7 s=0 f=3 t=304 nr=0 a0=253 a1=542769152 a2=6208 a3=310416
+E               TAPE k=7 s=0 f=3 t=304 nr=0 a0=296 a1=542769152 a2=6209 a3=310466
+E               TAPE k=7 s=0 f=3 t=304 nr=0 a0=253 a1=542769152 a2=6210 a3=310516
+E               TAPE k=7 s=0 f=3 t=304 nr=0 a0=253 a1=542769152 a2=6211 a3=310566
+E               TAPE k=7 s=0 f=3 t=304 nr=0 a0=253 a1=542769152 a2=6212 a3=310616
+E               TAPE k=7 s=0 f=3 t=304 nr=0 a0=253 a1=542769152 a2=6213 a3=310666
+E               TAPE k=7 s=0 f=3 t=305 nr=0 a0=253 a1=542769152 a2=6214 a3=310716
+E               TAPE k=7 s=0 f=3 t=305 nr=0 a0=253 a1=542769152 a2=6215 a3=310766
+E               TAPE k=7 s=0 f=3 t=305 nr=0 a0=253 a1=542769152 a2=6216 a3=310816
+E               TAPE k=7 s=0 f=3 t=305 nr=0 a0=253 a1=542769152 a2=6217 a3=310866
+E               TAPE k=7 s=0 f=3 t=305 nr=0 a0=253 a1=542769152 a2=6218 a3=310916
+E               TAPE k=7 s=0 f=3 t=305 nr=0 a0=253 a1=542769152 a2=6219 a3=310966
+E               TAPE k=7 s=0 f=3 t=305 nr=0 a0=253 a1=542769152 a2=6220 a3=311016
+E               TAPE k=7 s=0 f=3 t=305 nr=0 a0=253 a1=542769152 a2=6221 a3=311066
+E               TAPE k=7 s=0 f=3 t=306 nr=0 a0=253 a1=542769152 a2=6222 a3=311116
+E               TAPE k=7 s=0 f=3 t=306 nr=0 a0=253 a1=542769152 a2=6223 a3=311166
+E               TAPE k=7 s=0 f=3 t=306 nr=0 a0=253 a1=542769152 a2=6224 a3=311216
+E               TAPE k=7 s=0 f=3 t=306 nr=0 a0=253 a1=542769152 a2=6225 a3=311266
+E               TAPE k=7 s=0 f=3 t=306 nr=0 a0=253 a1=542769152 a2=6226 a3=311316
+E               TAPE k=7 s=0 f=3 t=306 nr=0 a0=253 a1=542769152 a2=6227 a3=311366
+E               TAPE k=7 s=0 f=3 t=306 nr=0 a0=253 a1=542769152 a2=6228 a3=311416
+E               TAPE k=7 s=0 f=3 t=306 nr=0 a0=253 a1=542769152 a2=6229 a3=311467
+E               TAPE k=7 s=0 f=3 t=307 nr=0 a0=253 a1=542769152 a2=6230 a3=311516
+E               TAPE k=7 s=0 f=3 t=307 nr=0 a0=253 a1=542769152 a2=6231 a3=311566
+E               TAPE k=7 s=0 f=3 t=307 nr=0 a0=253 a1=542769152 a2=6232 a3=311616
+E               TAPE k=7 s=0 f=3 t=307 nr=0 a0=253 a1=542769152 a2=6233 a3=311666
+E               TAPE k=7 s=0 f=3 t=307 nr=0 a0=253 a1=542769152 a2=6234 a3=311716
+E               TAPE k=7 s=0 f=3 t=307 nr=0 a0=253 a1=542769152 a2=6235 a3=311766
+E               TAPE k=7 s=0 f=3 t=307 nr=0 a0=253 a1=542769152 a2=6236 a3=311816
+E               TAPE k=7 s=0 f=3 t=307 nr=0 a0=253 a1=542769152 a2=6237 a3=311866
+E               TAPE k=7 s=0 f=3 t=308 nr=0 a0=253 a1=542769152 a2=6238 a3=311916
+E               TAPE k=7 s=0 f=3 t=308 nr=0 a0=253 a1=542769152 a2=6239 a3=311966
+E               TAPE k=7 s=0 f=3 t=308 nr=0 a0=253 a1=542769152 a2=6240 a3=312016
+E               TAPE k=7 s=0 f=3 t=308 nr=0 a0=253 a1=542769152 a2=6241 a3=312066
+E               TAPE k=7 s=0 f=3 t=308 nr=0 a0=253 a1=542769152 a2=6242 a3=312116
+E               TAPE k=7 s=0 f=3 t=308 nr=0 a0=253 a1=542769152 a2=6243 a3=312166
+E               TAPE k=7 s=0 f=3 t=308 nr=0 a0=253 a1=542769152 a2=6244 a3=312216
+E               TAPE k=7 s=0 f=3 t=308 nr=0 a0=253 a1=542769152 a2=6245 a3=312266
+E               TAPE k=7 s=0 f=3 t=309 nr=0 a0=253 a1=542769152 a2=6246 a3=312316
+E               TAPE k=7 s=0 f=3 t=309 nr=0 a0=253 a1=542769152 a2=6247 a3=312366
+E               TAPE k=7 s=0 f=3 t=309 nr=0 a0=253 a1=542769152 a2=6248 a3=312416
+E               TAPE k=7 s=0 f=3 t=309 nr=0 a0=253 a1=542769152 a2=6249 a3=312466
+E               TAPE k=7 s=0 f=3 t=309 nr=0 a0=253 a1=542769152 a2=6250 a3=312516
+E               TAPE k=7 s=0 f=3 t=309 nr=0 a0=253 a1=542769152 a2=6251 a3=312566
+E               TAPE k=7 s=0 f=3 t=309 nr=0 a0=253 a1=542769152 a2=6252 a3=312616
+E               TAPE k=7 s=0 f=3 t=309 nr=0 a0=253 a1=542769152 a2=6253 a3=312666
+E               TAPE k=7 s=0 f=3 t=310 nr=0 a0=253 a1=542769152 a2=6254 a3=312716
+E               TAPE k=7 s=0 f=3 t=310 nr=0 a0=253 a1=542769152 a2=6255 a3=312766
+E               TAPE k=7 s=0 f=3 t=310 nr=0 a0=253 a1=542769152 a2=6256 a3=312816
+E               TAPE k=7 s=0 f=3 t=310 nr=0 a0=253 a1=542769152 a2=6257 a3=312866
+E               TAPE k=7 s=0 f=3 t=310 nr=0 a0=253 a1=542769152 a2=6258 a3=312916
+E               TAPE k=7 s=0 f=3 t=310 nr=0 a0=253 a1=542769152 a2=6259 a3=312966
+E               TAPE k=7 s=0 f=3 t=310 nr=0 a0=253 a1=542769152 a2=6260 a3=313016
+E               TAPE k=7 s=0 f=3 t=310 nr=0 a0=253 a1=542769152 a2=6261 a3=313066
+E               TAPE k=7 s=0 f=3 t=311 nr=0 a0=253 a1=542769152 a2=6262 a3=313116
+E               TAPE k=7 s=0 f=3 t=311 nr=0 a0=288 a1=542769152 a2=6263 a3=313166
+E               TAPE k=7 s=0 f=3 t=311 nr=0 a0=253 a1=542769152 a2=6264 a3=313216
+E               TAPE k=7 s=0 f=3 t=311 nr=0 a0=288 a1=542769152 a2=6265 a3=313266
+E               TAPE k=7 s=0 f=3 t=311 nr=0 a0=253 a1=542769152 a2=6266 a3=313316
+E               TAPE k=7 s=0 f=3 t=311 nr=0 a0=296 a1=542769152 a2=6267 a3=313366
+E               TAPE k=7 s=0 f=3 t=311 nr=0 a0=287 a1=542769152 a2=6268 a3=313416
+E               TAPE k=7 s=0 f=3 t=311 nr=0 a0=288 a1=542769152 a2=6269 a3=313466
+E               TAPE k=7 s=0 f=3 t=312 nr=0 a0=253 a1=542769152 a2=6270 a3=313516
+E               TAPE k=7 s=0 f=3 t=312 nr=0 a0=253 a1=542769152 a2=6271 a3=313566
+E               TAPE k=7 s=0 f=3 t=312 nr=0 a0=253 a1=542769152 a2=6272 a3=313616
+E               TAPE k=7 s=0 f=3 t=312 nr=0 a0=253 a1=542769152 a2=6273 a3=313666
+E               TAPE k=7 s=0 f=3 t=312 nr=0 a0=253 a1=542769152 a2=6274 a3=313716
+E               TAPE k=7 s=0 f=3 t=312 nr=0 a0=253 a1=542769152 a2=6275 a3=313766
+E               TAPE k=7 s=0 f=3 t=312 nr=0 a0=295 a1=542769152 a2=6276 a3=313816
+E               TAPE k=7 s=0 f=3 t=312 nr=0 a0=296 a1=542769152 a2=6277 a3=313866
+E               TAPE k=7 s=0 f=3 t=313 nr=0 a0=296 a1=542769152 a2=6278 a3=313916
+E               TAPE k=7 s=0 f=3 t=313 nr=0 a0=295 a1=542769152 a2=6279 a3=313966
+E               TAPE k=7 s=0 f=3 t=313 nr=0 a0=295 a1=542769152 a2=6280 a3=314016
+E               TAPE k=7 s=0 f=3 t=313 nr=0 a0=252 a1=542769152 a2=6281 a3=314066
+E               TAPE k=7 s=0 f=3 t=313 nr=0 a0=252 a1=542769152 a2=6282 a3=314116
+E               TAPE k=7 s=0 f=3 t=313 nr=0 a0=253 a1=542769152 a2=6283 a3=314166
+E               TAPE k=7 s=0 f=3 t=313 nr=0 a0=252 a1=542769152 a2=6284 a3=314216
+E               TAPE k=7 s=0 f=3 t=313 nr=0 a0=296 a1=542769152 a2=6285 a3=314266
+E               TAPE k=7 s=0 f=3 t=314 nr=0 a0=253 a1=542769152 a2=6286 a3=314316
+E               TAPE k=7 s=0 f=3 t=314 nr=0 a0=296 a1=542769152 a2=6287 a3=314366
+E               TAPE k=7 s=0 f=3 t=314 nr=0 a0=296 a1=542769152 a2=6288 a3=314416
+E               TAPE k=7 s=0 f=3 t=314 nr=0 a0=253 a1=542769152 a2=6289 a3=314466
+E               TAPE k=7 s=0 f=3 t=314 nr=0 a0=253 a1=542769152 a2=6290 a3=314516
+E               TAPE k=7 s=0 f=3 t=314 nr=0 a0=252 a1=542769152 a2=6291 a3=314566
+E               TAPE k=7 s=0 f=3 t=314 nr=0 a0=253 a1=542769152 a2=6292 a3=314616
+E               TAPE k=7 s=0 f=3 t=314 nr=0 a0=253 a1=542769152 a2=6293 a3=314667
+E               TAPE k=7 s=0 f=3 t=315 nr=0 a0=296 a1=542769152 a2=6294 a3=314716
+E               TAPE k=7 s=0 f=3 t=315 nr=0 a0=296 a1=542769152 a2=6295 a3=314766
+E               TAPE k=7 s=0 f=3 t=315 nr=0 a0=296 a1=542769152 a2=6296 a3=314816
+E               TAPE k=7 s=0 f=3 t=315 nr=0 a0=295 a1=542769152 a2=6297 a3=314866
+E               TAPE k=7 s=0 f=3 t=315 nr=0 a0=296 a1=542769152 a2=6298 a3=314916
+E               TAPE k=7 s=0 f=3 t=315 nr=0 a0=253 a1=542769152 a2=6299 a3=314966
+E               TAPE k=7 s=0 f=3 t=315 nr=0 a0=295 a1=542769152 a2=6300 a3=315016
+E               TAPE k=7 s=0 f=3 t=315 nr=0 a0=253 a1=542769152 a2=6301 a3=315066
+E               TAPE k=7 s=0 f=3 t=316 nr=0 a0=296 a1=542769152 a2=6302 a3=315116
+E               TAPE k=7 s=0 f=3 t=316 nr=0 a0=253 a1=542769152 a2=6303 a3=315166
+E               TAPE k=7 s=0 f=3 t=316 nr=0 a0=253 a1=542769152 a2=6304 a3=315216
+E               TAPE k=7 s=0 f=3 t=316 nr=0 a0=253 a1=542769152 a2=6305 a3=315266
+E               TAPE k=7 s=0 f=3 t=316 nr=0 a0=253 a1=542769152 a2=6306 a3=315316
+E               TAPE k=7 s=0 f=3 t=316 nr=0 a0=253 a1=542769152 a2=6307 a3=315366
+E               TAPE k=7 s=0 f=3 t=316 nr=0 a0=253 a1=542769152 a2=6308 a3=315416
+E               TAPE k=7 s=0 f=3 t=316 nr=0 a0=253 a1=542769152 a2=6309 a3=315466
+E               TAPE k=7 s=0 f=3 t=317 nr=0 a0=253 a1=542769152 a2=6310 a3=315516
+E               TAPE k=7 s=0 f=3 t=317 nr=0 a0=253 a1=542769152 a2=6311 a3=315566
+E               TAPE k=7 s=0 f=3 t=317 nr=0 a0=253 a1=542769152 a2=6312 a3=315616
+E               TAPE k=7 s=0 f=3 t=317 nr=0 a0=253 a1=542769152 a2=6313 a3=315666
+E               TAPE k=7 s=0 f=3 t=317 nr=0 a0=253 a1=542769152 a2=6314 a3=315716
+E               TAPE k=7 s=0 f=3 t=317 nr=0 a0=253 a1=542769152 a2=6315 a3=315766
+E               TAPE k=7 s=0 f=3 t=317 nr=0 a0=253 a1=542769152 a2=6316 a3=315816
+E               TAPE k=7 s=0 f=3 t=317 nr=0 a0=253 a1=542769152 a2=6317 a3=315866
+E               TAPE k=7 s=0 f=3 t=318 nr=0 a0=253 a1=542769152 a2=6318 a3=315916
+E               TAPE k=7 s=0 f=3 t=318 nr=0 a0=253 a1=542769152 a2=6319 a3=315966
+E               TAPE k=7 s=0 f=3 t=318 nr=0 a0=253 a1=542769152 a2=6320 a3=316016
+E               TAPE k=7 s=0 f=3 t=318 nr=0 a0=253 a1=542769152 a2=6321 a3=316066
+E               TAPE k=7 s=0 f=3 t=318 nr=0 a0=253 a1=542769152 a2=6322 a3=316116
+E               TAPE k=7 s=0 f=3 t=318 nr=0 a0=288 a1=542769152 a2=6323 a3=316166
+E               TAPE k=7 s=0 f=3 t=318 nr=0 a0=253 a1=542769152 a2=6324 a3=316216
+E               TAPE k=7 s=0 f=3 t=318 nr=0 a0=253 a1=542769152 a2=6325 a3=316266
+E               TAPE k=7 s=0 f=3 t=319 nr=0 a0=296 a1=542769152 a2=6326 a3=316316
+E               TAPE k=7 s=0 f=3 t=319 nr=0 a0=296 a1=542769152 a2=6327 a3=316366
+E               TAPE k=7 s=0 f=3 t=319 nr=0 a0=296 a1=542769152 a2=6328 a3=316416
+E               TAPE k=7 s=0 f=3 t=319 nr=0 a0=295 a1=542769152 a2=6329 a3=316466
+E               TAPE k=7 s=0 f=3 t=319 nr=0 a0=296 a1=542769152 a2=6330 a3=316516
+E               TAPE k=7 s=0 f=3 t=319 nr=0 a0=295 a1=542769152 a2=6331 a3=316566
+E               TAPE k=7 s=0 f=3 t=319 nr=0 a0=288 a1=542769152 a2=6332 a3=316616
+E               TAPE k=7 s=0 f=3 t=319 nr=0 a0=296 a1=542769152 a2=6333 a3=316666
+E               TAPE k=7 s=0 f=3 t=320 nr=0 a0=296 a1=542769152 a2=6334 a3=316716
+E               TAPE k=7 s=0 f=3 t=320 nr=0 a0=296 a1=542769152 a2=6335 a3=316766
+E               TAPE k=7 s=0 f=3 t=320 nr=0 a0=296 a1=542769152 a2=6336 a3=316816
+E               TAPE k=7 s=0 f=3 t=320 nr=0 a0=296 a1=542769152 a2=6337 a3=316866
+E               TAPE k=7 s=0 f=3 t=320 nr=0 a0=287 a1=542769152 a2=6338 a3=316916
+E               TAPE k=7 s=0 f=3 t=320 nr=0 a0=296 a1=542769152 a2=6339 a3=316966
+E               TAPE k=7 s=0 f=3 t=320 nr=0 a0=296 a1=542769152 a2=6340 a3=317016
+E               TAPE k=7 s=0 f=3 t=320 nr=0 a0=253 a1=542769152 a2=6341 a3=317066
+E               TAPE k=7 s=0 f=3 t=321 nr=0 a0=296 a1=542769152 a2=6342 a3=317116
+E               TAPE k=7 s=0 f=3 t=321 nr=0 a0=296 a1=542769152 a2=6343 a3=317166
+E               TAPE k=7 s=0 f=3 t=321 nr=0 a0=296 a1=542769152 a2=6344 a3=317216
+E               TAPE k=7 s=0 f=3 t=321 nr=0 a0=296 a1=542769152 a2=6345 a3=317266
+E               TAPE k=7 s=0 f=3 t=321 nr=0 a0=295 a1=542769152 a2=6346 a3=317316
+E               TAPE k=7 s=0 f=3 t=321 nr=0 a0=296 a1=542769152 a2=6347 a3=317366
+E               TAPE k=7 s=0 f=3 t=321 nr=0 a0=296 a1=542769152 a2=6348 a3=317416
+E               TAPE k=7 s=0 f=3 t=321 nr=0 a0=296 a1=542769152 a2=6349 a3=317466
+E               TAPE k=7 s=0 f=3 t=322 nr=0 a0=253 a1=542769152 a2=6350 a3=317516
+E               TAPE k=7 s=0 f=3 t=322 nr=0 a0=253 a1=542769152 a2=6351 a3=317566
+E               TAPE k=7 s=0 f=3 t=322 nr=0 a0=253 a1=542769152 a2=6352 a3=317616
+E               TAPE k=7 s=0 f=3 t=322 nr=0 a0=253 a1=542769152 a2=6353 a3=317666
+E               TAPE k=7 s=0 f=3 t=322 nr=0 a0=253 a1=542769152 a2=6354 a3=317716
+E               TAPE k=7 s=0 f=3 t=322 nr=0 a0=295 a1=542769152 a2=6355 a3=317766
+E               TAPE k=7 s=0 f=3 t=322 nr=0 a0=253 a1=542769152 a2=6356 a3=317816
+E               TAPE k=7 s=0 f=3 t=322 nr=0 a0=253 a1=542769152 a2=6357 a3=317867
+E               TAPE k=7 s=0 f=3 t=323 nr=0 a0=253 a1=542769152 a2=6358 a3=317916
+E               TAPE k=7 s=0 f=3 t=323 nr=0 a0=253 a1=542769152 a2=6359 a3=317966
+E               TAPE k=7 s=0 f=3 t=323 nr=0 a0=253 a1=542769152 a2=6360 a3=318016
+E               TAPE k=7 s=0 f=3 t=323 nr=0 a0=253 a1=542769152 a2=6361 a3=318066
+E               TAPE k=7 s=0 f=3 t=323 nr=0 a0=253 a1=542769152 a2=6362 a3=318116
+E               TAPE k=7 s=0 f=3 t=323 nr=0 a0=253 a1=542769152 a2=6363 a3=318166
+E               TAPE k=7 s=0 f=3 t=323 nr=0 a0=253 a1=542769152 a2=6364 a3=318216
+E               TAPE k=7 s=0 f=3 t=323 nr=0 a0=253 a1=542769152 a2=6365 a3=318266
+E               TAPE k=7 s=0 f=3 t=324 nr=0 a0=253 a1=542769152 a2=6366 a3=318316
+E               TAPE k=7 s=0 f=3 t=324 nr=0 a0=253 a1=542769152 a2=6367 a3=318366
+E               TAPE k=7 s=0 f=3 t=324 nr=0 a0=253 a1=542769152 a2=6368 a3=318416
+E               TAPE k=7 s=0 f=3 t=324 nr=0 a0=253 a1=542769152 a2=6369 a3=318466
+E               TAPE k=7 s=0 f=3 t=324 nr=0 a0=253 a1=542769152 a2=6370 a3=318516
+E               TAPE k=7 s=0 f=3 t=324 nr=0 a0=253 a1=542769152 a2=6371 a3=318566
+E               TAPE k=7 s=0 f=3 t=324 nr=0 a0=253 a1=542769152 a2=6372 a3=318616
+E               TAPE k=7 s=0 f=3 t=324 nr=0 a0=253 a1=542769152 a2=6373 a3=318666
+
+tests/qemu.py:217: AssertionError
+__________________________ test_inv_13_estop_cuts_fan __________________________
+
+    def test_inv_13_estop_cuts_fan():
+        """Fan at 60 % -> E-stop pressed -> the board cuts the fan in its interrupt, the kernel latches
+        (DENY_ESTOP), cell_halt still allowed; release + `estop reset` + y clears it; motion is possible again."""
+>       with HwCell() as hw:
+             ^^^^^^^^
+
+tests/test_inv_13_hw.py:148: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_inv_13_hw.py:69: in __init__
+    m = self.s.expect(r"^AUDIT seq=\d+ tick=(\d+) sys=telemetry target=0 decision=BOARD_BOOT .*$", 15)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <tests.qemu.Session object at 0x6ffc3a84bd10>
+pattern = '^AUDIT seq=\\d+ tick=(\\d+) sys=telemetry target=0 decision=BOARD_BOOT .*$'
+timeout = 15
+
+    def expect(self, pattern: str, timeout: float | None = None) -> re.Match[str]:
+        """Waits until `pattern` (regex, multiline) matches output not yet consumed; consumes through it."""
+        deadline = time.monotonic() + (timeout if timeout is not None else self.timeout)
+        rx = re.compile(pattern, re.M)
+        while True:
+            text = self.output
+            m = rx.search(text, self.pos)
+            if m and pattern.endswith("$") and m.end() == len(text) and not text.endswith("\n"):
+                m = None  # a line-anchored pattern matched a partially arrived line: wait for the rest
+            if m:
+                self.pos = m.end()
+                return m
+            if "PANIC:" in text[self.pos :]:
+                raise AssertionError(f"unexpected PANIC (INV-12):\n{text}")
+            if self._eof.is_set() or time.monotonic() > deadline:
+>               raise AssertionError(f"timeout waiting for {pattern!r}; output so far:\n{text}")
+E               AssertionError: timeout waiting for '^AUDIT seq=\\d+ tick=(\\d+) sys=telemetry target=0 decision=BOARD_BOOT .*$'; output so far:
+E               RING3 0.1.0 build 747fa2d
+E               policy: default sha256=4101a8cc305078722afb56a4eb09e2b4c3705e2d2c697b418c7ef02885cdef0b
+E               memory: 65023 KiB usable
+E               init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, 3705 frames free
+E               link: COM2 present (bridge link, HELLO sent)
+E               cell: COM3 present (work cell, IRQ 4 + tick poll)
+E               TIMER t0=2
+E               TIMER t1=27
+E               test image: quotas action=100 request=6000 confirm=3000 ticks
+E               TAPE k=7 s=2 f=0 t=10 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=1 tick=10 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=1 f=0 t=23 nr=0 a0=6 a1=0 a2=0 a3=0
+E               AUDIT seq=2 tick=23 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               ring3> 
+E               TAPE k=7 s=2 f=0 t=36 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=3 tick=36 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=1 f=0 t=50 nr=0 a0=25 a1=0 a2=0 a3=0
+E               AUDIT seq=4 tick=50 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=50 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=5 tick=50 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=1 f=0 t=64 nr=0 a0=14 a1=0 a2=0 a3=0
+E               AUDIT seq=6 tick=64 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=1 f=0 t=104 nr=0 a0=6 a1=0 a2=0 a3=0
+E               AUDIT seq=7 tick=104 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=1 f=0 t=118 nr=0 a0=25 a1=0 a2=0 a3=0
+E               AUDIT seq=8 tick=118 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=157 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=9 tick=157 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=171 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=10 tick=171 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=184 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=11 tick=184 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=1 f=0 t=184 nr=0 a0=6 a1=0 a2=0 a3=0
+E               AUDIT seq=12 tick=184 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=197 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=13 tick=197 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=1 f=0 t=211 nr=0 a0=6 a1=0 a2=0 a3=0
+E               AUDIT seq=14 tick=211 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=3 f=0 t=224 nr=0 a0=6 a1=0 a2=0 a3=0
+E               AUDIT seq=15 tick=224 sys=telemetry target=3 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=224 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=16 tick=224 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=237 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=17 tick=237 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=251 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=18 tick=251 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=1 f=0 t=290 nr=0 a0=25 a1=0 a2=0 a3=0
+E               AUDIT seq=19 tick=290 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+
+tests/qemu.py:217: AssertionError
+_______________________ test_inv_13_watchdog_safe_state ________________________
+
+    def test_inv_13_watchdog_safe_state():
+        """The kernel goes silent (test knob `cellmute`) with the fan running: the board's link watchdog stops
+        the fan on its own within ~1.1 s, visible in its telemetry (LINK_LOST, fan 0); the fan does not restart
+        when the link comes back (D-50 F2). Then QEMU is killed with the fan running: the user confirms by eye."""
+>       with HwCell() as hw:
+             ^^^^^^^^
+
+tests/test_inv_13_hw.py:201: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_inv_13_hw.py:69: in __init__
+    m = self.s.expect(r"^AUDIT seq=\d+ tick=(\d+) sys=telemetry target=0 decision=BOARD_BOOT .*$", 15)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <tests.qemu.Session object at 0x6ffc3a848f50>
+pattern = '^AUDIT seq=\\d+ tick=(\\d+) sys=telemetry target=0 decision=BOARD_BOOT .*$'
+timeout = 15
+
+    def expect(self, pattern: str, timeout: float | None = None) -> re.Match[str]:
+        """Waits until `pattern` (regex, multiline) matches output not yet consumed; consumes through it."""
+        deadline = time.monotonic() + (timeout if timeout is not None else self.timeout)
+        rx = re.compile(pattern, re.M)
+        while True:
+            text = self.output
+            m = rx.search(text, self.pos)
+            if m and pattern.endswith("$") and m.end() == len(text) and not text.endswith("\n"):
+                m = None  # a line-anchored pattern matched a partially arrived line: wait for the rest
+            if m:
+                self.pos = m.end()
+                return m
+            if "PANIC:" in text[self.pos :]:
+                raise AssertionError(f"unexpected PANIC (INV-12):\n{text}")
+            if self._eof.is_set() or time.monotonic() > deadline:
+>               raise AssertionError(f"timeout waiting for {pattern!r}; output so far:\n{text}")
+E               AssertionError: timeout waiting for '^AUDIT seq=\\d+ tick=(\\d+) sys=telemetry target=0 decision=BOARD_BOOT .*$'; output so far:
+E               RING3 0.1.0 build 747fa2d
+E               policy: default sha256=4101a8cc305078722afb56a4eb09e2b4c3705e2d2c697b418c7ef02885cdef0b
+E               memory: 65023 KiB usable
+E               init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, 3705 frames free
+E               link: COM2 present (bridge link, HELLO sent)
+E               cell: COM3 present (work cell, IRQ 4 + tick poll)
+E               TIMER t0=1
+E               TIMER t1=26
+E               test image: quotas action=100 request=6000 confirm=3000 ticks
+E               TAPE k=7 s=1 f=0 t=5 nr=0 a0=10 a1=0 a2=0 a3=0
+E               AUDIT seq=1 tick=5 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=1 f=0 t=5 nr=0 a0=20 a1=0 a2=0 a3=0
+E               AUDIT seq=2 tick=5 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=5 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=3 tick=5 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=9 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=4 tick=9 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=1 f=0 t=9 nr=0 a0=21 a1=0 a2=0 a3=0
+E               AUDIT seq=5 tick=9 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=19 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=6 tick=19 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=23 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=7 tick=23 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               ring3> 
+E               TAPE k=7 s=2 f=0 t=32 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=8 tick=32 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=36 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=9 tick=36 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=3 f=0 t=36 nr=0 a0=6 a1=0 a2=0 a3=0
+E               AUDIT seq=10 tick=36 sys=telemetry target=3 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=1 f=0 t=45 nr=0 a0=2 a1=0 a2=0 a3=0
+E               AUDIT seq=11 tick=45 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=49 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=12 tick=49 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=58 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=13 tick=58 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=62 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=14 tick=62 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=62 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=15 tick=62 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=71 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=16 tick=71 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=1 f=0 t=76 nr=0 a0=6 a1=0 a2=0 a3=0
+E               AUDIT seq=17 tick=76 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=1 f=0 t=84 nr=0 a0=11 a1=0 a2=0 a3=0
+E               AUDIT seq=18 tick=84 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=84 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=19 tick=84 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=1 f=0 t=89 nr=0 a0=24 a1=0 a2=0 a3=0
+E               AUDIT seq=20 tick=89 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=97 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=21 tick=97 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=128 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=22 tick=128 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=1 f=0 t=136 nr=0 a0=19 a1=0 a2=0 a3=0
+E               AUDIT seq=23 tick=136 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=141 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=24 tick=141 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=1 f=0 t=149 nr=0 a0=19 a1=0 a2=0 a3=0
+E               AUDIT seq=25 tick=149 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=1 f=0 t=154 nr=0 a0=12 a1=0 a2=0 a3=0
+E               AUDIT seq=26 tick=154 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=1 f=0 t=154 nr=0 a0=6 a1=0 a2=0 a3=0
+E               AUDIT seq=27 tick=154 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=162 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=28 tick=162 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=1 f=0 t=168 nr=0 a0=6 a1=0 a2=0 a3=0
+E               AUDIT seq=29 tick=168 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=175 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=30 tick=175 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=1 f=0 t=181 nr=0 a0=6 a1=0 a2=0 a3=0
+E               AUDIT seq=31 tick=181 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=188 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=32 tick=188 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=4 f=0 t=195 nr=0 a0=24 a1=0 a2=0 a3=0
+E               AUDIT seq=33 tick=195 sys=telemetry target=4 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=1 f=0 t=201 nr=0 a0=14 a1=0 a2=0 a3=0
+E               AUDIT seq=34 tick=201 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=4 f=0 t=201 nr=0 a0=15 a1=0 a2=0 a3=0
+E               AUDIT seq=35 tick=201 sys=telemetry target=4 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=4 f=0 t=201 nr=0 a0=22 a1=0 a2=0 a3=0
+E               AUDIT seq=36 tick=201 sys=telemetry target=4 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=1 f=0 t=208 nr=0 a0=19 a1=0 a2=0 a3=0
+E               AUDIT seq=37 tick=208 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=1 f=0 t=214 nr=0 a0=20 a1=0 a2=0 a3=0
+E               AUDIT seq=38 tick=214 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=228 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=39 tick=228 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=4 f=0 t=241 nr=0 a0=16 a1=0 a2=0 a3=0
+E               AUDIT seq=40 tick=241 sys=telemetry target=4 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=248 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=41 tick=248 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=254 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=42 tick=254 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=5 f=0 t=262 nr=0 a0=20 a1=0 a2=0 a3=0
+E               AUDIT seq=43 tick=262 sys=telemetry target=5 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=1 f=0 t=268 nr=0 a0=9 a1=0 a2=0 a3=0
+E               AUDIT seq=44 tick=268 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=1 f=0 t=275 nr=0 a0=6 a1=0 a2=0 a3=0
+E               AUDIT seq=45 tick=275 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=1 f=0 t=281 nr=0 a0=6 a1=0 a2=0 a3=0
+E               AUDIT seq=46 tick=281 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=2 f=0 t=288 nr=0 a0=26 a1=0 a2=0 a3=0
+E               AUDIT seq=47 tick=288 sys=telemetry target=2 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+E               TAPE k=7 s=1 f=0 t=294 nr=0 a0=17 a1=0 a2=0 a3=0
+E               AUDIT seq=48 tick=294 sys=telemetry target=1 decision=FRAME_DROP reason=bad_frame result=0 tainted=0
+
+tests/qemu.py:217: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_inv_13_hw.py::test_inv_13_hw_interlock_stop - AssertionErro...
+FAILED tests/test_inv_13_hw.py::test_inv_13_estop_cuts_fan - AssertionError: ...
+FAILED tests/test_inv_13_hw.py::test_inv_13_watchdog_safe_state - AssertionEr...
+========================= 3 failed in 94.42s (0:01:34) =========================
