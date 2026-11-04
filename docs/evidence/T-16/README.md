@@ -11,7 +11,7 @@ the builder:** fake transports, synthetic frames, the simulated cell in QEMU; no
 |---|---|---|---|
 | A1 | Step-2 offline tests fail before and pass after; full suite passes; policy hash unchanged | **PASS.** Before: both test files error at import (`pytest-before.txt`). After: `tests/witness/test_vision.py` 64 + `tests/bridge/test_vision_secrets.py` 1 = **65 passed**; 2 QEMU tests on the simulated cell (`test_witness_loop.py::*vision*`) passed; full default suite **980 passed, 6 skipped (hardware tests, 2 by design), 221 s, 0 PANIC** (`suite.txt`; run while the last QEMU test edit was pending, the two vision loop tests re-run afterwards: 2 passed); policy hash `4101a8cc305078722afb56a4eb09e2b4c3705e2d2c697b418c7ef02885cdef0b` (= T-15); `git diff --stat 76ad29f -- kernel user firmware abi` empty | `pytest-before.txt`, `pytest-after.txt`, `sim-vision-loop.txt`, `sim-vision-zonecheck.txt`, `step5.txt` |
 | A2 | Request shape matches the official docs, quoted | **PASS.** See "Docs extract" and "Request shape"; `test_request_shape_matches_the_documented_fields` pins every field | this file, `bridge/ring3bridge/models/vision.py` docstring |
-| A3 | Hardware zone check by the user, N/6 with every reply logged | **OPEN: waiting for the user's run** (command (a) below) | to fill: "Zone check" table |
+| A3 | Hardware zone check by the user, N/6 with every reply logged | **3 of 6 PASS** on `zc-20261104-153656` (every reply logged; table below). Not 6/6: the two 130 images show the arm on the 110 boundary band (servo travel ~0.75 of the command, measured), one 50 image read UNSURE. v2 pack proposed under the once-only rule; second attempt pending the lead | "Zone check", `zc-153656/` |
 | A4 | If 6/6: live runs (b) and (c) with verdicts and the agent's next action | **OPEN: after A3** | to fill: "Live runs" |
 | A5 | Commits only this card's paths; worktree; "ready to merge" reported, merged only on the user's word | PASS for the builder's part: branch `t16`, paths listed under "Files"; not merged | `git log t16` |
 
@@ -101,7 +101,7 @@ default effort; a reply cut off at the cap is `CAN'T VERIFY: VISION_FORMAT (repl
 | Result / record | `witness/pipeline.py`, `run.py` | `WitnessResult.backend`, `pack_sha256`, `arm_visible`, `vision_reply`; the `witness` record carries `backend`, `pack_sha256`, `arm_visible`, `vision_reply_blob`; the observation's second line ends with `backend=sam|vision`; a vision `ModelStop` stops the request and run like a `SamStop`. |
 | Zone check | `bridge/ring3bridge/zonecheck.py`, `calibration.py` (`rounds`), `cli.py` | `ring3 calibrate --witness-backend vision`: 2 console requests, targets 50, 90, 130 then 90, 50, 130 (<= 7 moves each, every move through the kernel), one image per target; `zone_check` is ok only on 6/6 PASS by this backend with this pack, in order; `zonecheck.json` + a `zonecheck` record (file SHA-256). `ring3 run --witness-backend vision --calibration <zc-run>` re-verifies the chain, the file hash, the pack and gauge hashes and recomputes the verdict from the rows. |
 | CLI | `cli.py` | `--witness-backend sam|vision` on `run` and `calibrate` (default `sam`, unchanged); dry runs print the reservation. |
-| Pack | `docs/context-packs/witness-vision-v1.md` | SHA-256 `bf8f6102e35d69ebff2792d75b959f97e7042e857e5ea0bce1a6179d679a126c`, pinned by a test; describes the printed gauge (zones, labels, OUT regions, black bands, the black arm on the pivot); asks for the zone only ("Never report an angle"). |
+| Pack | `docs/context-packs/witness-vision-v1.md`, `-v2.md` | v1 SHA-256 `bf8f6102e35d69eb...` (the 2026-11-04 zone checks), v2 `aa51546543357dd2...` (the once-only revision, below), both pinned by a test; describe the printed gauge (zones, labels, OUT regions, black bands, the black arm on the pivot); ask for the zone only ("Never report an angle"). |
 | Config | `config/models.toml` `[vision]` | id, endpoint, `max_output_tokens` 2048, `reasoning_effort` low, `image_tokens_reserve` 2000, the `[model]` prices (a test keeps them equal). |
 | Event log | `eventlog.py` | record type `zonecheck`. |
 
@@ -144,12 +144,8 @@ only through a `Protocol`).
 | 1 | `tests/witness/test_part_b.py::test_no_move_observation_text` | It asserts the exact observation text; the card asks the observation to name the backend, so the second line gained `backend=sam` | `"measured_deg=none\n"` -> `"measured_deg=none backend=sam\n"` | unchanged: NO_MOVE, no frame, no spend, same words otherwise |
 
 ## `[UNVERIFIED]` (no call to Meta was made by the builder)
-- The real token count of a 920 x 570 JPEG crop for `muse-spark-1.3` (the 2,000 ceiling is above the docs'
-  ~1280 px figure; the first live `usage.input_tokens` decide).
+- (closed by zc-153656: 1,406 input tokens per call, under the reservation; strict json_schema accepted.)
 - Whether `POST /v1/responses/input_tokens` is billed (not used).
-- Whether `strict: true` with an `enum` property is accepted by the server for this model (the strict rules
-  quoted above forbid a top-level `enum`, not one inside a property); an HTTP 400 would stop the run as
-  `transport` and be visible in `model_reply`.
 - Whether the model reads the printed zone reliably: that is A3.
 
 ## Live steps (the user's, D-57) — commands and reservations
@@ -168,10 +164,64 @@ first, then `make run-cell` (D-70). Budgets are per run; the project cap is $30.
 Send back: the run ids (`runs/zc-*`, `runs/<time>`), or the printed tables. The builder reads the run
 directories (`events.jsonl`, `witness` and `model_reply` records, blobs) and fills the tables below.
 
-## Zone check (A3) — to fill from the user's run
-| image | request | commanded | verdict | reason | zone | arm_visible | usage in/out | crop sha256 |
-|---|---|---|---|---|---|---|---|---|
-| (not run yet) | | | | | | | | |
+## Zone check (A3): `zc-20261104-153656` (user, 2026-11-04, pack v1), `CHAIN OK: 3885 records, 31 blobs`
+Earlier attempts the same afternoon: `zc-152454`, `-152701`, `-152928` (no image: no telemetry / no move),
+`zc-153327` (6 images, 2 of 6: the arm stayed at ~76 deg for every command) and `zc-153614` (3 images, 1 of 3,
+same), after which the user fixed a servo wire. Then:
+
+| image | request | commanded | verdict | reason | zone | arm_visible | usage in / out (reasoning) | arm angle measured from the crop | crop sha256 |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | 1 | 50 LOW | CAN'T VERIFY | UNSURE | UNSURE | 1 | 1406 / 1550 (1530) | 51 deg, LOW | `zc-153656/image1-50-annotated.jpg` |
+| 2 | 1 | 90 MID | PASS | ZONE_MATCH | MID | 1 | 1406 / 403 (382) | 76-80 deg, MID (3-5 deg from the 75 band edge) | `image2-90-crop.jpg` |
+| 3 | 1 | 130 HIGH | FAIL | WRONG_ZONE | MID | 1 | 1406 / 274 (253) | 110 deg, **on the 110 band** | `image3-130-annotated.jpg` |
+| 4 | 2 | 90 MID | PASS | ZONE_MATCH | MID | 1 | 1406 / 359 (340) | 76-80 deg, MID | |
+| 5 | 2 | 50 LOW | PASS | ZONE_MATCH | LOW | 1 | 1406 / 416 (397) | 50 deg, LOW | |
+| 6 | 2 | 130 HIGH | FAIL | WRONG_ZONE | MID | 1 | 1406 / 1135 (1114) | 111 deg, **on the 110 band** | `image6-130-annotated.jpg` |
+
+Every reply was `status: completed`, exactly the schema object (`strict` json_schema accepted by the server:
+one `[UNVERIFIED]` closed). **`usage.input_tokens` = 1,406 per call** (pack 2,676 B + question + a 920 x 570
+JPEG): the 2,000-token image ceiling plus text bytes (5,390 reserved) is above the real count; closed.
+Reasoning spent 253-1,530 of the 2,048 output cap: the UNSURE reply used 1,530, close to the cap.
+Spend: $0.023164 settled for the run (3 runs today $0.047881, ledger).
+
+### Free analysis (no call): the arm's angle in each crop
+Measured from the printed pivot as the darkness-weighted direction of the black bar's pixels 6-20 mm out
+(`step` script in this session; the annotated crops draw the measured ray, the commanded ray and the nearest
+band edge): **50 -> 51 / 50, 90 -> 76 / 75 (visually 76-82), 130 -> 110 / 111**. So an 80 deg command span
+moved the arm ~60 deg: about 0.75 deg per commanded degree, with the 90 command 10-14 deg low (one SG90
+spline tooth is 14.4 deg). Camera axis 2.1 / 2.4 mm from the pivot (within the 5 mm advice); the hub's screw
+hole is not found (a white cap covers it), the hub sits on the pivot by eye. Parallax cannot rotate the arm
+about a point this close to the axis, so the crop shows the arm's real direction.
+- **130 -> MID (images 3, 6):** not a model misreading of a HIGH arm. In the rectified crop the arm lies along
+  the 110 edge (its tip 20 mm out, in the inner semicircle, along the thin 110 ray); a human extending it
+  lands inside the black 110 band or a degree or two to either side. The honest answer is UNSURE (the band),
+  the model chose the MID side. The lead's hypothesis holds in part: the tip stays in the inner semicircle,
+  so the model has to extend the line ~36 mm to the labelled ring, and the soft shadow (lamp from the right,
+  shadow up-left of the arm) sits exactly on the HIGH side; v1 never told it that the thin rays continue
+  the band edges inward, which is the cue a short arm needs.
+- **50 -> UNSURE once (image 1) and LOW once (image 5):** the two pictures are the same (51 vs 50 deg, 15 deg
+  clear of the 70 band). v1's UNSURE rule ("within a band's width of one", "anything else makes the zone
+  doubtful") is wide, and the long reasoning (1,530 tokens) ended in the escape answer. v2 narrows UNSURE to
+  "the direction cannot be judged".
+- What v2 cannot fix: with the arm physically on the 110 band at a 130 command, the best v2 outcome for
+  images 3 and 6 is CAN'T VERIFY: UNSURE, still not 6/6. The setup needs the travel fixed (re-seat the horn so
+  a 90 command points at the 90 tick: 130 would then read ~124, HIGH, but 50 would read ~64, 1 deg outside
+  the 70 band; or the firmware's pulse range, the user's domain; or targets the lead chooses).
+
+## witness-vision-v2 (the card's once-only prompt revision; lead's request after zc-153656)
+Same strict schema, same request shape; only the instructions change (`PACK_NAME` -> v2, v1 loadable). Changes
+and why: (1) "the arm is the one solid black bar attached to the white hub ... short, about 15 mm, its tip ends
+well inside the inner semicircle; a soft grey shadow ... is not the arm" (images 3/6: the shadow lies on the
+HIGH side; the tip never reaches the ring); (2) the two thin grey rays "continue the two inner zone edges down
+to where the arm's tip is": between the rays MID, right of the right ray LOW, left of the left ray HIGH (the
+cue a 15 mm arm needs; `make_gauge` draws them at exactly 70 and 110); (3) the task is to "follow the black
+arm's direction from the hub outward ... until the line reaches the labelled ring" with "the black boundary
+bands (and the thin rays that continue them inward) as the zone edges" (the lead's wording); (4) UNSURE "only
+when the direction cannot be judged: the line reaches the ring inside a black band or on the edge of one, the
+arm is blurred, hidden or doubled, or more than one bar is attached to the hub. Clear daylight between the
+line and the nearest band is a definite zone, not UNSURE" (image 1). A band still gives UNSURE: a band belongs
+to no zone and the card makes it CAN'T VERIFY. Re-test reservation: 6,020 input tokens + 2,048 = $0.016229
+per call, 6 images at most $0.097374 (`--budget-usd 0.10` still fits).
 
 ## Live runs (A4) — to fill
 | run | request | moves | witness verdict | agent's next action | outcome |
@@ -179,7 +229,8 @@ directories (`events.jsonl`, `witness` and `model_reply` records, blobs) and fil
 | (not run yet) | | | | | |
 
 ## Spend
-Builder: $0 (no call). User's runs: to fill from `ring3 spend`.
+Builder: $0 (no call). User's zone checks 2026-11-04: $0.047881 settled over 3 runs (ledger), $0.023164 for
+`zc-153656`.
 
 ## Files (this card's paths)
 `bridge/ring3bridge/models/vision.py` (new), `bridge/ring3bridge/witness/vision.py` (new),
