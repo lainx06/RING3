@@ -17,12 +17,10 @@ Host only: no QEMU, no key, no network, no hardware. Nothing here is a live run.
 from __future__ import annotations
 
 import argparse
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
 from ring3bridge import abi, replay
-from ring3bridge.config import REPO
 
 BANNER = "PERMISSIVE BUILD: no capability, taint or confirmation checks (device limits kept)"
 HONESTY = (
@@ -78,14 +76,8 @@ def _tape_events(records: list[dict]) -> list[dict]:
 
 
 def _host_decisions(exe: Path, tape: list[str]) -> dict[int, dict[str, str]]:
-    p = subprocess.run(
-        [str(exe), "--replay-ev"], input="\n".join(tape) + "\n", cwd=REPO, capture_output=True, text=True,
-        timeout=120, check=False,
-    )  # fmt: skip
-    if p.returncode != 0:
-        raise RuntimeError(f"{exe.name} --replay-ev exit {p.returncode}")
     out: dict[int, dict[str, str]] = {}
-    for a in replay.parse_audit_lines(p.stdout):
+    for a in replay.parse_audit_lines(replay.run_host_policy(exe, tape, with_ev=True)):
         if "ev" not in a:
             raise RuntimeError(f"{exe.name} printed no ev= field (rebuild: make host-policy)")
         out[int(a["ev"])] = a

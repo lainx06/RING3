@@ -81,6 +81,18 @@ def parse_audit_lines(text: str) -> list[dict[str, str]]:
     return out
 
 
+def run_host_policy(exe: Path, tape: list[str], with_ev: bool = False) -> str:
+    """The host policy build over TAPE lines (fixed argv: ``--replay``, or ``--replay-ev`` for T-17's
+    counterfactual, which appends the tape event index to each AUDIT line); returns its stdout."""
+    p = subprocess.run(
+        [str(exe), "--replay-ev" if with_ev else "--replay"], input="\n".join(tape) + "\n", cwd=REPO,
+        capture_output=True, text=True, timeout=120, check=False,
+    )  # fmt: skip
+    if p.returncode != 0:
+        raise RuntimeError(f"{Path(exe).name} exit {p.returncode}")
+    return p.stdout
+
+
 @dataclass
 class ReplayResult:
     ok: bool
