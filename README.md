@@ -412,6 +412,10 @@ The cap is checked per ledger, so it does not see the sum. A spend reservation i
   rarely exercised; that is why the red-team pack exists (D-69), and the README reports the two layers separately.
 - A run is replayable only if the bridge started before the kernel (D-70).
 - Taint is per request and coarse (the whole executor, not per byte).
+- In graphics mode (opt-in), a screen redraw in two kernel paths runs with interrupts off and can delay one timer tick
+  by up to one budgeted pass (p99 1.3 ms, worst measured 3.5 ms, 10 ms tick); a test keeps the hazard-to-halt time
+  within text mode's bound. Text mode, the default, is unaffected. Fix: move drawing to an interrupts-enabled context
+  (roadmap).
 
 ## Built during the hackathon
 
