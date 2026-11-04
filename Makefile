@@ -12,6 +12,9 @@
 #   make run-cell-screen     `make run-cell` with the VGA status screen in a QEMU window (T-08, WSLg GTK);
 #                            SCREEN_DISPLAY=curses for a terminal instead (COM1 then on tcp:127.0.0.1:$(COM1_PORT))
 #   make screendump NAME=x   PNG of the running screen -> docs/evidence/T-08/x.png (QEMU monitor socket)
+#   make run-cell-gfx        T-18: `make run-cell-screen` with the pixel graphics screen (boot option gfx=1,
+#                            1024x768 QEMU standard VGA; falls back to the text screen when the device is absent)
+#   make screendump-gfx NAME=x   PNG of the running graphics screen -> docs/evidence/T-18/x.png
 #   make run-cell-sim-permissive BUNDLE=replay/<name> [SHOTS=dir] [SIM_DISPLAY=none]
 #                            T-17: the PERMISSIVE image on the simulated cell (never a device), the bundle's
 #                            recorded model replies played back (no key, no network), banner on every screen
@@ -76,7 +79,7 @@ ifeq ($(TEST),1)
   ASFLAGS += -DRING3_TEST=1
   UPROGS  := agentsh agentsh_test agentsh_nocap \
              hello kwrite ticks priv spin badptr null hlt ud div0 stack dflag fuzz taint confirmw nocap objs \
-             fan multi lcd audspin cellcmd
+             fan multi lcd audspin cellcmd fbpoke bbpoke
 else
   UPROGS  := agentsh
 endif
@@ -114,7 +117,8 @@ QEMU_SCREEN := $(QEMU) -m 64 -display $(SCREEN_DISPLAY) -serial $(SCREEN_COM1) \
                -monitor unix:$(SCREEN_MON),server=on,wait=off -device isa-debug-exit,iobase=0xf4,iosize=0x04 \
                -no-reboot -serial tcp:127.0.0.1:$(COM2_PORT),server=on,wait=off -serial $(CELL_PORT)
 
-.PHONY: all clean run run-link run-cell run-cell-screen screendump test-link test-kernel user host-policy host-screen
+.PHONY: all clean run run-link run-cell run-cell-screen run-cell-gfx screendump screendump-gfx test-link test-kernel user \
+        host-policy host-screen host-gfx
 .SECONDARY: $(patsubst %,build/user/%.elf,$(UPROGS))
 all: $(KERNEL)
 
@@ -196,6 +200,17 @@ screendump:
 	@[ -n "$(NAME)" ] || { echo "usage: make screendump NAME=<state>"; exit 2; }
 	uv run python -I tools/screendump.py $(SCREEN_MON) docs/evidence/T-08/$(NAME).png
 
+# T-18 (D-101): the same wiring as run-cell-screen, QEMU's standard VGA named explicitly, `gfx=1` on the
+# command line. Text mode stays the default everywhere else.
+run-cell-gfx: $(KERNEL)
+	@mkdir -p $(dir $(SCREEN_MON))
+	@if [ "$(SCREEN_DISPLAY)" = curses ]; then echo "COM1 console: nc 127.0.0.1 $(COM1_PORT) (QEMU waits for it)"; fi
+	$(QEMU_SCREEN) -vga std -kernel $(KERNEL) -append "gfx=1" $(QEMU_EXTRA)
+
+screendump-gfx:
+	@[ -n "$(NAME)" ] || { echo "usage: make screendump-gfx NAME=<state>"; exit 2; }
+	uv run python -I tools/screendump.py $(SCREEN_MON) docs/evidence/T-18/$(NAME).png --gfx
+
 test-link:
 	$(MAKE) KTEST_LINK=1
 	$(QEMU_LINK) -kernel build/kernel-link.elf -append "linktest" $(QEMU_EXTRA); rc=$$?; \
@@ -227,10 +242,20 @@ evals:
 SCREEN_SRC := kernel/ui/screen.c kernel/ui/words.c kernel/ui/screen.h kernel/ui/words.h
 host-screen: build/host/screen_test
 
-build/host/screen_test: $(SCREEN_SRC) kernel/policy/policy.c kernel/policy/policy.h kernel/policy/variant_default.h tests/host/screen_test.c
+build/host/screen_test: $(SCREEN_SRC) kernel/policy/policy.c kernel/policy/policy.h kernel/policy/variant_default.h tests/host/screen_test.c tests/host/screen_states.h
 	@mkdir -p $(dir $@)
 	$(HOSTCC) $(HOST_CFLAGS) -Ikernel/ui -DPOLICY_VARIANT_HEADER='"variant_default.h"' tests/host/screen_test.c \
 	  kernel/ui/screen.c kernel/ui/words.c kernel/policy/policy.c -o $@
+
+# Host build of the pixel screen renderer (T-18): golden-image tests in tests/test_t18_gfx.py.
+GFX_SRC := kernel/ui/gfx.c kernel/ui/gfx.h $(SCREEN_SRC)
+host-gfx: build/host/gfx_test
+
+build/host/gfx_test: $(GFX_SRC) kernel/policy/policy.c kernel/policy/policy.h kernel/policy/variant_default.h \
+                     tests/host/gfx_test.c tests/host/screen_states.h
+	@mkdir -p $(dir $@)
+	$(HOSTCC) $(HOST_CFLAGS) -Ikernel/ui -DPOLICY_VARIANT_HEADER='"variant_default.h"' tests/host/gfx_test.c \
+	  kernel/ui/gfx.c kernel/ui/words.c kernel/policy/policy.c -o $@
 
 clean:
 	rm -rf build

@@ -17,5 +17,8 @@ struct trap_frame {
 
 static inline int trap_from_user(const struct trap_frame *f) { return (f->cs & 3) == 3; }
 
-void isr_dispatch(struct trap_frame *f);   /* called from isr.S */
+void isr_dispatch(struct trap_frame *f);
+/* TSC cycles spent in hardware interrupt handlers since boot (T-18: the screen's render-time figures leave
+ * out the interrupts that land inside a pass; the gross figure is reported too). */
+uint64_t irq_cycles_total(void);   /* called from isr.S */
 #endif

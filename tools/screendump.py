@@ -3,7 +3,8 @@
     uv run python -I tools/screendump.py build/screen-mon.sock docs/evidence/T-08/idle.png
 
 Also writes the VGA text buffer next to it (<name>.txt, CP437 decoded, 25 rows of 80 columns) so the
-evidence carries the exact characters. Reads only; sends nothing to the guest."""
+evidence carries the exact characters; `--gfx` (T-18, the pixel screen) writes the PNG only. Reads only; sends
+nothing to the guest."""
 
 from __future__ import annotations
 
@@ -39,16 +40,21 @@ def wait_file(p: Path, size: int | None = None) -> None:
 
 
 def main() -> None:
-    if len(sys.argv) != 3:
-        raise SystemExit("usage: screendump.py <monitor socket> <out.png>")
-    sock, png = sys.argv[1], Path(sys.argv[2]).resolve()
+    args = [a for a in sys.argv[1:] if a != "--gfx"]
+    gfx = "--gfx" in sys.argv[1:]  # T-18: the pixel screen has no text buffer to decode
+    if len(args) != 2:
+        raise SystemExit("usage: screendump.py <monitor socket> <out.png> [--gfx]")
+    sock, png = args[0], Path(args[1]).resolve()
     png.parent.mkdir(parents=True, exist_ok=True)
     raw = png.with_suffix(".bin")
     for p in (png, raw):
         p.unlink(missing_ok=True)
     monitor(sock, f'screendump "{png}" -f png')
-    monitor(sock, f'pmemsave 0xb8000 4000 "{raw}"')
     wait_file(png)
+    if gfx:
+        print(f"wrote {png.name} in {png.parent}")
+        return
+    monitor(sock, f'pmemsave 0xb8000 4000 "{raw}"')
     wait_file(raw, 4000)
     data = raw.read_bytes()
     raw.unlink()

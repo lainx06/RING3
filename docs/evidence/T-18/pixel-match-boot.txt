@@ -1,0 +1,1 @@
+pixels equal to the host simboot render: 0.9949

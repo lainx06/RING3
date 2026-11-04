@@ -10,7 +10,12 @@
 #include "pit.h"
 #include "printk.h"
 #include "exec.h"
+#include "io.h"
 #include "syscall.h"
+
+static uint64_t irq_cycles;
+
+uint64_t irq_cycles_total(void) { return irq_cycles; }
 
 void isr_dispatch(struct trap_frame *f)
 {
@@ -28,6 +33,7 @@ void isr_dispatch(struct trap_frame *f)
     }
     if (f->vector >= IRQ_BASE && f->vector < IRQ_BASE + 16) {
         uint8_t irq = (uint8_t)(f->vector - IRQ_BASE);
+        uint64_t c0 = rdtsc();
         if (irq == 0) {
             pit_on_tick();
             audit_on_tick(f);                 /* may not return (LIMIT from ring 3): sends EOI itself first */
@@ -37,6 +43,7 @@ void isr_dispatch(struct trap_frame *f)
             device_on_irq(f);                 /* COM3 (shared with the polled COM1, D-39a): frames -> decide() */
         }
         pic_eoi(irq);
+        irq_cycles += rdtsc() - c0;
         return;
     }
     panic("unexpected vector %u at eip=0x%08x", f->vector, f->eip);

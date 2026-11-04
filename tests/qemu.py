@@ -164,12 +164,14 @@ class Session:
         com2: bool = False,
         com3: bool | str = False,
         monitor: str = "none",
+        extra: list[str] | None = None,
     ):
+        """`extra`: more QEMU arguments after the harness's own (T-18: `-vga none` for the fallback test)."""
         self.com2_port: int | None = free_port() if com2 else None
         self.com3_port: int | str | None = com3 if isinstance(com3, str) else free_port() if com3 else None
         self.cmd = qemu_command(
             kernel, append, com2_port=self.com2_port, com3_port=self.com3_port, monitor=monitor
-        )
+        ) + list(extra or [])
         self.timeout = timeout
         self.t0 = time.monotonic()
         self.proc = subprocess.Popen(

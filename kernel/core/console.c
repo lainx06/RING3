@@ -201,6 +201,11 @@ static void dispatch(const char *l)
     } else if (word(l, "screen", &rest)) {
         feed_console(CONSOLE_OTHER);
         vga_print_stats();
+#ifdef RING3_TEST
+    } else if (word(l, "gfxfont", &rest)) {
+        feed_console(CONSOLE_OTHER);
+        vga_print_font();
+#endif
     } else if (word(l, "audit", &rest)) {
         feed_console(CONSOLE_OTHER);
         cmd_audit();

@@ -271,7 +271,7 @@ int exec_request_agent(const char *text, int variant)
 #ifdef RING3_TEST
 UPROG(hello) UPROG(kwrite) UPROG(ticks) UPROG(priv) UPROG(spin) UPROG(badptr) UPROG(null) UPROG(hlt)
 UPROG(ud) UPROG(div0) UPROG(stack) UPROG(dflag) UPROG(fuzz) UPROG(taint) UPROG(confirmw) UPROG(nocap)
-UPROG(objs) UPROG(fan) UPROG(multi) UPROG(lcd) UPROG(audspin) UPROG(cellcmd)
+UPROG(objs) UPROG(fan) UPROG(multi) UPROG(lcd) UPROG(audspin) UPROG(cellcmd) UPROG(fbpoke) UPROG(bbpoke)
 static struct uprog progs[] = {
     ENTRY(hello, PROG_TEST_CONSOLE), ENTRY(kwrite, PROG_TEST_CONSOLE), ENTRY(ticks, PROG_TEST_CONSOLE),
     ENTRY(priv, PROG_TEST_CONSOLE),  ENTRY(spin, PROG_TEST_CONSOLE),   ENTRY(badptr, PROG_TEST_CONSOLE),
@@ -280,7 +280,7 @@ static struct uprog progs[] = {
     ENTRY(fuzz, PROG_TEST_CONSOLE),  ENTRY(taint, PROG_TEST_OBJ),      ENTRY(confirmw, PROG_TEST_OBJ),
     ENTRY(nocap, PROG_TEST_NOCAP),   ENTRY(objs, PROG_TEST_OBJ),       ENTRY(fan, PROG_TEST_FULL),
     ENTRY(multi, PROG_TEST_CONSOLE), ENTRY(lcd, PROG_TEST_FULL),     ENTRY(audspin, PROG_TEST_CONSOLE),
-    ENTRY(cellcmd, PROG_TEST_FULL),
+    ENTRY(cellcmd, PROG_TEST_FULL), ENTRY(fbpoke, PROG_TEST_CONSOLE), ENTRY(bbpoke, PROG_TEST_CONSOLE),
 };
 
 static void fill_lengths(void)
@@ -292,7 +292,7 @@ static void fill_lengths(void)
     uint32_t lens[] = { LEN(hello), LEN(kwrite), LEN(ticks), LEN(priv), LEN(spin), LEN(badptr), LEN(null),
                         LEN(hlt), LEN(ud), LEN(div0), LEN(stack), LEN(dflag), LEN(fuzz), LEN(taint),
                         LEN(confirmw), LEN(nocap), LEN(objs), LEN(fan), LEN(multi), LEN(lcd), LEN(audspin),
-                        LEN(cellcmd) };
+                        LEN(cellcmd), LEN(fbpoke), LEN(bbpoke) };
     for (unsigned i = 0; i < sizeof progs / sizeof progs[0]; i++)
         progs[i].image_len = lens[i];
 }

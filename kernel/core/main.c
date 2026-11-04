@@ -79,7 +79,7 @@ void kmain(uint32_t magic, uint32_t mbi_addr)
     agentlink_init();
     device_init();
     sti();
-    vga_init();                          /* T-08: only with the `screen` boot option */
+    vga_init(mbi);                       /* T-08: only with the `screen` boot option (T-18: or gfx=1) */
     printk("init: gdt idt pic pit pmm paging objstore policy ok, interrupts on, %u frames free\n",
            pmm_free_frames());
     printk("link: COM2 %s\n", agentlink_present() ? "present (bridge link, HELLO sent)" : "absent (no bridge link)");

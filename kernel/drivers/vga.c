@@ -6,6 +6,8 @@
 #include "cellframe.h"
 #include "device.h"
 #include "exec.h"
+#include "gfx.h"
+#include "gfxdev.h"
 #include "io.h"
 #include "kernel.h"
 #include "kstring.h"
@@ -13,12 +15,22 @@
 #include "pmm.h"
 #include "printk.h"
 #include "screen.h"
+#include "trap.h"
 #include "words.h"
 
 #define VGA_TEXT ((volatile uint16_t *)0xB8000)
 #define CALIB_TICKS 50u                   /* TSC rate measured over the first 0.5 s, boot not delayed */
 
 static int on;
+/* T-18: the pixel screen (gfx=1): the same snapshot, rendered by kernel/ui/gfx.c into a back buffer; only
+ * the rectangles the renderer touched are copied to the framebuffer. */
+static int gfx;
+static struct gfxdev gdev;
+static struct gfx_font font;
+static struct screen_model prev_model;
+static struct gfx_rect rects[GFX_MAX_RECTS];
+static uint32_t gfx_pending;              /* regions still to draw (the per-tick budget) */
+static uint32_t over_2ms;
 /* decisions (written by the audit path with interrupts off) */
 static struct scr_decision dec[SCR_DECISIONS];
 static uint32_t ndec;                     /* total noted; ring index = n % SCR_DECISIONS */
@@ -43,21 +55,20 @@ static int busy;
 static uint32_t tsc_mhz;                  /* 0 until calibrated: no figures recorded before that */
 static uint64_t cal_tsc;
 static uint32_t cal_tick;
-static uint32_t n_renders, max_us, sum_us, over_1ms, max_cells;
+static uint32_t n_renders, max_us, sum_us, over_1ms, max_cells, max_gross_us;
 
 int vga_on(void) { return on; }
+int vga_gfx_on(void) { return gfx; }
 
-static inline uint64_t rdtsc(void)
+void vga_init(const struct multiboot_info *mbi)
 {
-    uint32_t lo, hi;
-    __asm__ volatile("rdtsc" : "=a"(lo), "=d"(hi));
-    return (uint64_t)hi << 32 | lo;
-}
-
-void vga_init(void)
-{
-    if (!boot_opt("screen"))
+    int want_gfx = boot_opt_num("gfx", 0) == 1;
+    if (!boot_opt("screen") && !want_gfx)
         return;
+    if (want_gfx)
+        gfx = gfxdev_init(mbi, &font, &gdev);   /* 0 = the text screen below, reason on COM1 */
+    if (gfx)
+        goto calibrate;
     /* Attribute mode control (index 0x10), bit 3 off: bit 7 of an attribute is a bright background, never
      * blink. Reading 0x3DA resets the index/data flip-flop; 0x20 keeps the palette enabled. */
     (void)inb(0x3DA);
@@ -67,6 +78,7 @@ void vga_init(void)
     /* CRTC cursor start (0x0A), bit 5: cursor off. */
     outb(0x3D4, 0x0A);
     outb(0x3D5, 0x20);
+calibrate:
     /* TSC rate against the PIT, for the render-time measurement only (finished in vga_service). */
     cal_tsc = rdtsc();
     cal_tick = ticks_now();
@@ -267,32 +279,47 @@ void vga_service(void)
     if (rendered_once && now == last_render_tick)
         return;                               /* at most once per tick (100 Hz) */
     busy = 1;
-    uint64_t c0 = rdtsc();
+    uint64_t c0 = rdtsc(), i0 = irq_cycles_total();
     if (!tsc_mhz && now - cal_tick >= CALIB_TICKS) {
         tsc_mhz = (uint32_t)(c0 - cal_tsc) / ((now - cal_tick) * (1000000u / POLICY_HZ));
         if (!tsc_mhz)
             tsc_mhz = 1;
     }
     snapshot(&model);
-    screen_render(&model, back);
     uint32_t cells = 0;
-    for (int r = 0; r < SCR_ROWS; r++)
-        for (int c = 0; c < SCR_COLS; c++)
-            if (back[r][c] != front[r][c]) {
-                front[r][c] = back[r][c];
-                VGA_TEXT[r * SCR_COLS + c] = back[r][c];
-                cells++;
-            }
-    uint32_t cycles = (uint32_t)(rdtsc() - c0);
+    if (gfx) {
+        uint32_t n = gfx_render(&model, rendered_once ? &prev_model : 0, &font, gdev.back, rects, &gfx_pending,
+                                GFX_TICK_BUDGET);
+        for (uint32_t i = 0; i < n && i < GFX_MAX_RECTS; i++)
+            cells += gfxdev_copy(&gdev, rects[i].x, rects[i].y, rects[i].w, rects[i].h);
+        prev_model = model;
+    } else {
+        screen_render(&model, back);
+        for (int r = 0; r < SCR_ROWS; r++)
+            for (int c = 0; c < SCR_COLS; c++)
+                if (back[r][c] != front[r][c]) {
+                    front[r][c] = back[r][c];
+                    VGA_TEXT[r * SCR_COLS + c] = back[r][c];
+                    cells++;
+                }
+    }
+    uint64_t c1 = rdtsc();
+    /* the pass's own work: interrupts that landed inside it (COM3 frames, the tick) are handler time, not
+     * render time, so they are taken out; the gross figure is kept as well */
+    uint32_t gross = (uint32_t)(c1 - c0), cycles = gross - (uint32_t)(irq_cycles_total() - i0);
     /* the first pass writes the whole screen once; the per-tick figures are the passes after it */
     if (rendered_once && tsc_mhz) {
-        uint32_t us = cycles / tsc_mhz;
+        uint32_t us = cycles / tsc_mhz, gross_us = gross / tsc_mhz;
+        if (gross_us > max_gross_us)
+            max_gross_us = gross_us;
         n_renders++;
         sum_us += us;
         if (us > max_us)
             max_us = us;
         if (us >= 1000u)
             over_1ms++;
+        if (us >= 2000u)
+            over_2ms++;
         if (cells > max_cells)
             max_cells = cells;
     }
@@ -307,6 +334,32 @@ void vga_print_stats(void)
         printk("screen: off (boot option `screen` not given)\n");
         return;
     }
-    printk("screen: renders=%u avg_us=%u max_us=%u over_1ms=%u max_cells_changed=%u tsc_mhz=%u\n", n_renders,
-           n_renders ? sum_us / n_renders : 0, max_us, over_1ms, max_cells, tsc_mhz);
+    printk("screen: renders=%u avg_us=%u max_us=%u over_1ms=%u max_cells_changed=%u tsc_mhz=%u gfx=%u over_2ms=%u"
+           " max_gross_us=%u\n",
+           n_renders, n_renders ? sum_us / n_renders : 0, max_us, over_1ms, max_cells, tsc_mhz, gfx, over_2ms,
+           max_gross_us);
+}
+
+void vga_print_font(void)
+{
+    if (!gfx) {
+        printk("gfxfont: the pixel screen is off (no glyphs read)\n");
+        return;
+    }
+    static const char hex[] = "0123456789abcdef";
+    for (uint32_t c = 0; c < 256; c++) {
+        char line[40];
+        line[0] = 'F';
+        line[1] = ' ';
+        line[2] = hex[c >> 4];
+        line[3] = hex[c & 15];
+        line[4] = ' ';
+        for (uint32_t r = 0; r < 16; r++) {
+            line[5 + 2 * r] = hex[font.rows[c][r] >> 4];
+            line[6 + 2 * r] = hex[font.rows[c][r] & 15];
+        }
+        line[37] = '\n';
+        line[38] = 0;
+        printk("%s", line);
+    }
 }

@@ -1,0 +1,1 @@
+test_t18_gfx_screendump_and_ring3_fault: {'renders': 81, 'avg_us': 160, 'max_us': 381, 'over_1ms': 0, 'max_cells_changed': 9920, 'tsc_mhz': 3780, 'gfx': 1, 'over_2ms': 0, 'max_gross_us': 381}

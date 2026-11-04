@@ -37,4 +37,6 @@ UPROG multi
 UPROG lcd
 UPROG audspin
 UPROG cellcmd
+UPROG fbpoke
+UPROG bbpoke
 #endif

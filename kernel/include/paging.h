@@ -12,4 +12,7 @@ void paging_map_user(uint32_t vaddr, uint32_t paddr, int writable);
 uint32_t paging_unmap_user(uint32_t vaddr);               /* returns the old physical address (0 if unmapped) */
 uint32_t paging_lookup(uint32_t vaddr);                   /* raw PTE, 0 when no mapping */
 void paging_flush_tlb(void);
+/* T-18: a kernel-only (U = 0) window over physical memory outside the identity map, for the graphics
+ * framebuffer and its back buffer. Panics on a user-range or already mapped address. */
+void paging_map_kernel(uint32_t vaddr, uint32_t paddr, uint32_t npages);
 #endif

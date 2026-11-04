@@ -86,6 +86,34 @@ uint32_t paging_lookup(uint32_t vaddr)
     return (pte & ~(PTE_U | PTE_W)) | (pte & pde & (PTE_U | PTE_W));
 }
 
+void paging_map_kernel(uint32_t vaddr, uint32_t paddr, uint32_t npages)
+{
+    if ((vaddr | paddr) & (PAGE_SIZE - 1))
+        panic("paging: unaligned kernel window 0x%08x -> 0x%08x", vaddr, paddr);
+    if (vaddr < PMM_LIMIT || vaddr + npages * PAGE_SIZE < vaddr)
+        panic("paging: kernel window 0x%08x inside the identity map or wrapping", vaddr);
+    if (vaddr < USER_TOP && vaddr + npages * PAGE_SIZE > USER_BASE)
+        panic("paging: kernel window 0x%08x overlaps the user range", vaddr);
+    for (uint32_t i = 0; i < npages; i++) {
+        uint32_t v = vaddr + i * PAGE_SIZE, pdi = v >> 22;
+        if (!(page_dir[pdi] & PTE_P)) {
+            uint32_t frame = pmm_alloc();
+            if (!frame)
+                panic("paging: out of frames for a kernel window table");
+            memset((void *)(uintptr_t)frame, 0, PAGE_SIZE);
+            page_dir[pdi] = frame | PTE_P | PTE_W;            /* supervisor only at the directory level */
+        } else if (page_dir[pdi] & PTE_U) {
+            panic("paging: kernel window 0x%08x in a user directory entry", v);
+        }
+        uint32_t *pt = (uint32_t *)(uintptr_t)PTE_ADDR(page_dir[pdi]);
+        uint32_t idx = (v >> 12) & 1023;
+        if (pt[idx] & PTE_P)
+            panic("paging: kernel window 0x%08x already mapped", v);
+        pt[idx] = (paddr + i * PAGE_SIZE) | PTE_P | PTE_W;
+    }
+    paging_flush_tlb();
+}
+
 void paging_flush_tlb(void)
 {
     uint32_t cr3;

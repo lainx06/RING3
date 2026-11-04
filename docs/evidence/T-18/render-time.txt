@@ -1,0 +1,1 @@
+test_t18_render_time: {'renders': 345, 'avg_us': 217, 'max_us': 1693, 'over_1ms': 16, 'max_cells_changed': 38592, 'tsc_mhz': 3887, 'gfx': 1, 'over_2ms': 0, 'max_gross_us': 1693}
