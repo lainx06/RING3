@@ -261,3 +261,16 @@ inside) became rejects; plus 3 tests on the recorded replies. **7** `synth.sam_l
 (ids from 0, image `w`/`h`, inclusive corners, hex stand-in payload); `FAR_BOX` (INV-14) and
 `test_sam_client.LINE` likewise. Expectations unchanged: every verdict and angle in `fixtures.md` is the same
 (only the displayed SAM lines and two detail texts changed).
+
+## Horn height after the D-78 remount (calculation, no SAM)
+D-78: the servo had been on its side (horn seen end-on: the x -7.7..+4.4 mm stub in frame `7855cbe2624a`,
+which is void). Remounted on its back, shaft toward the camera on the PIVOT mark, horn flat, plane ~25 mm above
+the paper. `height_check.py` / `height_check.txt`: with a pinhole camera at H whose axis is |c| from the
+pivot, the whole horn plane maps back to the paper scaled by k = H/(H-25) about the camera axis, so the
+measured box centre becomes k m - (k-1) c. H = 281 mm (4.84 px/mm and the C922's 78 deg diagonal FOV, f =
+1360 px). **At |c| = 1.3-1.7 mm the worst raw error is 1.22-1.59 deg (2.24 deg even at H = 200 mm), and
+<= 0.25 deg after the D-72 linear fit; under 3 deg, so no height parameter is needed.** The analytic bound
+agrees: (k-1)|c| / (k |m|min) = 0.098 x 1.7 / (1.098 x 5.44) = 1.60 deg. The larger risk is the shaft not
+on the PIVOT mark: 0.5 / 1 / 2 mm off -> 6.9 / 12.2 / 23.3 deg raw, 1.3 / 2.6 / 7.0 deg after the fit
+(2 mm makes the calibration fail its own 3.0 deg limit, which disables the witness rather than mis-judging).
+The apparent hub moves only (k-1)|c| = 0.17 mm from parallax, so `pivot.jpg` shows the placement directly.
