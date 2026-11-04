@@ -160,12 +160,17 @@ class Ledger:
         max_output_tokens: int,
         price: Price | None,
         run_budget_uusd: int | None,
+        input_tokens: int | None = None,
     ) -> Reservation:
+        """``input_tokens`` (T-16): an explicit count instead of 1 per request byte, for a request whose
+        bytes are not its tokens (an image: the caller adds a documented ceiling to the text bytes)."""
         if price is None:
             raise BudgetRefused("no_price", "model price unset in config/models.toml")
         if not run_budget_uusd or run_budget_uusd <= 0:
             raise BudgetRefused("no_run_budget", "--budget-usd is required")
-        tin = request_tokens(request)
+        tin = request_tokens(request) if input_tokens is None else input_tokens
+        if type(tin) is not int or tin < 0:
+            raise ValueError("input_tokens must be a non-negative integer")
         amount = cost_uusd(tin, price.input_uusd_per_mtok) + cost_uusd(
             max_output_tokens, price.output_uusd_per_mtok
         )

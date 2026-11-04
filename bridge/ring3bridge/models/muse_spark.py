@@ -131,6 +131,18 @@ def parse_response(body: bytes) -> ModelReply:
     return ModelReply(text, tin, tout, cached, status, incomplete_reason, len(texts))
 
 
+def redact_reply(transport: Transport, reply: ModelReply) -> ModelReply:
+    """T-09 F2: the decoded strings, once more (the body was scrubbed as bytes and through its JSON escapes;
+    the text the run loop validates, logs and prints must not carry the key either way). Shared with the
+    vision adapter (T-16) so the two cannot drift. Known limitation S4 (D-93): it runs when the transport
+    carries a ``Redactor`` (the real one always does)."""
+    red = getattr(transport, "redactor", None)
+    if red is None:
+        return reply
+    return ModelReply(red.text(reply.text), reply.input_tokens, reply.output_tokens, reply.cached_tokens,
+                      red.text(reply.status), red.text(reply.incomplete_reason), reply.texts)  # fmt: skip
+
+
 class MuseSparkClient:
     def __init__(
         self,
@@ -190,14 +202,7 @@ class MuseSparkClient:
             self._settle(res, None, None, None)
             self.stopped = ModelStop(abi.LINK_STOP_TRANSPORT, f"HTTP {resp.status}")
             raise self.stopped
-        reply = parse_response(resp.body)
-        red = getattr(self.transport, "redactor", None)
-        if red is not None:
-            # T-09 F2: the decoded strings, once more (the body was scrubbed as bytes and through its JSON
-            # escapes; the text the run loop validates, logs and prints must not carry the key either way).
-            reply = ModelReply(red.text(reply.text), reply.input_tokens, reply.output_tokens,
-                               reply.cached_tokens, red.text(reply.status), red.text(reply.incomplete_reason),
-                               reply.texts)  # fmt: skip
+        reply = redact_reply(self.transport, parse_response(resp.body))
         self._settle(res, reply.input_tokens, reply.output_tokens, reply.cached_tokens)
         return reply
 

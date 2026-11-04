@@ -280,7 +280,7 @@ def test_no_move_observation_text():
     out = witness_output(no_move(-1, "no kernel-allowed servo_set earlier in this request")).decode()
     assert out == (
         "CAN'T VERIFY\nreason=NO_MOVE commanded_deg=none commanded_zone=none measured_zone=none "
-        "measured_deg=none\ndetail: no kernel-allowed servo_set earlier in this request"
+        "measured_deg=none backend=sam\ndetail: no kernel-allowed servo_set earlier in this request"
     )
     assert NO_MOVE in out
 

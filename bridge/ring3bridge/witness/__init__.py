@@ -1,9 +1,12 @@
 """Camera witness (T-07, D-22, D-29, D-56, D-58, INV-14): reports evidence about a physical servo move.
 
-Pipeline for one check (``pipeline.check``): commanded zone -> session calibration -> 4 ArUco markers in
+Two backends (T-16, ``--witness-backend sam|vision``). SAM pipeline for one check (``pipeline.check``):
+commanded zone -> session calibration -> 4 ArUco markers in
 *this* frame (``dial``) -> warp-crop to the dial -> SAM 3.1 boxes (``sam``, one image reserved first) ->
 exactly one plausible arm, angle from the pivot through the box centre (``angle``) -> calibrated angle -> zone
-and verdict (``verdict``).
+and verdict (``verdict``). Vision backend (``vision``): the same fresh frame, markers and dial crop, then Muse
+Spark names the printed zone the arm points at (a strict JSON object, never an angle), enabled for a session
+only by a 6-of-6 zone check.
 
 Results are PASS / FAIL / CAN'T VERIFY. Every stage that is unsure raises ``CantVerify``; the pipeline returns
 at the first one, so a CAN'T VERIFY is never upgraded. Nothing here writes to the kernel link, imports the
@@ -31,6 +34,10 @@ STALE_FRAME = "STALE_FRAME"  # missing, old, mismatched or undecodable capture
 COMMAND_BOUNDARY = "COMMAND_BOUNDARY"  # the commanded angle itself is inside a boundary band
 COMMAND_RANGE = "COMMAND_RANGE"  # the commanded angle is outside 30-150 deg (the kernel would not allow it)
 NO_MOVE = "NO_MOVE"  # no kernel-allowed servo_set in this request, or telemetry never showed it settled
+# vision backend (T-16): the model's reply is data; anything but the exact zone object is VISION_FORMAT
+VISION_FORMAT = "VISION_FORMAT"  # reply not completed, not exactly {"zone": ..., "arm_visible": ...}
+NOT_VISIBLE = "NOT_VISIBLE"  # the model reports no visible arm on the pivot
+UNSURE = "UNSURE"  # the model could not name a zone
 
 # FAIL / PASS reasons
 WRONG_ZONE = "WRONG_ZONE"
@@ -39,7 +46,7 @@ ZONE_MATCH = "ZONE_MATCH"
 
 CANT_VERIFY_REASONS = frozenset(
     {MARKERS, SAM_FORMAT, NOT_FOUND, AMBIGUOUS, SHAPE, LOW_CONFIDENCE, BOUNDARY, CALIBRATION, STALE_FRAME,
-     COMMAND_BOUNDARY, COMMAND_RANGE, NO_MOVE}
+     COMMAND_BOUNDARY, COMMAND_RANGE, NO_MOVE, VISION_FORMAT, NOT_VISIBLE, UNSURE}
 )  # fmt: skip
 
 

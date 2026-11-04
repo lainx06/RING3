@@ -116,9 +116,11 @@ class CalibrationScript:
     ``checks=True`` for scripted zone checks (``ring3 calibrate --checks``): ``route`` to each of ``points``
     and a real ``Witness.check`` after each; every request starts again from its own fresh telemetry."""
 
-    witness: Witness
+    witness: Witness  # or a ``VisionWitness`` (T-16): anything with ``check`` (and ``measure`` for a fit)
     points: tuple[int, ...] = CAL_POINTS
     checks: bool = False
+    rounds: tuple[tuple[int, ...], ...] | None = None  # T-16 zone check: targets per request (the last
+    # round repeats); ``points`` is ignored when set
     move_gap_s: float = MOVE_GAP_S
     requests: int = 0  # replies given (the run loop's timeline reads this like a model client's)
     runner: object = None  # bound after the Runner exists (reads telemetry and the open request's results)
@@ -134,10 +136,20 @@ class CalibrationScript:
     )  # checks: (request, its text, result)
     _req: object = None
 
+    @property
+    def backend(self) -> str:
+        return str(getattr(self.witness, "backend", "sam"))
+
     def max_actions(self) -> int:
         """The bridge's turn bound for this request: the kernel's ACTION cap (the moves) plus one witness per
         point (witness ops send no frame, so the kernel's cap does not count them)."""
-        return abi.ACTIONS_PER_REQUEST + len(self.points)
+        longest = max(len(r) for r in self.rounds) if self.rounds else len(self.points)
+        return abi.ACTIONS_PER_REQUEST + longest
+
+    def targets_for(self, request_index: int) -> tuple[int, ...]:
+        if not self.rounds:
+            return self.points
+        return self.rounds[min(max(request_index, 1) - 1, len(self.rounds) - 1)]
 
     def measure(self, commanded_deg: int) -> Checked:
         if self.checks:
@@ -166,7 +178,8 @@ class CalibrationScript:
                 return self._done(f"{what} not started: " + self.note)
             self.start_deg = start
             try:
-                self.moves = (route if self.checks else plan)(self.start_deg, self.points)
+                pts = self.targets_for(getattr(req, "index", 1))
+                self.moves = (route if self.checks else plan)(self.start_deg, pts)
             except ValueError as e:
                 self.note = str(e)
                 return self._done(f"{what} not started: " + self.note)

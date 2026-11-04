@@ -20,9 +20,10 @@ Every frame in either direction is a ``frame`` record; every decoded AUDIT / EVE
 kernel-allowed ``servo_set`` earlier in the same request (observation result >= 0); the commanded angle of the
 last such move is the commanded zone. The loop then waits, still reading the link, for a telemetry frame that
 shows the board at that angle plus ``SETTLE_EXTRA_S``, else ``CAN'T VERIFY: NO_MOVE``. The check itself
-(frame, SAM, verdict) is the injected ``witness`` callable; its result is logged as a ``witness`` record and
-returned to the model as the observation. A SAM authentication / transport failure or a refused image
-reservation stops the request and the run (INV-09), never CAN'T VERIFY.
+(frame, SAM or Muse Spark vision, verdict) is the injected ``witness`` callable; its result is logged as a
+``witness`` record (with its ``backend``) and returned to the model as the observation. A SAM or vision
+authentication / transport failure or a refused reservation stops the request and the run (INV-09), never
+CAN'T VERIFY.
 """
 
 from __future__ import annotations
@@ -111,7 +112,8 @@ def witness_output(r: WitnessResult) -> bytes:
     lines = [
         r.verdict,
         f"reason={r.reason} commanded_deg={cmd} commanded_zone={r.commanded_zone or 'none'} "
-        f"measured_zone={r.measured_zone or 'none'} measured_deg={_deg(r.calibrated_mdeg)}",
+        f"measured_zone={r.measured_zone or 'none'} measured_deg={_deg(r.calibrated_mdeg)} "
+        f"backend={r.backend}",
     ]
     if r.detail:
         lines.append(f"detail: {r.detail}")
@@ -449,16 +451,26 @@ class Runner:
             return f"telemetry moved to servo {self.tele_servo} while settling, commanded {deg}"
         return ""
 
+    def witness_backend(self) -> str:
+        """The backend name of the injected witness callable (``Witness`` / ``VisionWitness`` /
+        ``CalibrationScript`` carry ``backend``); "sam" when it says nothing (T-16)."""
+        owner = getattr(self.witness, "__self__", None)
+        return str(getattr(owner, "backend", "sam"))
+
     def _witness_op(self, req: RequestState) -> str:
+        from dataclasses import replace
+
         from ring3bridge.witness.service import Checked, no_move
 
         assert self.witness is not None
         t0 = time.monotonic()
         cmd = req.last_servo_ok
+        backend = self.witness_backend()
         if cmd is None:
-            checked = Checked(no_move(-1, "no kernel-allowed servo_set earlier in this request"), b"")
+            r0 = no_move(-1, "no kernel-allowed servo_set earlier in this request")
+            checked = Checked(replace(r0, backend=backend), b"")
         elif detail := self._settle(cmd):
-            checked = Checked(no_move(cmd, detail), b"")
+            checked = Checked(replace(no_move(cmd, detail), backend=backend), b"")
         else:
             checked = self.witness(cmd)
         r = checked.result
@@ -471,12 +483,15 @@ class Runner:
             blobs["sam_line_blob"] = self.log.blob(r.sam_line.encode("ascii", "replace"))
         if r.sam_reply:
             blobs["sam_reply_blob"] = self.log.blob(r.sam_reply)
-        self.log.append("witness", action=req.actions, commanded_deg=r.commanded_deg,
+        if r.vision_reply:
+            blobs["vision_reply_blob"] = self.log.blob(r.vision_reply)
+        self.log.append("witness", action=req.actions, backend=r.backend, commanded_deg=r.commanded_deg,
                         commanded_zone=r.commanded_zone, measured_zone=r.measured_zone, verdict=r.verdict,
                         reason=r.reason, detail=r.detail, dial_mdeg=r.dial_mdeg,
                         calibrated_mdeg=r.calibrated_mdeg, crop_sha256=r.image_sha256,
-                        spend_uusd=r.spend_uusd, tele_servo=self.tele_servo,
-                        ms=int((time.monotonic() - t0) * 1000), **blobs)  # fmt: skip
+                        spend_uusd=r.spend_uusd, tele_servo=self.tele_servo, pack_sha256=r.pack_sha256,
+                        arm_visible=r.arm_visible, ms=int((time.monotonic() - t0) * 1000),
+                        **blobs)  # fmt: skip
         out = witness_output(r)
         req.results.append(("witness", 0))
         self.log.append("observation", index=-1, nonce=0, op="witness", result=0, truncated=0, bytes=len(out),
@@ -484,7 +499,7 @@ class Runner:
         self.timeline(
             f"model action {req.actions}: witness -> {r.verdict} ({r.reason}), commanded "
             f"{r.commanded_deg if r.commanded_deg >= 0 else 'none'} {r.commanded_zone or ''}, measured "
-            f"{r.measured_zone or 'none'}; answered by the bridge, no frame to the kernel"
+            f"{r.measured_zone or 'none'} [{r.backend}]; answered by the bridge, no frame to the kernel"
         )
         return observation_text("witness", 0, out, False)
 
@@ -533,6 +548,10 @@ class Runner:
                     code = abi.LINK_STOP_MODEL_AUTH if e.detail in ("HTTP 401", "HTTP 403") else (
                         abi.LINK_STOP_TRANSPORT)  # fmt: skip
                     self._stop_request(req, code, f"SAM: {e.detail}")
+                    self.stop()
+                    return
+                except ModelStop as e:  # T-16: the vision adapter (budget, auth, transport), INV-09
+                    self._stop_request(req, e.code, f"vision: {e.detail}")
                     self.stop()
                     return
                 except BudgetRefused as e:

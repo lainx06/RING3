@@ -23,7 +23,8 @@ ZERO_H = "0" * 64
 #: (every link frame in either direction, body as hex), ``frame_error`` (a K->B frame the bridge dropped),
 #: ``final_sent`` / ``stop_sent`` (the bridge's own end-of-request frames), and from T-07 Part B ``witness``
 #: (one camera check, integer millidegrees, images and the SAM line as blobs) and ``calibration`` (the fit a
-#: run uses, or the one ``ring3 calibrate`` produced).
+#: run uses, or the one ``ring3 calibrate`` produced), and from T-16 ``zonecheck`` (the vision backend's
+#: 6-image zone check, or the one a run loaded).
 RECORD_TYPES = frozenset(
     {
         "run_start",
@@ -45,6 +46,7 @@ RECORD_TYPES = frozenset(
         "witness",
         "calibration",
         "sam_probe",
+        "zonecheck",
         "run_end",
     }
 )

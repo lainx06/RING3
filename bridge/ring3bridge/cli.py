@@ -2,7 +2,9 @@
 
 Only ``run`` and ``calibrate`` (without ``--dry-run``) make network calls, and only to the endpoints in
 ``config/models.toml`` through the transport in ``models/``; both need ``--budget-usd`` and both are the
-user's to run (D-57: denied to builder sessions in ``.claude/settings.json``). Nothing here reads a key:
+user's to run (D-57: denied to builder sessions in ``.claude/settings.json``). ``--witness-backend vision``
+(T-16) selects Muse Spark's zone reading for the camera witness: ``calibrate`` then runs the 6-image zone
+check, ``run`` needs that check's run id as ``--calibration``. Nothing here reads a key:
 ``HttpsTransport`` does, from the environment, when ``run`` or ``calibrate`` constructs it.
 """
 
@@ -29,6 +31,7 @@ from ring3bridge.ledger import (
 
 RUNS = REPO / "runs"
 DEFAULT_PORT = 4555
+WITNESS_BACKENDS = ("sam", "vision")  # T-16: vision becomes the default only after it passes on hardware
 
 
 def _run_dir(arg: str) -> Path:
@@ -109,6 +112,32 @@ def _sam_setup():
     return load_sam_config(), load_geometry(), hashlib.sha256(GEOMETRY_JSON.read_bytes()).hexdigest()
 
 
+def _vision_setup():
+    """(vision config, gauge geometry, geometry.json SHA-256, witness context pack); no key, no network."""
+    from ring3bridge.config import load_vision_config
+    from ring3bridge.witness.dial import GEOMETRY_JSON, load_geometry
+    from ring3bridge.witness.vision import PACK_NAME
+
+    return (load_vision_config(), load_geometry(), hashlib.sha256(GEOMETRY_JSON.read_bytes()).hexdigest(),
+            context_pack.load(PACK_NAME))  # fmt: skip
+
+
+def _vision_reservation(cfg, pack) -> tuple[int, int]:  # noqa: ANN001
+    """(input tokens reserved, µUSD reserved) per vision call: the text bytes of the request with a
+    placeholder image plus the image ceiling, and the max output tokens (estimate, not billing)."""
+    from ring3bridge.models.vision import build_request, reserve_input_tokens
+    from ring3bridge.witness.vision import USER_TEXT
+
+    stub = b"\xff\xd8\xff\xd9"
+    body = build_request(cfg, pack.text, USER_TEXT, stub)
+    tin = reserve_input_tokens(body, stub, cfg.image_tokens_reserve)
+    assert cfg.price is not None
+    uusd = cost_uusd(tin, cfg.price.input_uusd_per_mtok) + cost_uusd(
+        cfg.max_output_tokens, cfg.price.output_uusd_per_mtok
+    )
+    return tin, uusd
+
+
 def _witness_dir(arg: str | None) -> Path | None:
     if arg is None:
         return None
@@ -151,7 +180,19 @@ def cmd_run(a: argparse.Namespace) -> int:
             f"  --budget-usd {a.budget_usd} = {fmt_usd(budget)} per run",
             f"  project cap {fmt_usd(load_project_cap())}",
         ]
-        if a.witness_dir:
+        if a.witness_dir and a.witness_backend == "vision":
+            vcfg, _, _, vpack = _vision_setup()
+            if vcfg.price is None:
+                lines.append("  witness: vision price unset in config/models.toml: every call refused")
+            else:
+                tin, per = _vision_reservation(vcfg, vpack)
+                lines.append(
+                    f"  witness: vision ({vcfg.id}), one image per witness op: {tin} input tokens "
+                    f"({vcfg.image_tokens_reserve} image ceiling + text) + {vcfg.max_output_tokens} max out "
+                    f"tokens = {fmt_usd(per)} reserved per call; pack {vpack.name} sha256 "
+                    f"{vpack.sha256[:16]}...; zone check {a.calibration or 'none'}"
+                )
+        elif a.witness_dir:
             sam_cfg, _, _ = _sam_setup()
             per = sam_cfg.price_uusd_per_image
             lines.append(
@@ -178,7 +219,9 @@ def cmd_run(a: argparse.Namespace) -> int:
     seed = secrets.token_bytes(16)
     start_run(log, run_id, kernel, pack, cfg.id, seed, budget)
     witness = None
-    if witness_dir is not None:
+    if witness_dir is not None and a.witness_backend == "vision":
+        witness = _run_vision_witness(a, log, transport, ledger, run_id, budget, witness_dir)
+    elif witness_dir is not None:
         witness = _run_witness(a, log, transport, ledger, run_id, budget, witness_dir)
     link = Link(a.host, a.port)
     print(f"run {run_id}: connecting to COM2 at {a.host}:{a.port} (budget {fmt_usd(budget)}, estimate)")
@@ -228,6 +271,142 @@ def _run_witness(a, log, transport, ledger, run_id, budget, witness_dir):  # noq
     print(f"witness: {cal.message()}")
     sam = SamClient(sam_cfg, transport, LedgerImageSpend(ledger, run_id, sam_cfg, budget))
     return Witness(FolderCamera(witness_dir), sam, cal, geom).check
+
+
+def _run_vision_witness(a, log, transport, ledger, run_id, budget, witness_dir):  # noqa: ANN001, ANN202
+    """T-16: the ``witness`` op with the vision backend: the zone check from ``--calibration`` (re-verified,
+    logged), the shared capture folder, Muse Spark on the run's transport and ledger. Without a passing zone
+    check every check is CAN'T VERIFY: CALIBRATION (no frame, no spend)."""
+    from ring3bridge.models.vision import VisionClient
+    from ring3bridge.witness import vision as vw
+    from ring3bridge.witness.service import FolderCamera
+    from ring3bridge.zonecheck import ZoneCheckError, load_zonecheck
+
+    cfg, geom, geom_sha, pack = _vision_setup()
+    zc, source, file_sha = vw.NONE, "", ""
+    if a.calibration:
+        try:
+            zc, doc, file_sha = load_zonecheck(_run_dir(a.calibration), pack.sha256, geom_sha)
+            source = str(doc.get("run_id", ""))
+        except (ZoneCheckError, OSError, ValueError, KeyError) as e:
+            zc = vw.ZoneCheck(False, f"zone check {a.calibration} not usable: {e}")
+    log.append("zonecheck", source_run=source, file_sha256=file_sha, ok=int(zc.ok), reason=zc.reason,
+               passed=zc.passed, n=zc.n, pack_sha256=pack.sha256, geometry_sha256=geom_sha)  # fmt: skip
+    print(f"witness: {zc.message()}")
+    client = VisionClient(cfg, transport, ledger, log, run_id, budget)
+    return vw.VisionWitness(FolderCamera(witness_dir), client, geom, pack, zc).check
+
+
+def _cmd_zone_check(a: argparse.Namespace) -> int:
+    """``ring3 calibrate --witness-backend vision`` (T-16): six scripted zone checks through the kernel (two
+    console requests: 50, 90, 130 then 90, 50, 130), one Muse Spark image each, reserved before each call.
+    The vision backend is enabled for later runs only on 6 of 6 PASS; the result is saved like a
+    calibration (``zonecheck.json`` + a ``zonecheck`` record)."""
+    from ring3bridge.zonecheck import ZONE_TARGETS, flat_targets
+
+    cfg, geom, geom_sha, pack = _vision_setup()
+    budget = usd_to_uusd(a.budget_usd)
+    if cfg.price is None:
+        print(
+            "calibrate: no vision price in config/models.toml; every call would be refused", file=sys.stderr
+        )
+        return 2
+    tin, per = _vision_reservation(cfg, pack)
+    targets = flat_targets(ZONE_TARGETS)
+    n = len(targets)
+    rounds = " then ".join(", ".join(str(d) for d in r) for r in ZONE_TARGETS)
+    print("ring3 calibrate --witness-backend vision: zone check"
+          + (" --dry-run (no network, no key read)" if a.dry_run else ""))  # fmt: skip
+    print(f"  {cfg.id} at {cfg.endpoint}; pack {pack.name} sha256 {pack.sha256[:16]}...")
+    p_in, p_out = cfg.price.input_uusd_per_mtok / 1e6, cfg.price.output_uusd_per_mtok / 1e6
+    print(f"  price: ${p_in:.2f} / 1M in, ${p_out:.2f} / 1M out ({cfg.price.source}, checked "
+          f"{cfg.price.checked}), estimate")  # fmt: skip
+    print(f"  targets: {rounds} ({n} images, 2 per zone, {len(ZONE_TARGETS)} console requests; moves of at "
+          f"most 30 deg through the kernel)")  # fmt: skip
+    print(f"  reservation: {tin} input tokens ({cfg.image_tokens_reserve} image ceiling + text) + "
+          f"{cfg.max_output_tokens} max output tokens = {fmt_usd(per)} per call, reserved before each call; "
+          f"{n} images = {fmt_usd(n * per)} worst case; --budget-usd {a.budget_usd} = "
+          f"{fmt_usd(budget)}")  # fmt: skip
+    print(f"  project cap {fmt_usd(load_project_cap())}; enabled only on {n} of {n} PASS")
+    if a.dry_run:
+        return 0
+    if not a.witness_dir:
+        print("calibrate: --witness-dir is required (the Windows capture helper's folder)", file=sys.stderr)
+        return 2
+    witness_dir = _witness_dir(a.witness_dir)
+    assert witness_dir is not None
+    from ring3bridge.calibration import CalibrationScript
+    from ring3bridge.context_pack import ContextPack
+    from ring3bridge.link import Link
+    from ring3bridge.models.transport import HttpsTransport, TransportError
+    from ring3bridge.models.vision import VisionClient
+    from ring3bridge.run import Runner, start_run
+    from ring3bridge.witness import vision as vw
+    from ring3bridge.witness.service import FolderCamera
+    from ring3bridge.zonecheck import write_zonecheck, zonecheck_doc
+
+    run_id = a.run_id or "zc-" + time.strftime("%Y%m%d-%H%M%S")
+    run_dir = RUNS / run_id
+    try:
+        transport = HttpsTransport()
+    except TransportError as e:
+        print(f"calibrate: {e} (the API key comes from the environment, never from a file)", file=sys.stderr)
+        return 2
+    log = eventlog.EventLog(run_dir)
+    ledger = Ledger(load_project_cap(), DEFAULT_LEDGER)
+    client = VisionClient(cfg, transport, ledger, log, run_id, budget)
+    witness = vw.VisionWitness(FolderCamera(witness_dir), client, geom, pack, vw.CHECKING)
+    script = CalibrationScript(witness, checks=True, rounds=ZONE_TARGETS)  # type: ignore[arg-type]
+    name = "scripted-zone-check"
+    script_pack = ContextPack(name, "", hashlib.sha256(b"").hexdigest())
+    kernel = Path(a.kernel) if Path(a.kernel).is_absolute() else REPO / a.kernel
+    seed = secrets.token_bytes(16)
+    start_run(log, run_id, kernel, script_pack, name, seed, budget)
+    link = Link(a.host, a.port)
+    print(
+        f"zone check {run_id}: connecting to COM2 at {a.host}:{a.port} (budget {fmt_usd(budget)}, estimate)"
+    )
+    link.connect(a.connect_timeout)
+    print(f"type {len(ZONE_TARGETS)} requests at the RING3 console, e.g. zone check 1 / zone check 2 "
+          "(keep hands away from the sensor and the arm)")  # fmt: skip
+    runner = Runner(link, script, log, script_pack, seed, timeline=_timeline, witness=script.measure,
+                    max_actions=script.max_actions())  # fmt: skip
+    script.runner = runner
+    zc = vw.NONE
+    try:
+        runner.serve(requests=len(ZONE_TARGETS), idle_s=a.idle)
+    except KeyboardInterrupt:
+        print("interrupted by the operator")
+        if runner.request is not None:
+            try:
+                link.send(abi.LINK_T_STOP, bytes([abi.LINK_STOP_OPERATOR]))
+            except Exception:  # noqa: BLE001
+                pass
+    finally:
+        results = [ch.result for _, _, ch in script.results]
+        zc = vw.zone_check(results, targets, run_id, pack.sha256, geom_sha)
+        doc = zonecheck_doc(zc)
+        sha = write_zonecheck(run_dir, doc)
+        log.append("zonecheck", **{k: v for k, v in doc.items() if k != "results"}, file_sha256=sha,
+                   note=script.note)  # fmt: skip
+        runner.finish()
+        link.close()
+    if script.note:
+        print(f"  script ended early: {script.note}")
+    print("  image | request | commanded | verdict | reason | zone | arm_visible | crop sha256")
+    for i, (idx, _text, ch) in enumerate(script.results, 1):
+        r = ch.result
+        vis = "-" if r.arm_visible is None else str(r.arm_visible)
+        print(f"  {i} | {idx} | {r.commanded_deg} {r.commanded_zone} | {r.verdict} | {r.reason} | "
+              f"{r.measured_zone or '-'} | {vis} | {r.image_sha256[:16]}")  # fmt: skip
+    print(f"  {zc.passed} of {zc.n} PASS")
+    print(zc.message())
+    print(f"zone check {run_id}: {run_dir.relative_to(REPO)}/zonecheck.json; "
+          f"use: ring3 run --witness-backend vision --calibration {run_id}")  # fmt: skip
+    print(ledger.report())
+    v = eventlog.verify(run_dir)
+    print(v.message)
+    return 0 if v.ok and zc.ok else 1
 
 
 def cmd_witness_frame(a: argparse.Namespace) -> int:
@@ -331,6 +510,8 @@ def cmd_calibrate(a: argparse.Namespace) -> int:
     from ring3bridge.witness import calibrate
     from ring3bridge.witness.calibrate import fit
 
+    if a.witness_backend == "vision":
+        return _cmd_zone_check(a)
     sam_cfg, geom, geom_sha = _sam_setup()
     budget = usd_to_uusd(a.budget_usd)
     per = sam_cfg.price_uusd_per_image
@@ -513,7 +694,11 @@ def main(argv: list[str] | None = None) -> int:
     u.add_argument("--dry-run", action="store_true", help="print the planned reservation; no network, no key")
     u.add_argument("--dry-run-request", help="request text to size the dry-run reservation on")
     u.add_argument("--witness-dir", help="capture folder shared with the Windows helper, e.g. /mnt/c/...")
-    u.add_argument("--calibration", help="run id (or directory) of a ring3 calibrate run")
+    u.add_argument("--calibration", help="run id (or directory) of a ring3 calibrate run (sam: calibration; "
+                   "vision: zone check)")  # fmt: skip
+    u.add_argument("--witness-backend", choices=WITNESS_BACKENDS, default="sam",
+                   help="sam (SAM 3.1 arm box + calibration) or vision (Muse Spark reads the zone, "
+                   "T-16)")  # fmt: skip
     u.add_argument(
         "--style", choices=style.STYLES, default="plain", help="plain, or console: 256 colours on a TTY"
     )
@@ -555,6 +740,8 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("--calibration", help="--checks: run id (or directory) of a ring3 calibrate run")
     c.add_argument("--targets", help="--checks: zone-centre angles per request (default 50,90,130)")
     c.add_argument("--requests", type=int, default=4, help="--checks: console requests to serve (default 4)")
+    c.add_argument("--witness-backend", choices=WITNESS_BACKENDS, default="sam",
+                   help="vision: the 6-image zone check instead of the SAM calibration (T-16)")  # fmt: skip
     c.set_defaults(fn=cmd_calibrate)
     a = ap.parse_args(args)
     return a.fn(a)

@@ -40,6 +40,10 @@ class WitnessResult:
     spend_uusd: int
     crop_jpeg: bytes = b""  # the cropped JPEG sent to SAM (b"" when none was sent), for the run's blobs
     sam_reply: bytes = b""  # SAM's reply body as received (scrubbed by the transport), for the run's blobs
+    backend: str = "sam"  # T-16: "sam" or "vision"
+    pack_sha256: str = ""  # vision: SHA-256 of the witness context pack sent as instructions
+    arm_visible: int | None = None  # vision: the reply's arm_visible (1/0), None when no reply parsed
+    vision_reply: bytes = b""  # vision: the model's reply body as received (scrubbed), for the run's blobs
 
 
 @dataclass

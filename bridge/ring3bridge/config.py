@@ -100,6 +100,42 @@ def load_model_config(path: Path = MODELS_TOML) -> ModelConfig:
     )
 
 
+@dataclass(frozen=True)
+class VisionConfig:
+    """``[vision]`` (T-16): the Muse Spark image call of the vision witness. Same fields as ``ModelConfig``
+    plus ``image_tokens_reserve``, the input tokens reserved per image before every call."""
+
+    id: str
+    endpoint: str
+    max_output_tokens: int
+    timeout_s: int
+    price: Price | None
+    reasoning_effort: str | None
+    image_tokens_reserve: int
+
+
+def load_vision_config(path: Path = MODELS_TOML) -> VisionConfig:
+    with open(path, "rb") as f:
+        d = tomllib.load(f)
+    v = d.get("vision")
+    if type(v) is not dict:
+        raise ConfigError("[vision] table missing")
+    mid, endpoint = v.get("id"), v.get("endpoint")
+    if type(mid) is not str or not mid or mid.endswith("-contributor"):
+        raise ConfigError("vision model id missing or not allowed")
+    if type(endpoint) is not str or not endpoint.startswith("https://"):
+        raise ConfigError("vision endpoint must be https")
+    return VisionConfig(
+        id=mid,
+        endpoint=endpoint,
+        max_output_tokens=_int(v, "max_output_tokens", MIN_OUTPUT_TOKENS, 65536),
+        timeout_s=_int(v, "timeout_s", 1, 600),
+        price=_price(v),
+        reasoning_effort=_reasoning_effort(v),
+        image_tokens_reserve=_int(v, "image_tokens_reserve", 1, 100_000),
+    )
+
+
 def load_project_cap(path: Path = BUDGET_TOML) -> int:
     with open(path, "rb") as f:
         d = tomllib.load(f)

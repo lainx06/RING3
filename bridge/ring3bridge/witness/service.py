@@ -198,6 +198,8 @@ class FolderCamera:
 
 
 class Witness:
+    backend = "sam"  # T-16: named in every witness record and observation
+
     def __init__(
         self,
         camera: Camera,

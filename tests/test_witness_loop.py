@@ -8,6 +8,7 @@ INV-09: a SAM 401 stops the request and the run."""
 
 from __future__ import annotations
 
+import hashlib
 import sys
 import time
 from pathlib import Path
@@ -246,3 +247,179 @@ def test_scripted_checks_normal_and_held(tmp_path):
     held = {deg: v for i, deg, v in got if i == 2}
     assert held[50] == "FAIL" and held[130] == "FAIL" and held[90] in ("PASS", "CAN'T VERIFY")
     assert len(t.posts) == 6 and ledger.settled_uusd() == 6 * 2500
+
+
+# ---- T-16: the vision backend in the same run loop and kernel (no network, no key, no paid call) ----
+
+
+def _zone_of(deg: float) -> str:
+    """What a truthful vision model would answer for an arm at ``deg`` on the printed gauge."""
+    if deg < 25:
+        return "OUT_LOW"
+    if deg > 155:
+        return "OUT_HIGH"
+    if any(abs(deg - e) <= 5 for e in (30, 70, 110, 150)):
+        return "UNSURE"
+    return "LOW" if deg < 70 else ("MID" if deg < 110 else "HIGH")
+
+
+class VisionSimCamera:
+    """A fresh synthetic frame at the simulated board's servo angle (or ``held``); queues the zone a truthful
+    model would read from it on the fake vision transport."""
+
+    def __init__(self, sim, transport, held: float | None = None):
+        self.sim, self.t, self.held = sim, transport, held
+        self.shots: list[float] = []
+
+    def __call__(self):
+        deg = self.held if self.held is not None else self.sim.servo + OFFSET_DEG
+        self.shots.append(deg)
+        frame, _, _ = synth.render(Scene([deg], quad="mild", light="gradient", seed=len(self.shots)))
+        self.t.responses.append(_vision_reply(_zone_of(deg)))
+        return frame, cv2.imencode(".jpg", frame)[1].tobytes()
+
+
+def _vision_reply(zone: str, visible: bool = True) -> TransportResponse:
+    import json
+
+    text = json.dumps({"zone": zone, "arm_visible": visible})
+    body = json.dumps(
+        {"id": "resp_fake", "object": "response", "status": "completed", "model": "muse-spark-1.3",
+         "output": [{"type": "message", "role": "assistant",
+                     "content": [{"type": "output_text", "text": text}]}],
+         "usage": {"input_tokens": 1700, "output_tokens": 20, "input_tokens_details": {"cached_tokens": 0}}}
+    ).encode()  # fmt: skip
+    return TransportResponse(200, body)
+
+
+def _vision_setup(b: BridgeThread, sim, held: float | None = None):
+    """A VisionWitness on the bridge's own log and ledger (as ``ring3 run`` wires it)."""
+    from ring3bridge import context_pack
+    from ring3bridge.config import load_vision_config
+    from ring3bridge.models.vision import VisionClient
+    from ring3bridge.witness import vision as vw
+    from tests.witness.fakes import FakeTransport
+
+    t = FakeTransport()
+    cam = VisionSimCamera(sim, t, held)
+    client = VisionClient(load_vision_config(), t, b.ledger, b.log, b.run_dir.name, 1_000_000)
+    pack = context_pack.load(vw.PACK_NAME)
+    return vw.VisionWitness(cam, client, GEOM, pack, vw.CHECKING), cam, t, pack
+
+
+def test_vision_witness_pass_then_held_arm_fails_and_the_model_halts(tmp_path):
+    """Request 1: witness before any move -> NO_MOVE, no frame, no call, and the record still names the
+    vision backend. Request 2: LOW in two moves, witness -> PASS (the fake model reads LOW from the fresh
+    frame). Request 3: a hand holds the arm in MID while the model moves to HIGH: the board says 130, the
+    picture says MID -> FAIL (never PASS); the scripted model halts. No witness op becomes a COM2 frame."""
+    with start(append=AGENT_QUOTAS, com2=True, timeout=150) as c:
+        replies = [
+            call("witness"), done("nothing moved; the camera could not confirm anything"),
+            call("servo_set", deg=60), later(call("servo_set", deg=50)), call("witness"),
+            done("gauge at 50, witness PASS"),
+            later(call("servo_set", deg=80)), later(call("servo_set", deg=110)),
+            later(call("servo_set", deg=130)), call("witness"), call("halt"),
+            done("witness FAIL: gauge did not reach HIGH; halted"),
+        ]  # fmt: skip
+        b = BridgeThread(c.s.com2_port, runs_dir(tmp_path, "vision"), replies, requests=3, pack="agent-v3")
+        w, cam, t, pack = _vision_setup(b, c.sim)
+        b.runner.witness = w.check
+        b.start()
+        t0 = _request(c, "check the gauge with the camera", timeout=60)
+        assert cam.shots == [] and t.posts == []  # no frame, no vision call (the ledger holds the model's)
+        t1 = _request(c, "move the gauge to LOW and confirm it with the camera", timeout=60)
+        assert c.sim.servo == 50 and len(cam.shots) == 1 and len(t.posts) == 1
+        cam.held = 90.0 + OFFSET_DEG
+        t2 = _request(c, "move the gauge to HIGH and confirm it with the camera", timeout=60)
+        b.join()
+        run = c.close()
+    record_evidence("sim-vision-loop.txt", run, "T-16")
+    assert run.exit_code == EXIT_PASS
+    for tr in (t0, t1, t2):
+        assert "OUTCOME DONE" in tr, tr
+    assert "EXECUTED 0 operation(s)" in t0 and "4 halt(0) -> 0" in t2, (t0, t2)
+    assert _b2k(b) == ["FINAL", "ACTION", "ACTION", "FINAL", "ACTION", "ACTION", "ACTION", "ACTION", "FINAL"]
+    ws = _witness_records(b)
+    got = [(r["backend"], r["verdict"], r["reason"], r["commanded_zone"], r["measured_zone"]) for r in ws]
+    assert got == [
+        ("vision", "CAN'T VERIFY", "NO_MOVE", "", ""),
+        ("vision", "PASS", "ZONE_MATCH", "LOW", "LOW"),
+        ("vision", "FAIL", "WRONG_ZONE", "HIGH", "MID"),
+    ]
+    assert ws[0]["commanded_deg"] == -1 and ws[0]["spend_uusd"] == 0 and "frame_blob" not in ws[0]
+    for r in ws[1:]:
+        assert r["pack_sha256"] == pack.sha256 and r["arm_visible"] == 1 and r["spend_uusd"] > 0
+        assert r["dial_mdeg"] is None and r["calibrated_mdeg"] is None  # a zone, never an angle
+        assert {"frame_blob", "crop_blob", "vision_reply_blob"} <= r.keys() and "sam_line_blob" not in r
+    assert ws[2]["tele_servo"] == 130  # the board says it moved; the camera says it did not
+    prompts = b.model.prompts()
+    assert (
+        "op=witness result=0\nCAN'T VERIFY\nreason=NO_MOVE" in prompts[1] and "backend=vision" in prompts[1]
+    )
+    assert "op=witness result=0\nPASS\nreason=ZONE_MATCH commanded_deg=50 commanded_zone=LOW" in prompts[5]
+    assert "backend=vision" in prompts[5] and "measured_deg=none" in prompts[5]
+    assert "\nFAIL\nreason=WRONG_ZONE commanded_deg=130 commanded_zone=HIGH measured_zone=MID" in prompts[10]
+    kinds = [r["type"] for r in b.records()]
+    assert kinds.count("model_request") == len(replies) + 2  # the scripted model's calls + 2 vision calls
+    vision_reqs = [r for r in b.records() if r["type"] == "model_request" and r.get("purpose")]
+    assert [r["purpose"] for r in vision_reqs] == ["witness_vision"] * 2
+    assert b.ledger.unsettled_uusd() == 0 and b.ledger.settled_uusd() > 0
+    assert eventlog.verify(b.run_dir).ok
+
+
+def test_vision_zone_check_through_the_kernel_enables_on_six_of_six(tmp_path):
+    """`ring3 calibrate --witness-backend vision` on the simulated cell: two console requests visiting
+    50, 90, 130 then 90, 50, 130 through the kernel (every move ALLOW), one vision image per target, 6 of 6
+    PASS -> the zone check enables the backend; its file loads back; the same check with one UNSURE
+    (the arm held in a band for one target) stays disabled."""
+    from ring3bridge import zonecheck
+    from ring3bridge.calibration import CalibrationScript
+    from ring3bridge.witness import vision as vw
+
+    with start(append=AGENT_QUOTAS, com2=True, timeout=200) as c:
+        b = BridgeThread(c.s.com2_port, runs_dir(tmp_path, "zc"), [], requests=2)
+        w, cam, t, pack = _vision_setup(b, c.sim)
+        script = CalibrationScript(w, checks=True, rounds=zonecheck.ZONE_TARGETS)  # type: ignore[arg-type]
+        b.client = script
+        b.runner.client = script
+        b.runner.witness = script.measure
+        b.runner.max_actions = script.max_actions()
+        script.runner = b.runner
+        b.start()
+        t1 = _request(c, "zone check 1", timeout=90)
+        t2 = _request(c, "zone check 2", timeout=90)
+        b.join(120)
+        run = c.close()
+    record_evidence("sim-vision-zonecheck.txt", run, "T-16")
+    assert run.exit_code == EXIT_PASS
+    for tr in (t1, t2):
+        assert "OUTCOME DONE: checks done: 3 witness checks after kernel-allowed moves" in tr, tr
+        servo = [x for x in audit_lines(tr) if x["sys"] == "cell_servo"]
+        assert servo and all(x["decision"] == "ALLOW" for x in servo)
+    targets = zonecheck.flat_targets()
+    results = [ch.result for _, _, ch in script.results]
+    assert [r.commanded_deg for r in results] == list(targets) and len(t.posts) == 6
+    assert _b2k(b).count("ACTION") == 6 + 7  # the moves only: no frame for any of the 6 witness ops
+    zc = vw.zone_check(results, targets, b.run_dir.name, pack.sha256, hashlib.sha256(
+        vw.GEOMETRY_JSON.read_bytes()).hexdigest())  # fmt: skip
+    assert zc.ok and zc.passed == 6, zc.message()
+    # saved like a calibration and loaded back (the run's chain verifies; the record names the file)
+    from ring3bridge.eventlog import EventLog
+
+    log = EventLog.__new__(
+        EventLog
+    )  # append to the bridge's finished log the way the CLI does before run_end
+    log.dir, log.path, log.blobs = b.log.dir, b.log.path, b.log.blobs
+    log.seq, log.prev = b.log.seq, b.log.prev
+    doc = zonecheck.zonecheck_doc(zc)
+    sha = zonecheck.write_zonecheck(b.run_dir, doc)
+    log.append("zonecheck", **{k: v for k, v in doc.items() if k != "results"}, file_sha256=sha)
+    loaded, _, _ = zonecheck.load_zonecheck(b.run_dir, pack.sha256, zc.geometry_sha256)
+    assert loaded.ok and loaded.passed == 6 and loaded.results == zc.results
+    # one target read as UNSURE (the arm held on the 70 band): 5 of 6, disabled, reported as measured
+    from dataclasses import replace
+
+    held = list(results)
+    held[3] = replace(results[3], verdict="CAN'T VERIFY", reason="UNSURE", measured_zone="")
+    bad = vw.zone_check(held, targets, "zc-held", pack.sha256, zc.geometry_sha256)
+    assert not bad.ok and bad.passed == 5 and "image 4 (90 deg): CAN'T VERIFY UNSURE" in bad.reason

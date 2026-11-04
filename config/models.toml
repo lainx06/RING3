@@ -41,3 +41,29 @@ timeout_s = 60
 price_uusd_per_image = 2500
 price_source = "https://dev.meta.ai/docs/pricing-rate-limits"
 price_checked = "2026-11-02"
+
+# Vision witness (T-16, D-98): Muse Spark reads the printed gauge ZONE from the rectified dial crop. Facts from
+# the official docs, checked by the builder on 2026-11-04: image understanding
+# (https://dev.meta.ai/docs/image-understanding: Responses API, a user message with an input_text and an
+# input_image whose image_url is a base64 data URL; image/jpeg accepted; a ~1280 px image adds roughly
+# 1,300-1,500 input tokens, a short text request ~110), structured output
+# (https://dev.meta.ai/docs/structured-output and the Responses schemas page: text.format = json_schema with
+# name, schema, strict) and the same prices as [model] (https://dev.meta.ai/docs/pricing-rate-limits, re-read
+# 2026-11-04: $1.25 / 1M in, $4.25 / 1M out, $0.15 / 1M cached in). A test keeps these prices equal to
+# [model]'s while the ids match.
+# image_tokens_reserve: input tokens reserved per image before every call, a ceiling over the docs' figure
+# (the crop is 920 x 570 px, under 1280); the reservation adds 1 token per request byte outside the image
+# and max_output_tokens, and settles on the reported usage. The token-counting page says per-image
+# estimates are not portable across deployments: the first live replies' usage.input_tokens are the check.
+[vision]
+id = "muse-spark-1.3"
+endpoint = "https://api.meta.ai/v1/responses"
+max_output_tokens = 2048
+reasoning_effort = "low"
+timeout_s = 60
+image_tokens_reserve = 2000
+price_input_uusd_per_mtok = 1250000
+price_output_uusd_per_mtok = 4250000
+price_cached_input_uusd_per_mtok = 150000
+price_source = "https://dev.meta.ai/docs/pricing-rate-limits"
+price_checked = "2026-11-04"
