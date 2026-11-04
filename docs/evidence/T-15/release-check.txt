@@ -1,0 +1,181 @@
+# T-15 release check (lead D-96, Codex Gate B) at 7b3c43cf506e81d7181c5ddd93d644e5a9f79c68 (T-13: Gate B (D-96) findings 2-3: README rule 13 splits kern)
+# fresh detached git worktree of that commit (~/dev/RING3-rc); no key in the environment; the default suite and the evals use free loopback ports and no /dev/ttyACM0 (hardware tests skipped), so filming was not paused; started 2026-11-04T18:13Z
+# host: load average: 0.10, 0.13, 0.18; other qemu-system processes at start: 0
+
+$ git status --porcelain
+(empty)
+[PASS] worktree clean at the start
+
+$ uv sync --frozen
+ + pytest==9.2.0
+ + ring3==0.1.0 (from file://<worktree>)
+ + ruff==0.17.3
+[PASS] uv sync
+
+$ make clean && make
+clang --target=i686-unknown-none-elf -ffreestanding -nostdlib -fno-pic -g -Wall -Wextra -Werror -Ikernel/include -c user/progs.S -o build/obj/user/progs.o
+ld.lld -m elf_i386 -nostdlib --gc-sections -T kernel/linker.ld -o build/kernel.elf build/obj/kernel/arch/i386/gdt.o build/obj/kernel/arch/i386/idt.o build/obj/kernel/arch/i386/paging.o build/obj/kernel/arch/i386/pic.o build/obj/kernel/arch/i386/pit.o build/obj/kernel/core/agentlink.o build/obj/kernel/core/audit.o build/obj/kernel/core/confirm.o build/obj/kernel/core/console.o build/obj/kernel/core/exec.o build/obj/kernel/core/interrupt.o build/obj/kernel/core/kmalloc.o build/obj/kernel/core/ktest.o build/obj/kernel/core/main.o build/obj/kernel/core/objstore.o build/obj/kernel/core/panic.o build/obj/kernel/core/pmm.o build/obj/kernel/core/printk.o build/obj/kernel/core/syscall.o build/obj/kernel/core/uaccess.o build/obj/kernel/lib/cobs.o build/obj/kernel/lib/crc16.o build/obj/kernel/lib/string.o build/obj/kernel/drivers/cellframe.o build/obj/kernel/drivers/device.o build/obj/kernel/drivers/linkprobe.o build/obj/kernel/drivers/serial.o build/obj/kernel/drivers/vga.o build/obj/kernel/ui/screen.o build/obj/kernel/ui/words.o build/obj/kernel/policy/policy.o build/obj/kernel/arch/i386/boot.o build/obj/kernel/arch/i386/isr.o build/obj/kernel/arch/i386/usermode.o build/obj/user/progs.o
+warnings: 0
+[PASS] clean build, 0 warnings
+
+$ make host-policy
+[PASS] host policy build + checks
+
+$ policy hash (ring3bridge.run.policy_sha256)
+4101a8cc305078722afb56a4eb09e2b4c3705e2d2c697b418c7ef02885cdef0b
+[PASS] policy hash unchanged from 747fa2d (4101a8cc30507872...)
+
+$ git diff --stat 747fa2d..HEAD -- kernel/policy abi firmware
+(empty)
+[PASS] kernel/policy, abi, firmware unchanged since 747fa2d
+
+$ git diff --stat 6fd1e0e..HEAD -- kernel user firmware (T-11 release candidate .. this commit)
+ kernel/ui/screen.c | 297 +++++++++++++++++++++++++++++++++++++++++++----------
+ kernel/ui/screen.h |  11 +-
+ 2 files changed, 250 insertions(+), 58 deletions(-)
+[NOTE] kernel/user/firmware differ from 6fd1e0e (listed above; informational)
+
+$ replay every bundle: env -u MODEL_API_KEY unshare -rn (no network namespace) ring3 verify + replay
+replay/t03b-run3-planted-note: CHAIN OK: 173 records, 12 blobs
+[PASS] verify replay/t03b-run3-planted-note
+replay/t03b-run3-planted-note: REPLAY MATCH: 22 decisions from 29 tape events
+replay/t03b-run3-planted-note: tape events by kind: action=3, action_boundary=4, exec_end=1, exec_start=1, syscall=20
+[PASS] REPLAY MATCH replay/t03b-run3-planted-note
+replay/t04-run3-fan-limit: CHAIN OK: 2337 records, 15 blobs
+[PASS] verify replay/t04-run3-fan-limit
+replay/t04-run3-fan-limit: REPLAY MATCH: 33 decisions from 1082 tape events
+replay/t04-run3-fan-limit: tape events by kind: action=3, action_boundary=5, exec_end=2, exec_start=2, syscall=25, telemetry=1045
+[PASS] REPLAY MATCH replay/t04-run3-fan-limit
+replay/t04-run4-taint-prompt: CHAIN OK: 938 records, 9 blobs
+[PASS] verify replay/t04-run4-taint-prompt
+replay/t04-run4-taint-prompt: REPLAY MATCH: 21 decisions from 424 tape events
+replay/t04-run4-taint-prompt: tape events by kind: action=2, action_boundary=4, confirm=1, exec_end=1, exec_start=1, syscall=16, telemetry=399
+[PASS] REPLAY MATCH replay/t04-run4-taint-prompt
+
+$ secret scan (docs/evidence/T-04/live-run/scan_run_secrets.py, unchanged) on replay/, docs/evals (raw, e4 transcripts, results.md), LICENSE
+scanned 76 file(s) under ['replay', 'docs/evals', 'LICENSE']: 0 hit(s)
+[PASS] secret scan 0 hits
+
+$ T-12 evidence (docs/evidence/T-12): every token the scanner's patterns flag, listed in full and classified
+NEEDLE b'MODEL_API_KEY' in docs/evidence/T-12/release-check.txt
+OTHER: --------------------------------------------------------------------------------------------------------------- (1x in release-check.txt)
+OTHER: docs/evidence/T-04/live-run/scan_run_secrets (1x in release-check.txt)
+pytest test id: test_helper_never_waiting_camera_live_stream_uses_the_latest_frame_proof (3x in README.md, capture-test-20-runs.txt, release-check.txt)
+pytest test id: test_no_tape_moves_that_ran_are_beyond_policy (3x in README.md, before/pytest.txt, release-check.txt)
+pytest test id: test_probe_sends_each_image_once_reserved_and_logs_the_raw_reply (3x in README.md, before/pytest.txt, release-check.txt)
+pytest test id: test_s2_tasks_never_typed_are_not_counted_as_declined (3x in README.md, before/pytest.txt, release-check.txt)
+pytest test id: test_s6_score_refuses_a_full_file_that_holds_another_run (3x in README.md, before/pytest.txt, release-check.txt)
+pytest test id: test_s6_score_with_only_refuses_to_overwrite_another_runs_partial_file (3x in README.md, before/pytest.txt, release-check.txt)
+pytest test id: test_s6_score_with_only_rewrites_the_partial_file_of_the_same_run (2x in README.md, release-check.txt)
+pytest test id: test_s7_existing_raw_files_are_not_rewritten_with_a_commit (2x in README.md, release-check.txt)
+pytest test id: test_s7_measured_commit_is_head_and_is_rendered (3x in README.md, before/pytest.txt, release-check.txt)
+pytest test id: test_s7_paid_runs_require_tools_eval_committed (3x in README.md, before/pytest.txt, release-check.txt)
+pytest test id: test_s8_e7_is_generated_from_the_t07_evidence (3x in README.md, before/pytest.txt, release-check.txt)
+pytest test id: test_s8_results_md_renders_e7_closed_not_run_yet (3x in README.md, before/pytest.txt, release-check.txt)
+14 key-shaped token(s), 2 not a pytest test id; needles: 1
+[FAIL] T-12 evidence scan
+
+$ tools/check-paths.sh
+check-paths: OK (656 tracked files scanned)
+[PASS] no home paths / user name in tracked files
+
+$ uv run ruff check . && uv run ruff format --check .
+All checks passed!
+204 files already formatted
+[PASS] ruff
+
+$ uv run pytest (full default suite, headless QEMU, no network; other qemu-system processes now: 0)
+SKIPPED [1] tests/test_inv_13_hw.py:105: hardware test: set RING3_HW=1 (board attached)
+SKIPPED [1] tests/test_inv_13_hw.py:157: hardware test: set RING3_HW=1 (board attached)
+SKIPPED [1] tests/test_inv_13_hw.py:215: hardware test: set RING3_HW=1 (board attached)
+SKIPPED [1] tests/test_link_hw.py:86: hardware test: set RING3_HW=1 (board attached)
+SKIPPED [2] tests/witness/test_inv_14_witness.py:80: raised by the verdict stage itself
+913 passed, 6 skipped in 209.06s (0:03:29)
+(195 s)
+[PASS] full default suite (run 1)
+
+$ git status --porcelain
+(empty)
+[PASS] worktree clean after the suite
+
+$ make evals EVAL_ARGS="--suites e1,e2,e3" (E1-E3 on the exported commit; other qemu-system processes now: 0)
+eval build: HEAD 7b3c43c exported to build/eval/src
+  make (production): ok
+  make POLICY=permissive: ok
+  make TEST=1: ok
+  make TEST=1 POLICY=permissive: ok
+  make host-policy: ok
+wrote docs/evals/raw/e1.json
+wrote docs/evals/raw/e2.json
+wrote docs/evals/raw/e3.json
+rendered docs/evals/results.md (193 lines)
+(137 s)
+[PASS] make evals E1-E3, no must-pass failure
+
+$ E3 frames counted (from the raw file written by this run)
+  RING3 seed 1: sent 10000, kernel frames_dropped 10000, FRAME_DROP audits 10000, status frames_dropped 10000, tx_dropped 0, stalled 0, fuzz_ok=True panic=False
+  RING3 seed 2: sent 10000, kernel frames_dropped 10000, FRAME_DROP audits 10000, status frames_dropped 10000, tx_dropped 0, stalled 0, fuzz_ok=True panic=False
+  RING3 seed 3: sent 10000, kernel frames_dropped 10000, FRAME_DROP audits 10000, status frames_dropped 10000, tx_dropped 0, stalled 0, fuzz_ok=True panic=False
+  permissive seed 1: sent 10000, kernel frames_dropped 10000, FRAME_DROP audits 10000, status frames_dropped 10000, tx_dropped 0, stalled 0, fuzz_ok=True panic=False
+  permissive seed 2: sent 10000, kernel frames_dropped 10000, FRAME_DROP audits 10000, status frames_dropped 10000, tx_dropped 0, stalled 0, fuzz_ok=True panic=False
+  permissive seed 3: sent 10000, kernel frames_dropped 10000, FRAME_DROP audits 10000, status frames_dropped 10000, tx_dropped 0, stalled 0, fuzz_ok=True panic=False
+
+$ git status --porcelain (make evals rewrites its raw files and results.md for the measured commit; not committed: the published tables stay those of the T-12 run, D-92)
+ M docs/evals/raw/e1.json
+ M docs/evals/raw/e2.json
+ M docs/evals/raw/e3.json
+ M docs/evals/results.md
+after restoring docs/evals: (empty)
+[PASS] worktree clean at the end
+
+RELEASE CHECK: 1 FAILURE(S) at 7b3c43cf506e81d7181c5ddd93d644e5a9f79c68
+worktree ~/dev/RING3-rc removed
+
+# ---------------------------------------------------------------------------------------------------------------
+# Addendum (same commit 7b3c43c; classification only, nothing in the tree changed)
+
+## The one [FAIL] above is the checker's own scan of docs/evidence/T-12, not a finding
+The step is carried over from T-12's script, where it covered the pytest transcripts; the directory now also
+holds T-12's committed release-check.txt, and that transcript tripped three of the scanner's patterns:
+  needle b'MODEL_API_KEY': the recorded command line "env -u MODEL_API_KEY unshare -rn uv run ring3 verify",
+    i.e. the variable's NAME while unsetting it (no value anywhere; T-11's release-check.txt records the same
+    command verbatim);
+  OTHER "-----...": a rule of dashes under the addendum heading (matches the 40+ character token pattern);
+  OTHER "docs/evidence/T-04/live-run/scan_run_secrets": the scanner's own path in a heading.
+The 12 remaining tokens are pytest test ids. Classification: 0 credentials, 0 key-shaped values.
+
+## The same scanner on this directory (docs/evidence/T-15), before the commit
+  HIT docs/evidence/T-15/release-check.txt: contains b'MODEL_API_KEY'
+  HIT docs/evidence/T-15/release-check.txt: key-shaped token b'++++++++++++'... (53 chars)
+  HIT docs/evidence/T-15/release-check.txt: key-shaped token b'docs/evidenc'... (44 chars)
+  HIT docs/evidence/T-15/release-check.txt: key-shaped token b'------------'... (111 chars)
+  HIT docs/evidence/T-15/release-check.txt: key-shaped token b'docs/evidenc'... (44 chars)
+  HIT docs/evidence/T-15/release-check.txt: key-shaped token b'test_helper_'... (72 chars)
+  HIT docs/evidence/T-15/release-check.txt: key-shaped token b'test_no_tape'... (45 chars)
+  HIT docs/evidence/T-15/release-check.txt: key-shaped token b'test_probe_s'... (64 chars)
+  HIT docs/evidence/T-15/release-check.txt: key-shaped token b'test_s2_task'... (53 chars)
+  HIT docs/evidence/T-15/release-check.txt: key-shaped token b'test_s6_scor'... (56 chars)
+  HIT docs/evidence/T-15/release-check.txt: key-shaped token b'test_s6_scor'... (70 chars)
+  HIT docs/evidence/T-15/release-check.txt: key-shaped token b'test_s6_scor'... (65 chars)
+  HIT docs/evidence/T-15/release-check.txt: key-shaped token b'test_s7_exis'... (58 chars)
+  HIT docs/evidence/T-15/release-check.txt: key-shaped token b'test_s7_meas'... (47 chars)
+  HIT docs/evidence/T-15/release-check.txt: key-shaped token b'test_s7_paid'... (46 chars)
+  HIT docs/evidence/T-15/release-check.txt: key-shaped token b'test_s8_e7_i'... (45 chars)
+  HIT docs/evidence/T-15/release-check.txt: key-shaped token b'test_s8_resu'... (48 chars)
+  scanned 1 file(s) under ['docs/evidence/T-15']: 17 hit(s)
+  (the needle is the same "env -u MODEL_API_KEY" command line recorded above; no value)
+
+## The [NOTE] on kernel/user/firmware: T-14's panel
+git diff 6fd1e0e..7b3c43c -- kernel user firmware = kernel/ui/screen.c, kernel/ui/screen.h only: the T-14 cell
+panel (render-only, D-94), merged on main after T-12. kernel/policy, abi and firmware are unchanged since
+747fa2d ([PASS] above); the policy hash is 4101a8cc30507872...
+
+## Result
+Every required step passes at 7b3c43c: clean build (0 warnings), full default suite 913 passed / 0 failed /
+6 skipped in one run (no re-run needed), make evals E1-E3 with no must-pass failure and E3 at 10000 of
+10000 on all six seed/build rows, 3 of 3 bundles CHAIN OK + REPLAY MATCH with no key and no network
+namespace, policy hash unchanged, secret scan 0 hits (replay/, docs/evals, LICENSE), check-paths OK (656
+tracked files), ruff, git status clean before and after. The raw files make evals wrote in the worktree were
+restored, not committed (the published tables stay those of the T-12 run, D-92). Host: no other QEMU process
+during the run; filming was not paused because the suite and the evals bind free loopback ports and never
+open /dev/ttyACM0 (the hardware tests are skipped without RING3_HW=1).
