@@ -331,9 +331,7 @@ def add_parser(sub: argparse._SubParsersAction) -> None:
     p.add_argument(
         "--budget-usd", help="turns voice on: the cap for this session; absent: no key, no network"
     )
-    p.add_argument(
-        "--voice-dir", help="folder shared with tools/voice_capture_win.py (default: $RING3_VOICE_DIR)"
-    )
+    p.add_argument("--voice-dir", help="the folder tools/voice_capture_win.py serves (voice only)")
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=DEFAULT_COM1_PORT, help="QEMU's COM1 (make run-cell-console)")
     p.add_argument("--connect-timeout", type=float, default=60.0)
@@ -355,7 +353,7 @@ def _voice_setup(a: argparse.Namespace, events: collections.deque):  # noqa: ANN
     folder = a.voice_dir or ""  # an argument: only models/ touches the environment (INV-09)
     if not folder or not Path(folder).is_dir():
         raise SystemExit(
-            "console: set --voice-dir or RING3_VOICE_DIR to the helper's folder (start the helper first)"
+            "console: --budget-usd needs --voice-dir, the folder the helper serves (start the helper first)"
         )
     cfg = load_voice_config()
     if cfg.price_uusd_per_hour is None:
