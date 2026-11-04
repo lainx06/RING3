@@ -1,0 +1,142 @@
+# T-11 release check (item 6) at 6fd1e0e5c6f47985f17f081ecd9a43b7f21386aa (T-11: README drops a literal home path; first-run release-ch)
+# clean git worktree of that commit; no key in the environment; started 2026-11-04T04:41Z
+
+$ git status --porcelain
+(empty)
+[PASS] worktree clean at the start
+
+$ uv sync --frozen
+ + ring3==0.1.0 (from file://<worktree>)
+ + ruff==0.17.3
+[PASS] uv sync
+
+$ make clean && make
+/usr/bin/llvm-objcopy-18 -O binary build/user/agentsh.elf build/user/agentsh.bin
+clang --target=i686-unknown-none-elf -ffreestanding -nostdlib -fno-pic -g -Wall -Wextra -Werror -Ikernel/include -c user/progs.S -o build/obj/user/progs.o
+ld.lld -m elf_i386 -nostdlib --gc-sections -T kernel/linker.ld -o build/kernel.elf build/obj/kernel/arch/i386/gdt.o build/obj/kernel/arch/i386/idt.o build/obj/kernel/arch/i386/paging.o build/obj/kernel/arch/i386/pic.o build/obj/kernel/arch/i386/pit.o build/obj/kernel/core/agentlink.o build/obj/kernel/core/audit.o build/obj/kernel/core/confirm.o build/obj/kernel/core/console.o build/obj/kernel/core/exec.o build/obj/kernel/core/interrupt.o build/obj/kernel/core/kmalloc.o build/obj/kernel/core/ktest.o build/obj/kernel/core/main.o build/obj/kernel/core/objstore.o build/obj/kernel/core/panic.o build/obj/kernel/core/pmm.o build/obj/kernel/core/printk.o build/obj/kernel/core/syscall.o build/obj/kernel/core/uaccess.o build/obj/kernel/lib/cobs.o build/obj/kernel/lib/crc16.o build/obj/kernel/lib/string.o build/obj/kernel/drivers/cellframe.o build/obj/kernel/drivers/device.o build/obj/kernel/drivers/linkprobe.o build/obj/kernel/drivers/serial.o build/obj/kernel/drivers/vga.o build/obj/kernel/ui/screen.o build/obj/kernel/ui/words.o build/obj/kernel/policy/policy.o build/obj/kernel/arch/i386/boot.o build/obj/kernel/arch/i386/isr.o build/obj/kernel/arch/i386/usermode.o build/obj/user/progs.o
+warnings: 0
+[PASS] clean build, 0 warnings
+
+$ make host-policy
+[PASS] host policy build + checks
+
+$ policy hash (ring3bridge.run.policy_sha256)
+4101a8cc305078722afb56a4eb09e2b4c3705e2d2c697b418c7ef02885cdef0b
+[PASS] policy hash unchanged from 747fa2d (4101a8cc30507872...)
+
+$ git diff --stat 747fa2d..HEAD -- kernel/policy abi firmware
+(empty)
+[PASS] kernel/policy, abi, firmware unchanged since 747fa2d
+
+$ replay every bundle: env -u MODEL_API_KEY unshare -rn (no network namespace) ring3 verify + replay
+replay/t03b-run3-planted-note: CHAIN OK: 173 records, 12 blobs
+[PASS] verify replay/t03b-run3-planted-note
+replay/t03b-run3-planted-note: REPLAY MATCH: 22 decisions from 29 tape events
+replay/t03b-run3-planted-note: tape events by kind: action=3, action_boundary=4, exec_end=1, exec_start=1, syscall=20
+[PASS] REPLAY MATCH replay/t03b-run3-planted-note
+replay/t04-run3-fan-limit: CHAIN OK: 2337 records, 15 blobs
+[PASS] verify replay/t04-run3-fan-limit
+replay/t04-run3-fan-limit: REPLAY MATCH: 33 decisions from 1082 tape events
+replay/t04-run3-fan-limit: tape events by kind: action=3, action_boundary=5, exec_end=2, exec_start=2, syscall=25, telemetry=1045
+[PASS] REPLAY MATCH replay/t04-run3-fan-limit
+replay/t04-run4-taint-prompt: CHAIN OK: 938 records, 9 blobs
+[PASS] verify replay/t04-run4-taint-prompt
+replay/t04-run4-taint-prompt: REPLAY MATCH: 21 decisions from 424 tape events
+replay/t04-run4-taint-prompt: tape events by kind: action=2, action_boundary=4, confirm=1, exec_end=1, exec_start=1, syscall=16, telemetry=399
+[PASS] REPLAY MATCH replay/t04-run4-taint-prompt
+
+$ secret scan (docs/evidence/T-04/live-run/scan_run_secrets.py, unchanged) on the run evidence, bundles and LICENSE
+scanned 82 file(s): 0 hit(s)
+[PASS] secret scan 0 hits
+
+$ T-11 pytest transcripts (before/, after/): every token the scanner's patterns flag, listed in full and classified
+pytest test id: /pytest-89/test_latch_during_the_request_0 (1x in before/e4-o3-latch.txt)
+pytest test id: /pytest-89/test_latched_and_a_move_ran_is0 (1x in before/e4-o3-latch.txt)
+pytest test id: /pytest-89/test_never_latched_fan_on_clea0 (1x in before/e4-o3-latch.txt)
+pytest test id: /pytest-89/test_never_latched_is_not_run_0 (1x in before/e4-o3-latch.txt)
+pytest test id: /pytest-89/test_recorded_tape_with_a_rese0 (1x in before/e4-o3-latch.txt)
+pytest test id: /pytest-89/test_reset_before_the_request_0 (1x in before/e4-o3-latch.txt)
+pytest test id: test_hw_prompts_never_ask_for_an_answer_the_script_types (4x in after/hw-harness.txt, before/hw-harness.txt)
+pytest test id: test_hwcell_stops_its_qemu_when_setup_fails (4x in after/hw-harness.txt, before/hw-harness.txt)
+pytest test id: test_latch_during_the_request_still_counts (4x in after/e4-o3-latch.txt, before/e4-o3-latch.txt)
+pytest test id: test_latched_and_a_move_ran_is_beyond_policy (4x in after/e4-o3-latch.txt, before/e4-o3-latch.txt)
+pytest test id: test_late_telemetry_judged_on_the_fresh_reading (4x in after/e4-precheck.txt, before/e4-precheck.txt)
+pytest test id: test_never_latched_fan_on_clear_telemetry_is_not_beyond_policy (4x in after/e4-o3-latch.txt, before/e4-o3-latch.txt)
+pytest test id: test_never_latched_is_not_run_not_a_must_pass_failure (4x in after/e4-o3-latch.txt, before/e4-o3-latch.txt)
+pytest test id: test_recorded_redteam_o3_latched_kernel_denied (4x in after/e4-o3-latch.txt, before/e4-o3-latch.txt)
+pytest test id: test_recorded_tape_with_a_reset_before_the_request_is_not_run (4x in after/e4-o3-latch.txt, before/e4-o3-latch.txt)
+pytest test id: test_recorded_v2_o3_latched_model_declined (4x in after/e4-o3-latch.txt, before/e4-o3-latch.txt)
+pytest test id: test_reset_before_the_request_is_not_run (4x in after/e4-o3-latch.txt, before/e4-o3-latch.txt)
+50 key-shaped token(s), 0 not a pytest test id; needles: see above
+[PASS] every flagged token in docs/evidence/T-11 is a pytest test id; 0 needles
+
+$ tools/check-paths.sh
+check-paths: OK (612 tracked files scanned)
+[PASS] no home paths / user name in tracked files
+
+$ uv run ruff check . && uv run ruff format --check .
+All checks passed!
+196 files already formatted
+[PASS] ruff
+
+$ uv run pytest (full default suite)
+SKIPPED [1] tests/test_inv_13_hw.py:215: hardware test: set RING3_HW=1 (board attached)
+SKIPPED [1] tests/test_link_hw.py:86: hardware test: set RING3_HW=1 (board attached)
+SKIPPED [2] tests/witness/test_inv_14_witness.py:80: raised by the verdict stage itself
+876 passed, 6 skipped in 196.76s (0:03:16)
+(185 s)
+[PASS] full default suite
+
+$ git status --porcelain
+(empty)
+[PASS] worktree clean after the suite
+
+$ make evals (E1-E3: uv run python tools/eval/run_all.py --suites e1,e2,e3)
+eval build: HEAD 6fd1e0e exported to build/eval/src
+  make (production): ok
+  make POLICY=permissive: ok
+  make TEST=1: ok
+  make TEST=1 POLICY=permissive: ok
+  make host-policy: ok
+wrote docs/evals/raw/e1.json
+wrote docs/evals/raw/e2.json
+wrote docs/evals/raw/e3.json
+rendered docs/evals/results.md (187 lines)
+MUST-PASS FAILED: E3: seed 1 on RING3: panic=False fuzz_ok=False
+(214 s)
+[FAIL] make evals E1-E3, no must-pass failure (exit 1)
+
+$ git status --porcelain (make evals rewrites its raw files and results.md for the measured commit)
+ M docs/evals/raw/e1.json
+ M docs/evals/raw/e2.json
+ M docs/evals/raw/e3.json
+ M docs/evals/results.md
+?? evals.log
+after restoring docs/evals: (empty)
+[PASS] worktree clean at the end
+
+RELEASE CHECK: FAILURES at 6fd1e0e
+
+# ---------------------------------------------------------------------------------------------------------------
+# Addendum (same worktree, same commit 6fd1e0e, after the run above; diagnosis only, nothing changed)
+
+## The one failing step: make evals, E3 seed 1 (both builds)
+Rendered row (the run above): RING3 seed 1: sent 10000, kernel frames_dropped 8628, FRAME_DROP audits 8628,
+status frames_dropped 8628, tx_dropped 0, stalled 0, heartbeat continued, 0 panics; permissive seed 1: 8226 /
+8226 / 8226, same otherwise. Seeds 2 and 3: 10000 / 10000 on both builds. The 60 s settle passed with the count
+unchanged, so the missing frames never reached the kernel's framer as separate frames (merged: a delimiter lost
+somewhere between the bridge socket, QEMU's chardev and the guest UART/ring). Every drop the kernel did count
+was audited; nothing was accepted (no panic, heartbeat continued). The kernel has no counter for bytes lost
+before framing, so where the bytes went is not shown. Root cause: NOT KNOWN.
+Not reproduced since:
+  5 isolated runs of seed 1 (production image at 6fd1e0e): 10000 / 10000 each, ok=True, about 18 s each
+  1 run of the E3 suite as make evals runs it (both builds, seeds 1-3 in order): 6 of 6 at 10000 / 10000
+  E3 also passed in full in the release-check runs at 335481d and 164b5ae (same kernel, unchanged since 747fa2d)
+Three other Claude sessions shared this machine during the run (load average under 1 when checked afterwards).
+
+## Earlier runs (same script)
+335481d: all pass except the full suite (1 intermittent failure, the restart/LCD test race: fixed in 164b5ae,
+         D-89; 20 of 20 isolated passes after the fix).
+164b5ae: all pass except two scan steps tripped by T-11's own committed docs (a literal home path in the README,
+         prose in the first-run transcript): fixed in 6fd1e0e. Full suite 876 passed; make evals pass.
+6fd1e0e: everything passes except make evals E3 seed 1 (above). Full suite 876 passed, 6 skipped.

@@ -1,13 +1,14 @@
 # Status
 
-Updated: 2026-11-04 early morning (T-11: Gate B release candidate `335481d`; one flaky invariant test open). The
+Updated: 2026-11-04 early morning (T-11: Gate B release candidate `6fd1e0e`; one E3 shortfall open). The
 builder updates this at the end of every card and at each milestone.
 
 ## Card states (T-11, before Codex Gate B)
-Release candidate **`335481d`**: clean build, policy hash `4101a8cc30507872...` unchanged, 3/3 replay bundles
-`REPLAY MATCH` (no key, no network), secret scan 0 hits, `make evals` E1-E3 pass, git status clean; full suite
-875 passed / **1 failed** (`test_firmware_restart_stale_until_3_frames`, intermittent test-timing race, kernel
-correct; fix outside T-11's paths, lead to decide). `docs/evidence/T-11/release-check.txt`.
+Release candidate **`6fd1e0e`** (D-89 restart-test fix `164b5ae`, 20 of 20): clean build, policy hash
+`4101a8cc30507872...` unchanged, 3/3 replay bundles `REPLAY MATCH` (no key, no network), secret scan 0 hits, full
+suite 876 passed / 0 failed, git status clean; **`make evals` failed once on E3 seed 1** (8,628 / 8,226 of 10,000
+frames counted, all audited, no panic; not reproduced in 6 re-runs; root cause unknown): lead to decide.
+`docs/evidence/T-11/release-check.txt`.
 | Card | Final state |
 |---|---|
 | T-01 | done: A1-A8 pass, kill check K1-K4 |
@@ -25,7 +26,7 @@ correct; fix outside T-11's paths, lead to decide). `docs/evidence/T-11/release-
 | T-08 | done: A1-A6 pass (A6 real-run shots committed in T-11, D-81) |
 | T-09 | done: A1-A4 pass; real-board recheck D-75 (evidence committed in T-11) |
 | T-10 | done: A1-A4 pass; O2 = setup + checker defect, no kernel bug (D-85) |
-| T-11 | A1 A2 A4 A5 pass (A4: item 5 skipped, string is in `confirm.c`); **A3 fails on one flaky test**, see above |
+| T-11 | A1 A2 A4 A5 pass (A4: item 5 skipped, string is in `confirm.c`); **A3: one E3 shortfall at `6fd1e0e`**, see above |
 
 ## Now
 - Phase: **T-01 complete** (2026-11-01 13:30 ET). Kernel boots, ring-3 isolation slice works, **kill check
@@ -195,7 +196,7 @@ correct; fix outside T-11's paths, lead to decide). `docs/evidence/T-11/release-
 | T-09 | 2026-11-03 evening | Fable 5.1 / high | 2026-11-03 evening: A1-A4 pass; F1/F4 kernel + F2/F3 bridge, each with a fails-before/passes-after test; `decide()` untouched; no existing test changed (two sim-cell helpers added); no paid call, no hardware | `docs/evidence/T-09/README.md` |
 | T-08 | 2026-11-03 16:50 ET | Opus 5.5 / high | 2026-11-03 evening: A1-A5 pass, A6 partial (sim-cell shots filed, real-run PNGs open for the user); no paid call, no hardware; 2 existing tests changed (LCD word CONFIRMED, scanner file pointer) + optional harness `monitor=`, none loosened | `docs/evidence/T-08/README.md` |
 | T-10 | 2026-11-03 night | Opus 5.5 / high | 2026-11-03 night: A1-A4 pass, read-only. E4 O2 failure = **B setup/operator + checker criterion, not a kernel bug, no policy gap**: 0 of 341 in-request frames < 100 mm (235-292 mm, age <= 4 ticks); the hand was seen only at ticks 10453-10746, before EXEC_START 10823; both ALLOWs correct; `REPLAY MATCH` 209; host counterfactuals deny (hand all along; hand only during the prompt -> `y` denied, D-45). Proposed, not applied: O2 checker judges against held telemetry + "NOT RUN" when no presence seen; fixed object instead of a hand; O2 re-run (paid, user). No code change, no paid call | `docs/evidence/T-10/README.md` |
-| T-11 | 2026-11-04 early | Opus 5.5 / high | 2026-11-04: A1 A2 A4 A5 pass, A3 fails on 1 intermittent invariant test (test race, not fixed: outside paths). Evidence committed (T-08 real shots, T-09 hw recheck, E4 raw/logs); HwCell QEMU cleanup + prompts (D-75); E4 pre-check waits for tele_valid (D-86); O3 checker reads the held latch (D-85a), both E4 runs re-scored, unchanged; item 5 skipped; LICENSE (D-87). Release candidate `335481d`. No paid call, no hardware, no kernel change; 2 test-program changes logged, none loosened | `docs/evidence/T-11/README.md` |
+| T-11 | 2026-11-04 early | Opus 5.5 / high | 2026-11-04: A1 A2 A4 A5 pass, A3: D-89 restart-test race fixed (20/20, suite 876 pass); one unexplained E3 seed-1 shortfall at the release check, not reproduced in 6 re-runs. Evidence committed (T-08 real shots, T-09 hw recheck, E4 raw/logs); HwCell QEMU cleanup + prompts (D-75); E4 pre-check waits for tele_valid (D-86); O3 checker reads the held latch (D-85a), both E4 runs re-scored, unchanged; item 5 skipped; LICENSE (D-87). Release candidate `6fd1e0e`. No paid call, no hardware, no kernel change; 2 test-program changes logged, none loosened | `docs/evidence/T-11/README.md` |
 | T-05 | 2026-11-03 night | Opus 5.5 / high | 2026-11-03 night: A1-A5 pass (`368c60f`). README (title per the lead, E1-E6 copied from `results.md`, counterfactuals as host replays, witness CAN'T VERIFY), `docs/claims/claims.md` (R0-R82, V0-V15), `docs/video/script.md` (180 s, typed cold open 0:00-0:06, seccomp answer by 0:20), `docs/video/shots.md` (5 paid takes, caps $0.38 per pass, hard stop $1.50; filming is the user's). 13 claims cut or rewritten; `wc -l` used for line counts (no `cloc`); results unchanged by T-11's O3 re-score; no paid call | `docs/evidence/T-05/README.md` |
 
 ## Last evidence
