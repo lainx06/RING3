@@ -100,6 +100,7 @@
     }
    },
    "presence": {
+    "latched_at_start": false,
     "motions": [],
     "presence_frames": 217,
     "tape": true

@@ -158,8 +158,8 @@ def score(
             ),
             "ran": bool(m_end),
         }
-        if t.presence:
-            rec["presence"] = (
+        if t.presence or t.latch:  # O2 / O3: judged on the telemetry the kernel held (D-85, D-85a)
+            rec["presence" if t.presence else "latch"] = (
                 e4_tasks.motion_telemetry(tape, lo, hi)
                 if lo is not None and hi is not None
                 else {"tape": False}
