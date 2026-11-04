@@ -21,7 +21,7 @@ arguments. It doesn't track what the agent has done during a task, and it can't 
 separate supervisor process. But the rules that matter for an AI agent driving a machine are about exactly that
 kind of task state:
 - "it just read an untrusted note, so its next fan command needs a human 'y'";
-- "the fan may rise at most 20 points per step";
+- "the fan may rise at most 20 points per step" (its first start from 0 may go straight to 50-60 %);
 - "nothing moves while something is in front of the sensor".
 
 RING3 makes those rules part of the kernel. Each agent starts with a fixed set of permissions (capabilities) that
@@ -110,7 +110,7 @@ Each rule is in `docs/INVARIANTS.md` with the code that enforces it; each has a 
 | 10 | Every run started with the bridge attached first (D-70) is logged in a hash chain and can be replayed decision by decision: 8 of 8 in E5. | [`tests/bridge/test_inv_10_chain_tamper.py`](tests/bridge/test_inv_10_chain_tamper.py), [`tests/test_inv_10_replay_match.py`](tests/test_inv_10_replay_match.py) |
 | 11 | Never claim more than the evidence shows; outcomes are DONE / REFUSED / STOPPED / ERROR. | [`tests/test_inv_11_banned_words.py`](tests/test_inv_11_banned_words.py) |
 | 12 | A kernel panic is always a failure. | checked by the harness in every QEMU test ([`tests/qemu.py`](tests/qemu.py), [`tests/test_boot.py`](tests/test_boot.py)) |
-| 13 | Physical limits are enforced twice, by the kernel and by the firmware: ranges, ramp rates, presence interlock (stale or missing data counts as presence), E-stop latch. | [`tests/test_inv_13_limits.py`](tests/test_inv_13_limits.py), [`tests/test_inv_13_interlock_and_stale.py`](tests/test_inv_13_interlock_and_stale.py), [`tests/test_inv_13_estop_latch.py`](tests/test_inv_13_estop_latch.py), real cell: [`tests/test_inv_13_hw.py`](tests/test_inv_13_hw.py) |
+| 13 | Physical limits are enforced below the AI. The kernel enforces the ranges, the fan and servo step and rate limits, the presence interlock (stale or missing data counts as presence) and the E-stop latch. The firmware independently clamps the ranges (servo 15-165°, fan at most 80 %), cuts the fan when something is closer than 100 mm or 3 echoes in a row are missing while it runs, cuts the fan and latches in the E-stop interrupt, and sets fan 0 and servo 90 when the kernel is silent for 1 s; its hardware watchdog resets a stuck board, which boots with the fan off. | [`tests/test_inv_13_limits.py`](tests/test_inv_13_limits.py), [`tests/test_inv_13_interlock_and_stale.py`](tests/test_inv_13_interlock_and_stale.py), [`tests/test_inv_13_estop_latch.py`](tests/test_inv_13_estop_latch.py), real cell: [`tests/test_inv_13_hw.py`](tests/test_inv_13_hw.py) |
 | 14 | The camera witness only reports evidence and never changes a kernel decision. | [`tests/witness/test_inv_14_witness.py`](tests/witness/test_inv_14_witness.py) |
 | 15 | Reading untrusted data taints the agent: from then on every motion that adds energy and every write needs a human "y". | [`tests/test_inv_05_confirm.py`](tests/test_inv_05_confirm.py) (`test_taint_demo`), [`tests/test_agent_fake_model.py`](tests/test_agent_fake_model.py) |
 | 16 | Stopping is always allowed; the kernel checks the cell on every timer tick and halts it on a hazard by itself. | [`tests/test_inv_16_halt.py`](tests/test_inv_16_halt.py) |

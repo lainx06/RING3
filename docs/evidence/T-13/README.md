@@ -139,3 +139,14 @@ T-14 row "merged at `26780eb`, 913 passed", T-13 rows.
 Replace the README's three D-81 screenshots ("What it looks like": `docs/evidence/T-08/real-{ask,estop,idle}.png`
 and their `.txt`) with the new T-14 screen shots from the filming run; the lead gives the file names. Update the
 captions and claims rows R11-R14 to the new files and run id, and re-run the banned-word test and scan.
+
+## Codex Gate B findings (lead, D-96)
+| Finding | Before | After | Source |
+|---|---|---|---|
+| (2) README rule 13 | "Physical limits are enforced twice, by the kernel and by the firmware: ranges, ramp rates, presence interlock (stale or missing data counts as presence), E-stop latch." | Kernel: ranges, fan and servo step and rate limits, presence interlock (stale or missing data counts as presence), E-stop latch. Firmware, independently: clamps (servo 15-165°, fan at most 80 %), fan cut on presence (< 100 mm, or 3 missing echoes in a row while it runs), fan cut and latch in the E-stop interrupt, fan 0 and servo 90 after 1 s of kernel silence, hardware watchdog resets a stuck board, which boots with the fan off. The firmware has no step or rate limit, so "twice" no longer covers them | `firmware/ring3cell/ring3cell.ino` lines 6-16, 62-68, 292-297, 310-318, 518-527, 585, 609; `protocol.h` lines 78-86; claims R32b |
+| (3) README "Why a new kernel" | "the fan may rise at most 20 points per step" | adds "(its first start from 0 may go straight to 50-60 %)" | `policy.h` lines 76, 78, 79; `policy.c` lines 234, 306; claims R4 |
+
+The rule-13 scope fix is README-only: INV-13 in `docs/INVARIANTS.md` already lists the step and rate limits under
+the kernel driver and the clamps, E-stop interrupt and watchdogs under the firmware, so it was not edited.
+Banned-word test re-run after these edits: 2 passed; manual scan of `docs/video/`, `docs/claims/`, `README.md`: 0
+hits.
