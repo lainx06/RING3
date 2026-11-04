@@ -216,17 +216,21 @@ guards read the raw output, not the tidied screen. Real kernel: default `h e l p
 ## Acceptance
 | # | Result | Evidence |
 |---|---|---|
-| A1 | **pass**: offline tests pass, guards fail-before, last full suite 1131 passed / 0 failed (one existing flake on earlier runs, measured above), policy hash below | `suite.txt`, `guards-fail-before.txt`, `checks.txt` |
+| A1 | **pass**: offline tests pass, guards fail-before, full suite after the rebase 1237 passed / 0 failed (one existing flake on earlier runs, measured above), policy hash below | `suite.txt`, `guards-fail-before.txt`, `checks.txt` |
 | A2 | **pass**: request shape and price from the official pages | section A2 above; `config/models.toml` `[voice]` |
 | A3 | **pass for the live request** (transcript, decision, spend above); the selftest output was not shown to the builder | `live-run.txt`, section A3 |
-| A4 | **pass so far**: worktree only, branch `voice`, not merged, nothing pushed | `git log a639f42..voice` |
+| A4 | **ready to merge**: worktree only, branch `voice` on top of `main`, not merged, nothing pushed; merges on the user's word | `git log main..voice` |
+
+`suite.txt`: the full suite after the rebase onto `main` (`cba8465`, T-16 merged), with no other suite on the host: **1237
+passed, 0 failed, 6 skipped** (hardware and verdict-stage skips).
 
 `checks.txt`: policy hashes unchanged (`4101a8cc...`, permissive `001bceb8...`), no change under `kernel/ user/
-firmware/ abi/`, no existing test changed, 4 of 4 bundles CHAIN OK + REPLAY MATCH. **Secret scan:** the scanner reports
-118 hits and none is a secret: 111 are long pytest test ids (key-shaped by its rule, as in T-11 and T-12) and the other
-7 are one long path in `checks.txt` and, in `tests/voice/`, the made-up test key, the header names and the redaction
-marker that the tests check for. Scrub on this folder: 0 hits. `.env` was not opened; the builder's environment made no
-network call to the model API.
+firmware/ abi/` and no existing test changed against `cba8465`, 4 of 4 bundles CHAIN OK + REPLAY MATCH. **Secret scan:**
+the scanner reports hits and none is a secret. Nearly all are long pytest test ids (key-shaped by its rule, as in T-11
+and T-12); the others, listed by the check, are one long path in `checks.txt`, the API's session id in `live-run.txt`
+(`voyager/transcribe/...`, a server correlation id), and in `tests/voice/` the made-up test key, the header names and the
+redaction marker the tests look for. The two live run folders scanned the same way: only that session id. Scrub on this
+folder: 0 hits. `.env` was not opened, and the builder made no call to the model API.
 
 Files outside the card's named pieces: `bridge/ring3bridge/eventlog.py` (5 new record types), `Makefile` (one target),
 `.claude/settings.json` (one deny rule). No dependency added to the project; `sounddevice` is Windows-side only, like
