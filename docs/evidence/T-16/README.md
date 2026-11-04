@@ -1,5 +1,9 @@
 # T-16 evidence: vision witness (Muse Spark reads the gauge zone from the camera)
 
+**Closed as measured (D-106, 2026-11-04): the zone check did not pass 6/6 in four runs (best 3 of 6, twice),
+so the vision backend stays in the code, off by default (`--witness-backend sam` unchanged), enabled for a
+session only by a 6/6 zone check; the live runs (A4) were not run.**
+
 Builder: Fable 5.1 / high, worktree `~/dev/RING3-t16`, branch `t16` (D-98) · 2026-11-04 · **offline only by
 the builder:** fake transports, synthetic frames, the simulated cell in QEMU; no camera, no paid call, no
 `MODEL_API_KEY`, no network except the four doc pages read. No change to `kernel/`, `user/`, `firmware/`,
@@ -11,9 +15,9 @@ the builder:** fake transports, synthetic frames, the simulated cell in QEMU; no
 |---|---|---|---|
 | A1 | Step-2 offline tests fail before and pass after; full suite passes; policy hash unchanged | **PASS.** Before: both test files error at import (`pytest-before.txt`). After: `tests/witness/test_vision.py` 64 + `tests/bridge/test_vision_secrets.py` 1 = **65 passed**; 2 QEMU tests on the simulated cell (`test_witness_loop.py::*vision*`) passed; full default suite **980 passed, 6 skipped (hardware tests, 2 by design), 221 s, 0 PANIC** (`suite.txt`; run while the last QEMU test edit was pending, the two vision loop tests re-run afterwards: 2 passed); policy hash `4101a8cc305078722afb56a4eb09e2b4c3705e2d2c697b418c7ef02885cdef0b` (= T-15); `git diff --stat 76ad29f -- kernel user firmware abi` empty | `pytest-before.txt`, `pytest-after.txt`, `sim-vision-loop.txt`, `sim-vision-zonecheck.txt`, `step5.txt` |
 | A2 | Request shape matches the official docs, quoted | **PASS.** See "Docs extract" and "Request shape"; `test_request_shape_matches_the_documented_fields` pins every field | this file, `bridge/ring3bridge/models/vision.py` docstring |
-| A3 | Hardware zone check by the user, N/6 with every reply logged | **3 of 6 PASS** on `zc-20261104-153656` (every reply logged; table below). Not 6/6: the two 130 images show the arm on the 110 boundary band (servo travel ~0.75 of the command, measured), one 50 image read UNSURE. v2 pack (accepted, D-103) and the servo map in place; re-test pending the user | "Zone check", `zc-153656/` |
+| A3 | Hardware zone check by the user, N/6 with every reply logged | **Measured, not passed: 2/6, 1/3, 3/6, 3/6** over four runs (every reply logged; tables below). Best 3 of 6 with pack v1 (`zc-153656`: the arm on the 110 band at a 130 command) and with pack v2 + the servo map (`zc-155859`: the arm in the right zones, the model misread two images and hit the output cap once). Stopped by D-106 | "Zone check", `zc-153656/` |
 | A4 | If 6/6: live runs (b) and (c) with verdicts and the agent's next action | **OPEN: after A3** | to fill: "Live runs" |
-| A5 | Commits only this card's paths; worktree; "ready to merge" reported, merged only on the user's word | PASS for the builder's part: branch `t16`, paths listed under "Files"; not merged | `git log t16` |
+| A5 | Commits only this card's paths; worktree; "ready to merge" reported, merged only on the user's word | PASS: branch `t16` rebased onto main, suite re-run (below), "ready to merge" reported; merged only on the user's word | `git log t16` |
 
 ## Docs extract (official pages, read 2026-11-04 through a fetch tool; the exact field names below are the
 ## ones the pages state; nothing was guessed)
@@ -164,25 +168,54 @@ first, then `make run-cell` (D-70). Budgets are per run; the project cap is $30.
 Send back: the run ids (`runs/zc-*`, `runs/<time>`), or the printed tables. The builder reads the run
 directories (`events.jsonl`, `witness` and `model_reply` records, blobs) and fills the tables below.
 
-## Zone check (A3): `zc-20261104-153656` (user, 2026-11-04, pack v1), `CHAIN OK: 3885 records, 31 blobs`
-Earlier attempts the same afternoon: `zc-152454`, `-152701`, `-152928` (no image: no telemetry / no move),
-`zc-153327` (6 images, 2 of 6: the arm stayed at ~76 deg for every command) and `zc-153614` (3 images, 1 of 3,
-same), after which the user fixed a servo wire. Then:
+## Zone check (A3): four runs, 2026-11-04 (user; every reply logged; `ring3 verify` CHAIN OK on each)
+Earlier attempts `zc-152454`, `-152701`, `-152928` produced no image (no telemetry / no move) and no spend.
+"arm" = the arm's angle measured from the printed pivot in the crop (free, local; the method in "Free
+analysis"). All replies `status: completed` and exactly the schema object unless noted; `usage.input_tokens`
+1,406 per call with pack v1, 1,553 with v2.
 
-| image | request | commanded | verdict | reason | zone | arm_visible | usage in / out (reasoning) | arm angle measured from the crop | crop sha256 |
-|---|---|---|---|---|---|---|---|---|---|
-| 1 | 1 | 50 LOW | CAN'T VERIFY | UNSURE | UNSURE | 1 | 1406 / 1550 (1530) | 51 deg, LOW | `zc-153656/image1-50-annotated.jpg` |
-| 2 | 1 | 90 MID | PASS | ZONE_MATCH | MID | 1 | 1406 / 403 (382) | 76-80 deg, MID (3-5 deg from the 75 band edge) | `image2-90-crop.jpg` |
-| 3 | 1 | 130 HIGH | FAIL | WRONG_ZONE | MID | 1 | 1406 / 274 (253) | 110 deg, **on the 110 band** | `image3-130-annotated.jpg` |
-| 4 | 2 | 90 MID | PASS | ZONE_MATCH | MID | 1 | 1406 / 359 (340) | 76-80 deg, MID | |
-| 5 | 2 | 50 LOW | PASS | ZONE_MATCH | LOW | 1 | 1406 / 416 (397) | 50 deg, LOW | |
-| 6 | 2 | 130 HIGH | FAIL | WRONG_ZONE | MID | 1 | 1406 / 1135 (1114) | 111 deg, **on the 110 band** | `image6-130-annotated.jpg` |
+**`zc-20261104-153327`, pack v1, 2 of 6.** A loose servo wire: the kernel ALLOWed every move and the board
+acknowledged each angle (`tele_servo` = the command), but the arm stayed at ~76 deg. The witness said FAIL
+four times: **true FAILs** (the board claimed a move that did not happen), the D-29 case caught without a hand.
+| image | commanded | board says | arm | verdict | reason | zone read | out tokens | crop |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 50 LOW | 50 | 75 | FAIL | WRONG_ZONE | MID | 429 | `4255f697` |
+| 2 | 90 MID | 90 | 76 | PASS | ZONE_MATCH | MID | 290 | `bf0bd311` |
+| 3 | 130 HIGH | 130 | 76 | FAIL | WRONG_ZONE | MID | 280 | `9900e0da` |
+| 4 | 90 MID | 90 | 75 | PASS | ZONE_MATCH | MID | 289 | `d5db2bb9` |
+| 5 | 50 LOW | 50 | 75 | FAIL | WRONG_ZONE | MID | 404 | `02fc7d65` |
+| 6 | 130 HIGH | 130 | 75 | FAIL | WRONG_ZONE | MID | 458 | `36b03884` |
 
-Every reply was `status: completed`, exactly the schema object (`strict` json_schema accepted by the server:
-one `[UNVERIFIED]` closed). **`usage.input_tokens` = 1,406 per call** (pack 2,676 B + question + a 920 x 570
-JPEG): the 2,000-token image ceiling plus text bytes (5,390 reserved) is above the real count; closed.
-Reasoning spent 253-1,530 of the 2,048 output cap: the UNSURE reply used 1,530, close to the cap.
-Spend: $0.023164 settled for the run (3 runs today $0.047881, ledger).
+**`zc-20261104-153614`, pack v1, 1 of 3** (the user stopped it after one request; same loose wire, arm at 76):
+50 -> FAIL MID, 90 -> PASS MID, 130 -> FAIL MID (out tokens 298 / 361 / 257; crops `215583e5`, `77453782`,
+`d73adca8`).
+
+**`zc-20261104-153656`, pack v1, 3 of 6** (after the wire fix; $0.023164):
+| image | request | commanded | board says | arm | verdict | reason | zone read | arm_visible | out tokens (reasoning) | crop |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 1 | 50 LOW | 50 | 51 | CAN'T VERIFY | UNSURE | UNSURE | 1 | 1550 (1530) | `zc-153656/image1-50-annotated.jpg` |
+| 2 | 1 | 90 MID | 90 | 76-80 | PASS | ZONE_MATCH | MID | 1 | 403 (382) | `image2-90-crop.jpg` |
+| 3 | 1 | 130 HIGH | 130 | 110 (on the band) | FAIL | WRONG_ZONE | MID | 1 | 274 (253) | `image3-130-annotated.jpg` |
+| 4 | 2 | 90 MID | 90 | 76-80 | PASS | ZONE_MATCH | MID | 1 | 359 (340) | |
+| 5 | 2 | 50 LOW | 50 | 50 | PASS | ZONE_MATCH | LOW | 1 | 416 (397) | |
+| 6 | 2 | 130 HIGH | 130 | 111 (on the band) | FAIL | WRONG_ZONE | MID | 1 | 1135 (1114) | `image6-130-annotated.jpg` |
+
+**`zc-20261104-155859`, pack v2 + servo map (D-103), 3 of 6** ($0.038679). The map put the arm where
+intended (52 -> 52, 105 -> 88, 150 -> 129-130, predicted 50.3 / 89.9 / 123.6), so the three misses are the
+model's: a LOW arm read as MID, a HIGH arm read as LOW, and one reply cut off at the 2,048-token output cap
+(`status: incomplete`, `incomplete:max_output_tokens`, no text -> VISION_FORMAT, not retried).
+| image | request | commanded -> mapped | board says | arm | verdict | reason | zone read | arm_visible | out tokens | crop |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 1 | 52 -> 50.3 LOW | 52 | 52 | FAIL | WRONG_ZONE | MID | 1 | 1631 | `14811800` |
+| 2 | 1 | 105 -> 89.9 MID | 105 | 88 | PASS | ZONE_MATCH | MID | 1 | 467 | `aa9f780f` |
+| 3 | 1 | 150 -> 123.6 HIGH | 150 | 129 | FAIL | WRONG_ZONE | LOW | 1 | 1106 | `83ad5440` |
+| 4 | 2 | 150 -> 123.6 HIGH | 150 | 130 | CAN'T VERIFY | VISION_FORMAT | (incomplete) | - | 2048 | `21eaaa34` |
+| 5 | 2 | 105 -> 89.9 MID | 105 | 88 | PASS | ZONE_MATCH | MID | 1 | 344 | `781bf4c2` |
+| 6 | 2 | 52 -> 50.3 LOW | 52 | 51 | PASS | ZONE_MATCH | LOW | 1 | 1447 | `4834e61e` |
+
+Totals over the four runs: 21 images, 9 PASS, 10 FAIL, 2 CAN'T VERIFY; never a false PASS (every PASS was a
+MID or LOW image whose arm the crop shows in that zone). MID was read right 8 of 8 times; LOW 2 of 5; HIGH 0
+of 6 (4 with the arm at 76 or on the band, 2 with the arm at 129-130). Spend $0.086560 settled (ledger).
 
 ### Free analysis (no call): the arm's angle in each crop
 Measured from the printed pivot as the darkness-weighted direction of the black bar's pixels 6-20 mm out
@@ -251,14 +284,15 @@ confirm" request answers CAN'T VERIFY: COMMAND_BOUNDARY (detail names both angle
 D-29 moment (c) therefore needs a request that commands 150 (e.g. "move the gauge to 150 and confirm it with
 the camera") or a pack change, the lead's call.
 
-## Live runs (A4) — to fill
-| run | request | moves | witness verdict | agent's next action | outcome |
-|---|---|---|---|---|---|
-| (not run yet) | | | | | |
+## Live runs (A4)
+Not run: the gate was not passed (D-106). `ring3 run --witness-backend vision` without a 6/6 zone check
+answers every `witness` op CAN'T VERIFY: CALIBRATION (no frame, no spend); the default backend is still SAM
+(D-83: CAN'T VERIFY on this setup). The D-29 moment is nevertheless on record from `zc-153327`: the board
+acknowledged four moves that did not happen and the witness said FAIL each time.
 
 ## Spend
-Builder: $0 (no call). User's zone checks 2026-11-04: $0.047881 settled over 3 runs (ledger), $0.023164 for
-`zc-153656`.
+Builder: $0 (no call). User's zone checks 2026-11-04: **$0.086560 settled over 4 runs** (ledger: $0.017204,
+$0.007513, $0.023164, $0.038679); reservations never exceeded the run budgets.
 
 ## Files (this card's paths)
 `bridge/ring3bridge/models/vision.py` (new), `bridge/ring3bridge/witness/vision.py` (new),
