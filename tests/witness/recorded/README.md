@@ -10,3 +10,4 @@ Exact reply bodies from the user's paid probes on 2026-11-03 (`runs/probe-202611
 | `sam-blue-servo-motor.json` | blue servo motor | `<0f>` + 1 record |
 | `sam-black-square.json` | black square | `<0f>` + 4 records |
 | `sam-empty-black-plastic-arm.json` | black plastic arm | empty: concept not present |
+| `frame-7855cbe2624a-side-mount-90.jpg` | (camera frame) | the full 1920 x 1080 frame those replies came from: servo on its side at 90 deg (D-78, void for calibration; used to check the hub readout says "not found") |

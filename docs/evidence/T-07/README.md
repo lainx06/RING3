@@ -274,3 +274,19 @@ agrees: (k-1)|c| / (k |m|min) = 0.098 x 1.7 / (1.098 x 5.44) = 1.60 deg. The lar
 on the PIVOT mark: 0.5 / 1 / 2 mm off -> 6.9 / 12.2 / 23.3 deg raw, 1.3 / 2.6 / 7.0 deg after the fit
 (2 mm makes the calibration fail its own 3.0 deg limit, which disables the witness rather than mis-judging).
 The apparent hub moves only (k-1)|c| = 0.17 mm from parallax, so `pivot.jpg` shows the placement directly.
+
+## Hub-offset readout in `ring3 witness-frame` (D-79; local image analysis, no SAM, no spend)
+`witness/service.py` `find_hub`: in the 20 px/mm pivot zoom, white = bright (>= 0.85 x the 95th-percentile
+value) and unsaturated (S <= 60); a candidate must not touch the zoom border (the white paper does), be 2-5 mm
+in radius, round (circularity >= 0.75, fill of its enclosing circle >= 0.70) and centred within 6 mm of the
+printed pivot. Exactly one candidate -> `hub offset: dx .. mm, dy .. mm, d mm OK` (d <= 0.5 mm) or `MOVE: move
+servo LEFT/RIGHT/UP/DOWN x mm (as seen in pivot.jpg, dial on top)`; none or several -> `hub offset: not
+found (...)`, never OK. `pivot.jpg` gets a green 0.5 mm ring on the printed pivot and the detected cap in red;
+`witness-frame` exits 0 only with the camera axis and the hub both OK. The reading includes the parallax
+shift of the cap, (k-1)|c| ~ 0.17 mm at 1.7 mm camera offset (height check above).
+Tests: per direction (+-1.2 mm in x and y) and a centred case (0.28 mm -> OK) under 3 camera/light variants,
+all within 0.2 mm; no cap, cap merging with white paper, two caps, cap 9 mm away -> not found. **Real frames:**
+all 126 recorded frames (calibration, probes, every `runs/witness-frame-*`) predate the D-78 remount and say
+`not found` (or stop at missing markers); none says OK. A positive detection on a real frame is therefore
+**not yet shown**: the first `witness-frame` after the remount is the real test (if it says not found,
+measure `pivot.jpg` by hand).

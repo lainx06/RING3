@@ -4,8 +4,11 @@ witness observation text, the CLI dry run. No QEMU, no network, no key, no camer
 from __future__ import annotations
 
 import json
+import re
+from pathlib import Path
 
 import cv2
+import numpy as np
 import pytest
 
 from ring3bridge import abi, cli, eventlog
@@ -28,6 +31,7 @@ from tests.witness.fakes import make_client, ok
 from tests.witness.synth import OFFSET_DEG, Scene
 
 GEOM = load_geometry()
+RECORDED_FRAME = Path(__file__).parent / "recorded" / "frame-7855cbe2624a-side-mount-90.jpg"
 
 
 # ---- plan ----
@@ -465,3 +469,90 @@ def test_calibrate_probe_dry_run_and_cap(capsys, monkeypatch, tmp_path):
     assert "3 image(s) (max 5) x $0.002500 = $0.007500" in out and "phrase='servo horn'" in out
     args[-1] = "full,tight"
     assert cli.main(args) == 2 and "6 images planned, at most 5" in capsys.readouterr().err
+
+
+# ---- D-79: hub-offset readout in ring3 witness-frame (local image analysis, no SAM) ----
+
+
+def _hub_scene(shaft=(0.0, 0.0), cap=True, body=True, extra_caps=(), quad="flat", light="even", cap_r=3.5):
+    """A rendered camera frame with the D-78 mount drawn in gauge mm through the detected homography: blue
+    servo body on its back around the shaft, the blackened horn pointing at 90, a white cap at the shaft."""
+    frame, _, _ = synth.render(Scene([], quad=quad, light=light))
+    from ring3bridge.witness.dial import find_dial
+
+    to_img = np.linalg.inv(find_dial(frame, GEOM).img_to_mm)
+
+    def px(pts):
+        p = np.c_[np.asarray(pts, float), np.ones(len(pts))] @ to_img.T
+        return np.round(p[:, :2] / p[:, 2:]).astype(np.int32)
+
+    def circle(cx, cy, r):
+        t = np.linspace(0, 2 * np.pi, 72, endpoint=False)
+        return px(np.c_[cx + r * np.cos(t), cy + r * np.sin(t)])
+
+    sx, sy = shaft
+    if body:
+        outline = [(sx - 6.1, sy - 17), (sx + 6.1, sy - 17), (sx + 6.1, sy + 5.5), (sx - 6.1, sy + 5.5)]
+        cv2.fillPoly(frame, [px(outline)], (190, 90, 30))
+    cv2.fillPoly(
+        frame, [px([(sx - 2.5, sy), (sx + 2.5, sy), (sx + 2, sy + 15), (sx - 2, sy + 15)])], (35, 35, 35)
+    )
+    for c in ([(sx, sy)] if cap else []) + list(extra_caps):
+        cv2.fillPoly(frame, [circle(c[0], c[1], cap_r)], (238, 238, 238))
+    frame = cv2.GaussianBlur(frame, (0, 0), 1.0)
+    return cv2.imdecode(cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 88])[1], cv2.IMREAD_COLOR)
+
+
+@pytest.mark.parametrize("variant", [("flat", "even"), ("mild", "gradient"), ("steep", "dim")])
+@pytest.mark.parametrize(
+    "shaft,word",
+    [
+        ((1.2, 0.0), "LEFT"),
+        ((-1.2, 0.0), "RIGHT"),
+        ((0.0, 1.2), "DOWN"),
+        ((0.0, -1.2), "UP"),
+        ((0.2, -0.2), None),
+    ],  # fmt: skip
+)
+def test_hub_offset_per_direction(shaft, word, variant):
+    from ring3bridge.witness.service import frame_report
+
+    rep = frame_report(_hub_scene(shaft, quad=variant[0], light=variant[1]), GEOM)
+    assert rep.hub is not None, rep.lines[-1]
+    assert abs(rep.hub.dx_mm - shaft[0]) <= 0.2 and abs(rep.hub.dy_mm - shaft[1]) <= 0.2, rep.lines[-1]
+    line = rep.lines[-1]
+    if word is None:
+        assert line.endswith(" OK") and rep.hub.dist_mm <= 0.5
+    else:
+        m = re.search(r" MOVE: move servo (LEFT|RIGHT|UP|DOWN) (\d+\.\d) mm \(as seen in pivot\.jpg", line)
+        assert m and m.group(1) == word and abs(float(m.group(2)) - 1.2) <= 0.2, line
+        assert "OK" not in line
+        assert not rep.ok  # witness-frame exits 1 until the hub is placed
+
+
+@pytest.mark.parametrize(
+    "kw,why",
+    [
+        ({"cap": False}, "no round white cap"),  # horn and body only
+        ({"body": False, "shaft": (0.0, -4.0)}, "no round white cap"),  # cap merges with the white paper
+        ({"extra_caps": [(3.0, 3.0)]}, None),  # two caps near the pivot (merged or 2 candidates)
+        ({"shaft": (9.0, 0.0)}, "no round white cap"),  # cap far from the pivot: not searched for
+    ],
+)
+def test_hub_offset_never_ok_when_unsure(kw, why):
+    from ring3bridge.witness.service import frame_report
+
+    rep = frame_report(_hub_scene(**kw), GEOM)
+    assert rep.hub is None and rep.lines[-1].startswith("hub offset: not found"), rep.lines[-1]
+    assert why is None or why in rep.lines[-1]
+    assert not rep.ok and "OK" not in rep.lines[-1]
+
+
+def test_recorded_frames_say_not_found():
+    """Every recorded real frame predates the D-78 remount (servo on its side, no cap facing the camera):
+    the readout must say not found there, never OK. Uses the probe frame committed as a fixture."""
+    from ring3bridge.witness.service import frame_report
+
+    rep = frame_report(cv2.imread(str(RECORDED_FRAME)), GEOM)
+    assert rep.lines[-1] == "hub offset: not found (no round white cap near the PIVOT mark)"
+    assert rep.pivot_img is not None and rep.pivot_img.shape[:2] == (840, 1200)
