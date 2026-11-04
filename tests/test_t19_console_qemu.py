@@ -21,7 +21,7 @@ import wave
 
 import pytest
 
-from ring3bridge import console, voice
+from ring3bridge import console, replay, voice
 from ring3bridge.eventlog import EventLog, verify
 from ring3bridge.ledger import Ledger
 from ring3bridge.models.transcribe import TranscribeClient, VoiceConfig
@@ -83,10 +83,17 @@ class Proxied:
     """QEMU with COM1 on TCP, `console.serve` on pipes in a thread."""
 
     def __init__(
-        self, voice_service=None, events=None, com2=False, com3=False, append="", kernel=KERNEL
+        self,
+        voice_service=None,
+        events=None,
+        com2=False,
+        com3=False,
+        append="",
+        kernel=KERNEL,
+        com2_port=None,
     ) -> None:
         self.com1_port = free_port()
-        self.com2_port = free_port() if com2 else None
+        self.com2_port = com2_port or (free_port() if com2 else None)
         self.com3_port = free_port() if com3 else None
         cmd = qemu_command(kernel, append, com2_port=self.com2_port, com3_port=self.com3_port)
         cmd[cmd.index("stdio")] = f"tcp:127.0.0.1:{self.com1_port},server=on,wait=on"
@@ -308,6 +315,34 @@ def test_a_spoken_request_end_to_end_with_the_kernels_decisions(tmp_path):
     blobs = [r["text_blob"] for r in b.records() if r["type"] == "user_request"]
     got = [(b.run_dir / "blobs" / h).read_text() for h in blobs]
     assert got == ["set the fan to 100 %", "set the fan to 60 %"]
+
+
+def test_the_printed_start_order_gives_a_replayable_run(tmp_path):
+    """Bridge first (retrying), then QEMU, then the console, as the evidence README tells the operator. QEMU
+    opens COM2 only once the console has attached, so the bridge must still see the tape from the boot on: a late
+    bridge is what made T-04's runs 1-2 unreplayable (D-70)."""
+    com2 = free_port()
+    b = BridgeThread(
+        com2, runs_dir(tmp_path, "bridge"), [call("list_objects"), done("listed the objects")], requests=1
+    ).start()
+    svc, events, _asr, _rec, _led = _voice_rig(tmp_path, ["RING3, list the objects"])
+    p = Proxied(svc, events, com3=True, append=AGENT_QUOTAS, com2_port=com2)
+    sim = SimCell(p.com3_port).start()
+    try:
+        p.screen.expect(PROMPT_RE)
+        _say(p)
+        p.screen.expect(r'heard: "list the objects"  Enter = send')
+        p.key(b"\r")
+        p.screen.expect(r"^OUTCOME DONE: listed the objects\r?$", 40)
+        p.screen.expect(PROMPT_RE)
+        b.join()
+        assert p.exit() == EXIT_PASS
+    finally:
+        p.close()
+        sim.stop()
+    assert verify(b.run_dir).ok
+    r = replay.replay_run(b.run_dir)
+    assert r.ok, r
 
 
 def test_make_run_cell_console_gives_com1_to_the_tool():

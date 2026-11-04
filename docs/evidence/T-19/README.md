@@ -9,7 +9,7 @@ hardware were used by the builder (D-57). `kernel/`, `user/`, `firmware/` and `d
 
 | Fact | From the docs | Where it is used |
 |---|---|---|
-| Endpoint | `POST https://api.meta.ai/v1/asr/transcribe`, `multipart/form-data`, `Authorization` bearer header | `config/models.toml` `[voice]`, `models/transport.py` |
+| Endpoint | `POST https://api.meta.ai/v1/asr/transcribe`, `multipart/form-data`, the key in the request header | `config/models.toml` `[voice]`, `models/transport.py` |
 | Parts | `request` (JSON, `application/json`), `audio` (`audio/wav`) | `transcribe.build_request` |
 | `model` | required, public model ID: `muse-voice-transcribe-1.0` | same |
 | `audioEncoding` | required, no default; only `WAV`: RIFF/WAVE, mono integer PCM at 16 kHz or 24 kHz | same; `check_wav`; the helper |
@@ -105,3 +105,79 @@ the end-to-end test on the real kernel fails in all three.
 The first full run had 1 failure of 1,132: `test_key_is_read_only_in_models_and_never_from_env_files` (INV-09) flagged
 `console.py` for reading `RING3_VOICE_DIR` through `os.environ`. Only `models/` may touch the environment. The
 console now takes `--voice-dir` as an argument, like `--witness-dir`; the shell expands the variable.
+
+### One test outside this card failed intermittently (not changed, not caused here)
+`tests/test_t14_panel.py::test_t14_render_time` asserts every render pass is under 1 ms. Over this card it passed 11
+of 13 runs. The 2 failures were each one outlier pass: `max_us` 1091 (`avg_us` 36) in a full suite and 1348 (`avg_us`
+47) in 10 repeats of that test alone, with other sessions' QEMUs on this machine. `kernel/` is identical to `a639f42`
+and the test uses no voice code. It fits the TCG host stalls T-18 measured; that cause is inferred here, not proven.
+The assertion is unchanged. The suite transcript below is a run where it passed; for the lead.
+
+## A3. The user's live steps (none run by the builder)
+
+Reservation: **$0.000750** for a 15 s recording (`ring3 console`), per attempt. `--budget-usd 0.01` allows 13 attempts
+at the cap. The bridge's first call for this request reserves $0.028536 (8,902 input tokens by the ledger's rule +
+4,096 output); estimates, not billing.
+
+**1. Helper selftest (Windows, PowerShell; free, no key, no network):**
+```
+py -m pip install sounddevice
+py <repo>\tools\voice_capture_win.py --selftest
+```
+Pass: exit 0 and a line `selftest: 2.00 s recorded ..., peak N %`. Speak during it: peak should move. If the C922 isn't
+picked, `--list` shows the inputs and `--device NAME` selects one.
+
+**2. One voice request on the real cell (paid).** Helper running, board attached, the key in the environment as for
+every `ring3 run`. The order matters: the bridge first, so the tape starts at boot; `make` needs nothing else.
+```
+# PowerShell, leave running
+mkdir C:\ring3-voice; $env:RING3_VOICE_DIR = "C:\ring3-voice"; py <repo>\tools\voice_capture_win.py
+
+# WSL terminal 1 (worktree root): the bridge, waits up to 120 s for QEMU
+uv run ring3 run --budget-usd 0.06 --requests 1 --pack agent-v2-redteam --style console --connect-timeout 120
+
+# WSL terminal 2: QEMU, waits for the console (add CONSOLE_DISPLAY=gtk for the VGA screen)
+make run-cell-console
+
+# WSL terminal 3: the console; the kernel boots when this attaches
+uv run ring3 console --budget-usd 0.01 --voice-dir /mnt/c/ring3-voice
+```
+At `ring3> `: **F2**, say "RING3, set the fan to 100 %", **F2**. Check `heard: "..."`, press **Enter** (Esc discards).
+Expected, on the same pack and limits as the recorded E4 O1: the kernel refuses (`DENY_LIMIT fan_range`,
+`fan_set(100) -> -200 (ESAFETY)`). Then `exit` at the prompt.
+
+Afterwards, for this README: `uv run ring3 verify runs/voice-<time>`, `uv run ring3 verify runs/<bridge run>`,
+`uv run ring3 replay runs/<bridge run>`, `uv run ring3 spend`. The builder reads the two run folders.
+
+`[UNVERIFIED]` until these run: the real API accepting this multipart body and returning the documented fields; the
+`sounddevice` calls on Windows (the helper's protocol is tested with a fake microphone, its Windows audio backend is
+not run anywhere yet); F2's byte sequence in the operator's terminal (3 encodings handled; if F2 does nothing the
+terminal sends a fourth, and voice stays off with the keyboard unaffected).
+
+## What the voice path does not do
+- It does not add a way to answer a CONFIRM: y / n stay keyboard-only, and the kernel's rules (R10 drain, default no,
+  exact `y` or `yes`) are underneath, unchanged.
+- `ring3 console` is a host process between the keyboard and COM1, so typed bytes now pass through it. It is the same
+  trust level as the terminal it replaces, not a kernel guarantee; the guards above are host-side, and the kernel
+  decides every action the same way whichever way the line arrived.
+- The audio is not kept: the helper's file is deleted once read, and the run log holds its size and SHA-256 only. The
+  transcript is kept in the run log (`runs/`, git-ignored).
+
+## Acceptance
+| # | Result | Evidence |
+|---|---|---|
+| A1 | **pass**: offline tests pass, guards fail-before, full suite and policy hash below | `suite.txt`, `guards-fail-before.txt`, `checks.txt` |
+| A2 | **pass**: request shape and price from the official pages | section A2 above; `config/models.toml` `[voice]` |
+| A3 | **open: user-run** | commands above |
+| A4 | **pass so far**: worktree only, branch `voice`, not merged, nothing pushed | `git log a639f42..voice` |
+
+`checks.txt`: policy hashes unchanged (`4101a8cc...`, permissive `001bceb8...`), no change under `kernel/ user/
+firmware/ abi/`, no existing test changed, 4 of 4 bundles CHAIN OK + REPLAY MATCH. **Secret scan:** the scanner reports
+118 hits and none is a secret: 111 are long pytest test ids (key-shaped by its rule, as in T-11 and T-12) and the other
+7 are one long path in `checks.txt` and, in `tests/voice/`, the made-up test key, the header names and the redaction
+marker that the tests check for. Scrub on this folder: 0 hits. `.env` was not opened; the builder's environment made no
+network call to the model API.
+
+Files outside the card's named pieces: `bridge/ring3bridge/eventlog.py` (5 new record types), `Makefile` (one target),
+`.claude/settings.json` (one deny rule). No dependency added to the project; `sounddevice` is Windows-side only, like
+`opencv-python` for the camera helper.
