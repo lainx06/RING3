@@ -1,0 +1,21 @@
+$ uv run ring3 calibrate --witness-backend vision --budget-usd 0.10 --dry-run
+ring3 calibrate --witness-backend vision: zone check --dry-run (no network, no key read)
+  muse-spark-1.3 at https://api.meta.ai/v1/responses; pack witness-vision-v1 sha256 bf8f6102e35d69eb...
+  price: $1.25 / 1M in, $4.25 / 1M out (https://dev.meta.ai/docs/pricing-rate-limits, checked 2026-11-04), estimate
+  targets: 50, 90, 130 then 90, 50, 130 (6 images, 2 per zone, 2 console requests; moves of at most 30 deg through the kernel)
+  reservation: 5390 input tokens (2000 image ceiling + text) + 2048 max output tokens = $0.015442 per call, reserved before each call; 6 images = $0.092652 worst case; --budget-usd 0.10 = $0.100000
+  project cap $30.000000; enabled only on 6 of 6 PASS
+
+$ uv run ring3 run --budget-usd 0.50 --pack agent-v3 --witness-backend vision --witness-dir . --calibration zc-<id> --dry-run
+ring3 run --dry-run (no network, no key read)
+  model muse-spark-1.3 at https://api.meta.ai/v1/responses
+  context pack agent-v3: 8945 B, sha256 c98d2955d4a9d9dd...
+  price: $1.25 / 1M in, $4.25 / 1M out (https://dev.meta.ai/docs/pricing-rate-limits, checked 2026-11-01)
+  first call for request 'move the gauge to MID and confirm it with the camera': request body 9448 B -> 9448 input tokens reserved
+    + 4096 max output tokens = $0.029218 per call
+    (estimate, not billing)
+  worst case per request: 8 actions + done + one retry each
+    = 17 calls; later calls grow with the observations (<= 512 B each)
+  --budget-usd 0.50 = $0.500000 per run
+  project cap $30.000000
+  witness: vision (muse-spark-1.3), one image per witness op: 5390 input tokens (2000 image ceiling + text) + 2048 max out tokens = $0.015442 reserved per call; pack witness-vision-v1 sha256 bf8f6102e35d69eb...; zone check zc-<id>

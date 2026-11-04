@@ -1,0 +1,11 @@
+# T-16 step 2 tests AFTER the implementation (worktree t16, 2026-11-04T20:05Z)
+$ uv run pytest tests/witness/test_vision.py tests/bridge/test_vision_secrets.py -q
+.................................................................        [100%]
+65 passed in 2.22s
+
+$ uv run pytest tests/test_witness_loop.py -k vision -q  (QEMU + simulated cell, run earlier in this session)
+2 passed, 5 deselected in 29.47s (first version); re-run after the NO_MOVE backend fix and the extended test: 2 passed, 5 deselected in 16.74s
+
+$ uv run pytest tests/witness tests/bridge -q
+SKIPPED [2] tests/witness/test_inv_14_witness.py:80: raised by the verdict stage itself
+813 passed, 2 skipped in 27.19s

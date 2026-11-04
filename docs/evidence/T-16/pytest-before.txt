@@ -1,0 +1,10 @@
+# T-16 step 2 tests BEFORE the implementation (worktree t16 at 76ad29f, 2026-11-04T19:50Z)
+$ uv run pytest tests/witness/test_vision.py tests/bridge/test_vision_secrets.py -q
+tests/bridge/test_vision_secrets.py:13: in <module>
+    from ring3bridge.config import load_vision_config
+E   ImportError: cannot import name 'load_vision_config' from 'ring3bridge.config' (<worktree>/bridge/ring3bridge/config.py)
+=========================== short test summary info ============================
+ERROR tests/witness/test_vision.py
+ERROR tests/bridge/test_vision_secrets.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 2 errors during collection !!!!!!!!!!!!!!!!!!!!
+2 errors in 0.19s
