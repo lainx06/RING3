@@ -1343,8 +1343,10 @@ static void t_D53_link_drop(void)
     ok();
 }
 
-/* ---- replay: TAPE lines in, AUDIT lines out, same format as kernel/core/audit.c ---- */
-static int replay(void)
+/* ---- replay: TAPE lines in, AUDIT lines out, same format as kernel/core/audit.c ----
+ * `--replay-ev` (T-17, `ring3 counterfactual`) appends ` ev=<n>`, the 0-based index of the TAPE line that made
+ * the decision, so two builds' decisions can be lined up event by event; `--replay` output is unchanged. */
+static int replay(int with_ev)
 {
     struct pol_state s;
     policy_state_init(&s);
@@ -1361,10 +1363,13 @@ static int replay(void)
         n++;
         if (!d.audit)
             continue;
-        printf("AUDIT seq=%u tick=%u sys=%s target=%d decision=%s reason=%s result=%d tainted=%u%s\n", s.seq, t,
+        printf("AUDIT seq=%u tick=%u sys=%s target=%d decision=%s reason=%s result=%d tainted=%u%s", s.seq, t,
                e.kind == EV_SYSCALL ? policy_syscall_name(nr) : policy_event_name(e.kind), (int)d.target,
                policy_code_name(d.code), policy_reason_name(d.reason), d.result, s.tainted,
                policy_is_permissive() ? " PERMISSIVE (EVAL ONLY)" : "");
+        if (with_ev)
+            printf(" ev=%lu", n - 1);
+        printf("\n");
     }
     fprintf(stderr, "replayed %lu events\n", n);
     return 0;
@@ -1373,7 +1378,9 @@ static int replay(void)
 int main(int argc, char **argv)
 {
     if (argc > 1 && strcmp(argv[1], "--replay") == 0)
-        return replay();
+        return replay(0);
+    if (argc > 1 && strcmp(argv[1], "--replay-ev") == 0)
+        return replay(1);
     printf("policy_test: variant %s, state %u bytes, event %u bytes\n", policy_variant_name(),
            (unsigned)sizeof(struct pol_state), (unsigned)sizeof(struct pol_event));
     t_object_table();

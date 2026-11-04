@@ -489,6 +489,9 @@ def main(argv: list[str] | None = None) -> int:
     t = sub.add_parser("tape", help="print a run's event tape as TAPE lines (input of policy_test --replay)")
     t.add_argument("run")
     t.set_defaults(fn=cmd_tape)
+    from ring3bridge import counterfactual  # T-17: `ring3 counterfactual <bundle>`
+
+    counterfactual.add_parser(sub)
     z = sub.add_parser("fuzz-link", help="send seeded malformed frames to a running kernel's COM2 (INV-02)")
     z.add_argument("--host", default="127.0.0.1")
     z.add_argument("--port", type=int, default=DEFAULT_PORT)
