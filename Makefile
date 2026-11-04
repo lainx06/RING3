@@ -12,6 +12,9 @@
 #   make run-cell-screen     `make run-cell` with the VGA status screen in a QEMU window (T-08, WSLg GTK);
 #                            SCREEN_DISPLAY=curses for a terminal instead (COM1 then on tcp:127.0.0.1:$(COM1_PORT))
 #   make screendump NAME=x   PNG of the running screen -> docs/evidence/T-08/x.png (QEMU monitor socket)
+#   make run-cell-sim-permissive BUNDLE=replay/<name> [SHOTS=dir] [SIM_DISPLAY=none]
+#                            T-17: the PERMISSIVE image on the simulated cell (never a device), the bundle's
+#                            recorded model replies played back (no key, no network), banner on every screen
 VERSION    := 0.1.0
 BUILD_HASH := $(shell git rev-parse --short HEAD 2>/dev/null || echo nogit)
 POLICY     ?= default
@@ -178,6 +181,16 @@ run-cell-screen: $(KERNEL)
 	@mkdir -p $(dir $(SCREEN_MON))
 	@if [ "$(SCREEN_DISPLAY)" = curses ]; then echo "COM1 console: nc 127.0.0.1 $(COM1_PORT) (QEMU waits for it)"; fi
 	$(QEMU_SCREEN) -kernel $(KERNEL) -append "screen" $(QEMU_EXTRA)
+
+# T-17 (D-98, D-99): tools/counterfactual_sim.py refuses any device as COM3; CELL_PORT is refused here too.
+SIM_DISPLAY ?= gtk
+.PHONY: run-cell-sim-permissive
+run-cell-sim-permissive:
+	@[ -n "$(BUNDLE)" ] || { echo "usage: make run-cell-sim-permissive BUNDLE=replay/<name> [SHOTS=dir]"; exit 2; }
+	@case "$(origin CELL_PORT)" in command*|environment*) \
+	  echo "refused: CELL_PORT=$(CELL_PORT): the permissive build runs on the simulated cell only"; exit 2;; esac
+	$(MAKE) -s POLICY=permissive
+	uv run python tools/counterfactual_sim.py $(BUNDLE) --display $(SIM_DISPLAY) $(if $(SHOTS),--shots $(SHOTS))
 
 screendump:
 	@[ -n "$(NAME)" ] || { echo "usage: make screendump NAME=<state>"; exit 2; }
