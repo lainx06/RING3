@@ -185,7 +185,7 @@ measurement change stays: `max_us` leaves out interrupt-handler time, `max_gross
 
 | | Result | Evidence |
 |---|---|---|
-| A1 | **pass**: full default suite on this branch, rebased onto main `a639f42`, **978 passed, 6 skipped** on a quiet host (two earlier runs while another session's suite shared the host each had one text-mode timing flake, listed in `pytest.txt`; both pass 3/3 alone) (946 before + 32 T-18; text mode default; replay-match tests inside); policy hash `4101a8cc...` unchanged; ruff clean; `check-paths` OK | `pytest.txt` |
+| A1 | **pass**: full default suite on this branch, rebased onto main `cba8465` (T-16 merged), **1052 passed, 6 skipped**, no other suite running; earlier on `a639f42` 978 passed (two earlier runs while another session's suite shared the host each had one text-mode timing flake, listed in `pytest.txt`; both pass 3/3 alone) (946 before + 32 T-18; text mode default; replay-match tests inside); policy hash `4101a8cc...` unchanged; ruff clean; `check-paths` OK | `pytest.txt` |
 | A2 | **pass** (D-105 form): golden-image, damage and fan tests pass; hazard -> FAN 0 latency under continuous redraw within text mode's tested bound in both scenarios, internal gap 0 ticks; render avg 0.24-0.25 ms, p99 <= 1.3 ms, max 1.5-3.5 ms as measured; per-tick budget kept | `latency.txt`, `render-time.txt`, `host-*.png` |
 | A3 | `fbpoke` / `bbpoke`: PROC_FAULT vector 14 at the window address, 0 PANIC; `-vga none` falls back to text | `sim-after-fault.png`, test transcript |
 | A4 | sim-cell PNGs of every state; no banned words; original design | `sim-*.png` |
