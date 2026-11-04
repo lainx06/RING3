@@ -6,13 +6,19 @@ Request (official docs, checked by the lead 2026-11-02, D-56): ``POST https://ap
 ``metadata.include_confidence: "true"``. The endpoint, model ID and per-image price come from the ``[sam]``
 table of ``config/models.toml``.
 
-Reply: one text line per image (we send one), records separated by commas, each
-``<id> <|box;x1=..;y1=..;x2=..;y2=..;w=..;h=..[;c=..]|><|mask;x=..;y=..[;c=..];data=H,W,<enc>payload|>``.
-Parsed with a bounded regex, not a comma split (mask data contains commas). Coordinates are strict integers in
-source pixels, ``c`` a decimal in [0, 1] kept as integer parts-per-million. The mask payload is opaque (its
-encoding is not documented beyond "row-major 0/1 raster"): bounded and checked for shape, never decoded.
-Anything the parser doesn't accept -> ``CAN'T VERIFY: SAM_FORMAT``. An empty line means "concept not present":
-no records.
+Reply (official grammar, https://dev.meta.ai/docs/sam/reading-segmentation, re-read 2026-11-03 after the first
+real replies; D-56's paraphrase on the card had four details wrong): one line per frame, ``FRAME record
+("," record)*``, where ``FRAME`` = ``<Nf>`` (we send one image: ``<0f>``) and each record is
+``<id><|box;x1=..;y1=..;x2=..;y2=..;w=..;h=..[;c=..]|><|mask;x=0;y=0[;c=..];data=H,W,<enc>payload|>``:
+the id directly before ``<|box`` (no space), ``w``/``h`` the **image** size repeated on every record,
+``x2``/``y2`` the bottom-right pixel **inclusive** (the mask raster is ``H = y2 - y1 + 1`` rows by
+``W = x2 - x1 + 1`` columns, in the docs' example and in the recorded replies), ``<enc>`` ``~`` (lossless) or
+``!`` (one-bit), base85 payload (alphabet inferred from the recorded replies: ``PAYLOAD_ALPHABET``), ``c`` a
+decimal in [0, 1] (seen with 16 digits). Parsed record by record with a bounded regex; the parser checks
+``w``/``h`` against the image it sent and the mask shape against the box. ``SamRecord`` stores
+``x2``/``y2`` as exclusive edges (SAM's value + 1), the convention ``angle.box_mm`` uses. The payload stays
+opaque (bounded, never decoded). Anything else -> ``CAN'T VERIFY: SAM_FORMAT``. An empty line means
+"concept not present": no records.
 
 Spend and authority: this module never touches the model key and never builds headers. It takes an injected
 ``Transport`` (the T-03a one in Part B; a fake in tests) and an injected ``ImageSpend``; one image is reserved
@@ -43,7 +49,6 @@ MAX_IMAGE_BYTES = 4 << 20
 MAX_LINE = 1 << 20
 MAX_RECORDS = 16
 MAX_PAYLOAD = 1 << 20
-MAX_MASK_DIM = 16384
 STATUS_COMPLETED = "completed"
 
 # ---- config ----
@@ -180,12 +185,17 @@ def parse_envelope(body: bytes) -> str:
 # ---- record line ----
 
 _INT = r"(0|[1-9][0-9]{0,5})"
-_DEC = r"(0(?:\.[0-9]{1,6})?|1(?:\.0{1,6})?)"
+_DEC = r"(0(?:\.[0-9]{1,20})?|1(?:\.0{1,20})?)"
+_ID = r"(?:0|[1-9][0-9]{0,5})"
+_FRAME = re.compile(r"<(0|[1-9][0-9]{0,5})f>")
 _BOX = rf"<\|box;x1={_INT};y1={_INT};x2={_INT};y2={_INT};w={_INT};h={_INT}(?:;c={_DEC})?\|>"
-_MASK = rf"<\|mask;x={_INT};y={_INT}(?:;c={_DEC})?;data={_INT},{_INT},([\x21-\x7e]{{1,{MAX_PAYLOAD}}}?)\|>"
-_NEXT = r"(?=\Z|, ?(?:0|[1-9][0-9]{0,5}) <\|box;)"  # the payload ends at the "|>" that ends the record
-_RECORD = re.compile(rf"(0|[1-9][0-9]{{0,5}}) {_BOX}{_MASK}{_NEXT}")
-_SEP = re.compile(r", ?")
+#: The payload alphabet: the 85 printable characters other than " , ; < > \\ | } ~ . Not listed in the docs
+#: ("base85"); inferred from the recorded replies (12,520 payload characters, exactly these 85, T-07 Part B).
+#: Without "|" a payload can't contain "|>", so a record can never swallow the next one.
+PAYLOAD_ALPHABET = frozenset(chr(c) for c in range(0x21, 0x7F)) - frozenset('",;<>\\|}~')
+_PAY = "[" + "".join(re.escape(ch) for ch in sorted(PAYLOAD_ALPHABET)) + "]"
+_MASK = rf"<\|mask;x=0;y=0(?:;c={_DEC})?;data={_INT},{_INT},([~!])({_PAY}{{1,{MAX_PAYLOAD}}})\|>"
+_RECORD = re.compile(rf"({_ID}){_BOX}{_MASK}")
 
 
 @dataclass(frozen=True)
@@ -193,9 +203,9 @@ class SamRecord:
     obj_id: int
     x1: int
     y1: int
-    x2: int
-    y2: int
-    c_ppm: int | None  # box confidence, parts per million
+    x2: int  # exclusive edge: SAM's inclusive x2 + 1
+    y2: int  # exclusive edge: SAM's inclusive y2 + 1
+    c_ppm: int | None  # box confidence, parts per million (truncated)
     mask_c_ppm: int | None
     mask_h: int
     mask_w: int
@@ -221,35 +231,37 @@ def parse_line(text: str, img_w: int, img_h: int) -> list[SamRecord]:
         return []
     if not all(0x20 <= ord(ch) < 0x7F for ch in text):
         raise CantVerify(SAM_FORMAT, "not one line of printable ASCII")
+    f = _FRAME.match(text)
+    if f is None:
+        raise CantVerify(SAM_FORMAT, "no frame marker <0f> at byte 0")
+    if f.group(1) != "0":
+        raise CantVerify(SAM_FORMAT, f"frame {f.group(1)}, expected 0 (one image sent)")
     recs: list[SamRecord] = []
-    pos = 0
+    pos = f.end()
     while True:
         m = _RECORD.match(text, pos)
         if m is None:
             raise CantVerify(SAM_FORMAT, f"record {len(recs) + 1} not understood at byte {pos}")
         g = m.groups()
         oid, x1, y1, x2, y2, w, h = (int(v) for v in g[0:7])
-        bc, mx, my, mc, mh, mw, payload = g[7], int(g[8]), int(g[9]), g[10], int(g[11]), int(g[12]), g[13]
-        if not (0 <= x1 < x2 <= img_w and 0 <= y1 < y2 <= img_h):
-            raise CantVerify(SAM_FORMAT, f"record {oid}: box outside the image or empty")
-        if abs(w - (x2 - x1)) > 1 or abs(h - (y2 - y1)) > 1:
-            raise CantVerify(SAM_FORMAT, f"record {oid}: w/h disagree with the corners")
-        if not (
-            1 <= mh <= MAX_MASK_DIM and 1 <= mw <= MAX_MASK_DIM and mx <= MAX_MASK_DIM and my <= MAX_MASK_DIM
-        ):
-            raise CantVerify(SAM_FORMAT, f"record {oid}: mask shape out of range")
+        bc, mc, mh, mw, payload = g[7], g[8], int(g[9]), int(g[10]), g[12]
+        if (w, h) != (img_w, img_h):
+            raise CantVerify(SAM_FORMAT, f"record {oid}: w/h {w}x{h} are not the image size {img_w}x{img_h}")
+        if not (0 <= x1 <= x2 < img_w and 0 <= y1 <= y2 < img_h):
+            raise CantVerify(SAM_FORMAT, f"record {oid}: box outside the image")
+        if (mh, mw) != (y2 - y1 + 1, x2 - x1 + 1):
+            raise CantVerify(SAM_FORMAT, f"record {oid}: mask {mh}x{mw} does not match the box")
         if any(r.obj_id == oid for r in recs):
             raise CantVerify(SAM_FORMAT, f"duplicate object id {oid}")
-        recs.append(SamRecord(oid, x1, y1, x2, y2, _ppm(bc), _ppm(mc), mh, mw, len(payload)))
+        recs.append(SamRecord(oid, x1, y1, x2 + 1, y2 + 1, _ppm(bc), _ppm(mc), mh, mw, len(payload)))
         if len(recs) > MAX_RECORDS:
             raise CantVerify(SAM_FORMAT, f"more than {MAX_RECORDS} records")
         pos = m.end()
         if pos == len(text):
             return recs
-        s = _SEP.match(text, pos)
-        if s is None:
+        if text[pos] != ",":
             raise CantVerify(SAM_FORMAT, f"bad separator at byte {pos}")
-        pos = s.end()
+        pos += 1
 
 
 # ---- client ----

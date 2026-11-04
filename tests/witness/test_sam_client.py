@@ -20,7 +20,7 @@ from tests.witness.synth import envelope
 
 JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 64
 W, H = 920, 570
-LINE = "1 <|box;x1=440;y1=320;x2=480;y2=430;w=40;h=110;c=0.93|><|mask;x=0;y=0;data=570,920,abc|>"
+LINE = "<0f>0<|box;x1=440;y1=320;x2=480;y2=430;w=920;h=570;c=0.93|><|mask;x=0;y=0;data=111,41,~abc|>"
 
 
 def _ledger_lines(tmp_path):

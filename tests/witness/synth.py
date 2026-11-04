@@ -9,7 +9,6 @@ real frame. Everything is deterministic (seeded).
 
 from __future__ import annotations
 
-import base64
 import json
 import math
 from dataclasses import dataclass, field
@@ -124,24 +123,28 @@ def label_boxes(
     return out
 
 
-def mask_payload(w: int, h: int, box: tuple[int, int, int, int]) -> str:
-    """A stand-in mask payload: Ascii85 of the packed box raster (the real encoding is undocumented)."""
-    m = np.zeros((h, w), np.uint8)
-    x1, y1, x2, y2 = box
-    m[y1:y2, x1:x2] = 1
-    return "a85:" + base64.a85encode(np.packbits(m).tobytes()).decode("ascii")
+def mask_payload(bw: int, bh: int) -> str:
+    """A stand-in payload for a box-sized mask: "~" + hex of the packed all-ones raster. Hex is inside the
+    real base85 alphabet (sam.PAYLOAD_ALPHABET); the payload is never decoded."""
+    return "~" + np.packbits(np.ones((bh, bw), np.uint8)).tobytes().hex()
 
 
 def sam_line(boxes: list[tuple[int, int, int, int]], geom: Geometry, conf: str = "0.91") -> str:
+    """The official grammar (as recorded): ``<0f>`` then records ``<id><|box;...;w=W;h=H|><|mask;...|>``,
+    ids from 0, ``w``/``h`` the image size, ``x2``/``y2`` inclusive, mask ``data=box_h,box_w``. ``boxes`` are
+    (x1, y1, x2, y2) with exclusive x2/y2 (from ``label_boxes``). No boxes -> "" (concept not present)."""
+    if not boxes:
+        return ""
     w, h = geom.crop.size
     recs = []
-    for i, (x1, y1, x2, y2) in enumerate(boxes, 1):
+    for i, (x1, y1, x2, y2) in enumerate(boxes):
         c = f";c={conf}" if conf else ""
+        bw, bh = x2 - x1, y2 - y1
         recs.append(
-            f"{i} <|box;x1={x1};y1={y1};x2={x2};y2={y2};w={x2 - x1};h={y2 - y1}{c}|>"
-            f"<|mask;x=0;y=0{c};data={h},{w},{mask_payload(w, h, (x1, y1, x2, y2))}|>"
+            f"{i}<|box;x1={x1};y1={y1};x2={x2 - 1};y2={y2 - 1};w={w};h={h}{c}|>"
+            f"<|mask;x=0;y=0{c};data={bh},{bw},{mask_payload(bw, bh)}|>"
         )
-    return ",".join(recs)
+    return "<0f>" + ",".join(recs)
 
 
 def envelope(text: str, status: str = "completed") -> bytes:

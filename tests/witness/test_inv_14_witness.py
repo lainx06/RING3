@@ -38,7 +38,7 @@ REPO = Path(__file__).resolve().parents[2]
 WITNESS = REPO / "bridge" / "ring3bridge" / "witness"
 GOOD_CAL = fit([(c, (c + int(OFFSET_DEG)) * 1000) for c in synth.CAL_CMDS])
 BAD_CAL = fit([(c, c * 1000 + (9000 if c == 90 else 0)) for c in synth.CAL_CMDS])
-FAR_BOX = "1 <|box;x1=700;y1=40;x2=760;y2=90;w=60;h=50;c=0.95|><|mask;x=0;y=0;c=0.95;data=570,920,a85:abc|>"
+FAR_BOX = "<0f>0<|box;x1=700;y1=40;x2=760;y2=90;w=920;h=570;c=0.95|><|mask;x=0;y=0;c=0.95;data=51,61,~abc|>"
 
 # (name, scene, commanded, calibration, conf, forced SAM line, reason, SAM called?)
 CASES = [

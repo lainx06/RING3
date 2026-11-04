@@ -219,3 +219,45 @@ stop rule: the arm was not found with the short prompt.
    3. Camera a little closer (all 4 markers span 186 x 142 mm: at most ~6.5 px/mm at 1080 p).
    4. Phrase and crop: test with `ring3 calibrate --probe` (new; paid; <= 5 images; saved frames, no kernel)
       on a new frame after 1-3, or on the saved 90 deg frame as a control.
+
+## Real SAM format (probes `probe-20261103-202522`, `probe-20261103-202557`, user, 2026-11-03)
+Arm probes ("black plastic arm", "servo horn"; full and tight crop; blackened horn): 4 empty replies (802 B
+envelopes, `output_text` ""). Control probe: "blue servo motor" and "black square" returned records that the
+Part A parser rejected (`record 1 not understood at byte 0`). Raw replies (no key, no `Authorization`/`Bearer`,
+no long tokens) are committed as `tests/witness/recorded/`. First bytes of the servo reply's text:
+`<0f>0<|box;x1=393;y1=425;x2=563;y2=569;w=920;h=570;c=0.8672199249267578|><|mask;x=0;y=0;c=0.8672199249267578;data=145,171,~!!!T@#K{$iEAqi$e'q#...`
+
+**The real output matches the official page** (https://dev.meta.ai/docs/sam/reading-segmentation, re-read
+2026-11-03); **D-56's paraphrase on the card, which the Part A parser followed, differs in five points:**
+| | card / Part A parser | official docs + recorded replies |
+|---|---|---|
+| line start | records directly | frame marker `<0f>` (`FRAME ::= "<" INT "f>"`) |
+| id | `<id> <\|box` (space) | `<id><\|box` (no space), ids from 0, records joined by `,` |
+| box `w`/`h` | box width/height | image width/height, repeated on every record |
+| `x2`/`y2` | exclusive (assumed) | inclusive: mask `data=H,W` = `y2-y1+1`, `x2-x1+1` (docs example 353..453 -> 101; recorded 393..563 -> 171; `x2=919` in a 920 px crop) |
+| `c` | <= 6 decimals | 16 decimals seen |
+| payload | opaque, any printable | `~` (lossless) or `!` (one-bit) + base85; alphabet = printable ASCII minus `" , ; < > \ \| } ~` (inferred: exactly these 85 in 12,520 recorded payload characters; the docs say only "base85") |
+
+**Parser fixed** (`witness/sam.py`): frame `<0f>` required (other frame -> SAM_FORMAT), id + `<|box` with no
+space, `w`/`h` must equal the image sent, `0 <= x1 <= x2 < W` (inclusive), mask origin literally `0`, mask
+`H,W` must equal the box, encoding `~`/`!`, payload only from the 85-character alphabet (so a payload can't
+contain `|>` and a record can't swallow the next one), separator exactly `,`, `c` <= 20 decimals, <= 16
+records, unique ids; `SamRecord.x2/y2` stay exclusive edges (value + 1), so `angle.py` is unchanged.
+
+**Recorded replies through the fixed parser** (full crop, the box -> gauge-mm mapping the arm angle uses):
+| phrase | record | gauge mm | matches | arm filter |
+|---|---|---|---|---|
+| black square | 1 | x 63.5..91.9, y -21.9..-12.3 | marker 2 (63..93, -42..-12) clipped by the crop at -22: within 0.5 mm | pivot not inside |
+| black square | 2 | x 63.7..91.9, y 70.3..92.1 | marker 1 (63..93, 70..100) clipped at 92: within 0.7 mm | pivot not inside |
+| black square | 0, 3 | 5.0 x 4.6 and 5.0 x 2.0 mm | single 5 mm cells inside marker 0 | pivot not inside |
+| blue servo motor | 0 | x -13.5..20.7, y -21.9..7.1 (34 x 29 mm), c 0.867 | servo body outline (-6.1..6.1, -17..5.5) + putty on both sides (D-64) | SHAPE: far side 30.1 mm |
+So the coordinates are read right to < 1 mm on real replies; the arm probes were genuinely empty.
+
+Test-program changes (logging rule): **6** `test_sam_parser.py` ACCEPT/REJECT rewritten to the official
+grammar (cause: the old cases encoded the card's paraphrase); every old rule kept or tightened, new rejects
+for the old grammar itself, frame != 0, `w`/`h` not the image, inclusive overflow, mask/box mismatch, unknown
+encoding, payload characters outside the alphabet; the four "odd payload" accepts (commas, `|>`, `<|box`
+inside) became rejects; plus 3 tests on the recorded replies. **7** `synth.sam_line` writes the real grammar
+(ids from 0, image `w`/`h`, inclusive corners, hex stand-in payload); `FAR_BOX` (INV-14) and
+`test_sam_client.LINE` likewise. Expectations unchanged: every verdict and angle in `fixtures.md` is the same
+(only the displayed SAM lines and two detail texts changed).

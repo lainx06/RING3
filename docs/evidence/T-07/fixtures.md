@@ -47,36 +47,36 @@ Simulated mounting offset: dial angle = command + 2 deg.
 | boundary band | 69 | mild/even  | 50 | 72.2 |  | CAN'T VERIFY: BOUNDARY (measured 70.2 deg, within 5 deg of 70) |
 | bad calibration | 94 | mild/even  | 90 |  |  | CAN'T VERIFY: CALIBRATION (residual 7.20 deg above the 3.0 deg limit) (no SAM call) |
 | not calibrated | 94 | mild/even  | 90 |  |  | CAN'T VERIFY: CALIBRATION (0 points, need 5) (no SAM call) |
-| unparseable SAM line | 94 | mild/even  | 90 |  |  | CAN'T VERIFY: SAM_FORMAT (record 1 not understood at byte 0) |
+| unparseable SAM line | 94 | mild/even  | 90 |  |  | CAN'T VERIFY: SAM_FORMAT (no frame marker <0f> at byte 0) |
 | low confidence | 94 | mild/even  | 90 |  |  | CAN'T VERIFY: LOW_CONFIDENCE (confidence 0.21 below 0.50) |
 | no confidence | 94 | mild/even  | 90 |  |  | CAN'T VERIFY: LOW_CONFIDENCE (no confidence in the record) |
-| box not arm-shaped | 94 | mild/even  | 90 |  |  | CAN'T VERIFY: SHAPE (1: pivot not inside the box) |
+| box not arm-shaped | 94 | mild/even  | 90 |  |  | CAN'T VERIFY: SHAPE (0: pivot not inside the box) |
 | command on a boundary | 74 | mild/even  | 70 |  |  | CAN'T VERIFY: COMMAND_BOUNDARY (commanded 70 deg is within 5 deg of the 70 deg edge) (no SAM call) |
 
 ## Recorded-style SAM lines (as returned by the fake transport)
 
-- **LOW reached**: `1 <|box;x1=441;y1=395;x2=515;y2=480;w=74;h=85;c=0.91|><|mask;x=0;y=0;c=0.91;data=570,920,a85:zzzzzzzz...[17498 chars]|>`
-- **MID reached**: `1 <|box;x1=441;y1=380;x2=480;y2=480;w=39;h=100;c=0.91|><|mask;x=0;y=0;c=0.91;data=570,920,a85:zzzzzzzz...[17194 chars]|>`
-- **HIGH reached**: `1 <|box;x1=403;y1=398;x2=480;y2=480;w=77;h=82;c=0.91|><|mask;x=0;y=0;c=0.91;data=570,920,a85:zzzzzzzz...[17462 chars]|>`
-- **held in MID, HIGH commanded**: `1 <|box;x1=441;y1=380;x2=480;y2=480;w=39;h=100;c=0.91|><|mask;x=0;y=0;c=0.91;data=570,920,a85:zzzzzzzz...[17194 chars]|>`
-- **held in LOW, HIGH commanded**: `1 <|box;x1=441;y1=395;x2=515;y2=480;w=74;h=85;c=0.91|><|mask;x=0;y=0;c=0.91;data=570,920,a85:zzzzzzzz...[17498 chars]|>`
-- **held in HIGH, LOW commanded**: `1 <|box;x1=403;y1=398;x2=480;y2=480;w=77;h=82;c=0.91|><|mask;x=0;y=0;c=0.91;data=570,920,a85:zzzzzzzz...[17462 chars]|>`
-- **drooped below scale**: `1 <|box;x1=441;y1=440;x2=541;y2=480;w=100;h=40;c=0.91|><|mask;x=0;y=0;c=0.91;data=570,920,a85:zzzzzzzz...[17034 chars]|>`
-- **pushed past scale**: `1 <|box;x1=381;y1=440;x2=480;y2=480;w=99;h=40;c=0.91|><|mask;x=0;y=0;c=0.91;data=570,920,a85:zzzzzzzz...[17034 chars]|>`
-- **on the LOW/MID edge**: `1 <|box;x1=441;y1=384;x2=494;y2=480;w=53;h=96;c=0.91|><|mask;x=0;y=0;c=0.91;data=570,920,a85:zzzzzzzz...[17354 chars]|>`
-- **on the MID/HIGH edge**: `1 <|box;x1=424;y1=385;x2=480;y2=480;w=56;h=95;c=0.91|><|mask;x=0;y=0;c=0.91;data=570,920,a85:zzzzzzzz...[17346 chars]|>`
+- **LOW reached**: `<0f>0<|box;x1=441;y1=395;x2=514;y2=479;w=920;h=570;c=0.91|><|mask;x=0;y=0;c=0.91;data=85,74,~fffffffffff...[1575 chars]|>`
+- **MID reached**: `<0f>0<|box;x1=441;y1=380;x2=479;y2=479;w=920;h=570;c=0.91|><|mask;x=0;y=0;c=0.91;data=100,39,~fffffffffff...[977 chars]|>`
+- **HIGH reached**: `<0f>0<|box;x1=403;y1=398;x2=479;y2=479;w=920;h=570;c=0.91|><|mask;x=0;y=0;c=0.91;data=82,77,~fffffffffff...[1581 chars]|>`
+- **held in MID, HIGH commanded**: `<0f>0<|box;x1=441;y1=380;x2=479;y2=479;w=920;h=570;c=0.91|><|mask;x=0;y=0;c=0.91;data=100,39,~fffffffffff...[977 chars]|>`
+- **held in LOW, HIGH commanded**: `<0f>0<|box;x1=441;y1=395;x2=514;y2=479;w=920;h=570;c=0.91|><|mask;x=0;y=0;c=0.91;data=85,74,~fffffffffff...[1575 chars]|>`
+- **held in HIGH, LOW commanded**: `<0f>0<|box;x1=403;y1=398;x2=479;y2=479;w=920;h=570;c=0.91|><|mask;x=0;y=0;c=0.91;data=82,77,~fffffffffff...[1581 chars]|>`
+- **drooped below scale**: `<0f>0<|box;x1=441;y1=440;x2=540;y2=479;w=920;h=570;c=0.91|><|mask;x=0;y=0;c=0.91;data=40,100,~fffffffffff...[1001 chars]|>`
+- **pushed past scale**: `<0f>0<|box;x1=381;y1=440;x2=479;y2=479;w=920;h=570;c=0.91|><|mask;x=0;y=0;c=0.91;data=40,99,~fffffffffff...[991 chars]|>`
+- **on the LOW/MID edge**: `<0f>0<|box;x1=441;y1=384;x2=493;y2=479;w=920;h=570;c=0.91|><|mask;x=0;y=0;c=0.91;data=96,53,~fffffffffff...[1273 chars]|>`
+- **on the MID/HIGH edge**: `<0f>0<|box;x1=424;y1=385;x2=479;y2=479;w=920;h=570;c=0.91|><|mask;x=0;y=0;c=0.91;data=95,56,~fffffffffff...[1331 chars]|>`
 - **markers missing**: (none: no SAM call, or empty line)
 - **markers missing (id 0)**: (none: no SAM call, or empty line)
 - **arm not found (no mask)**: (none: no SAM call, or empty line)
-- **two candidates (two masks)**: `1 <|box;x1=442;y1=387;x2=503;y2=480;w=61;h=93;c=0.91|><|mask;x=0;y=0;c=0.91;data=570,920,a85:zzzzzzzz...[17414 chars]|>,2 <|box;x1=411;y1=392;x2=480;y2=480;w=69;h=88;c=0.91|><|mask;x=0;y=0;c=0.91;data=570,920,a85:zzzzzzzz...[17450 chars]|>`
-- **two overlapping candidates**: `1 <|box;x1=442;y1=380;x2=480;y2=480;w=38;h=100;c=0.91|><|mask;x=0;y=0;c=0.91;data=570,920,a85:zzzzzzzz...[17194 chars]|>,2 <|box;x1=438;y1=381;x2=480;y2=480;w=42;h=99;c=0.91|><|mask;x=0;y=0;c=0.91;data=570,920,a85:zzzzzzzz...[17286 chars]|>`
-- **boundary band**: `1 <|box;x1=442;y1=385;x2=497;y2=480;w=55;h=95;c=0.91|><|mask;x=0;y=0;c=0.91;data=570,920,a85:zzzzzzzz...[17438 chars]|>`
+- **two candidates (two masks)**: `<0f>0<|box;x1=442;y1=387;x2=502;y2=479;w=920;h=570;c=0.91|><|mask;x=0;y=0;c=0.91;data=93,61,~fffffffffff...[1421 chars]|>,1<|box;x1=411;y1=392;x2=479;y2=479;w=920;h=570;c=0.91|><|mask;x=0;y=0;c=0.91;data=88,69,~fffffffffff...[1519 chars]|>`
+- **two overlapping candidates**: `<0f>0<|box;x1=442;y1=380;x2=479;y2=479;w=920;h=570;c=0.91|><|mask;x=0;y=0;c=0.91;data=100,38,~fffffffffff...[951 chars]|>,1<|box;x1=438;y1=381;x2=479;y2=479;w=920;h=570;c=0.91|><|mask;x=0;y=0;c=0.91;data=99,42,~fffffffffff...[1041 chars]|>`
+- **boundary band**: `<0f>0<|box;x1=442;y1=385;x2=496;y2=479;w=920;h=570;c=0.91|><|mask;x=0;y=0;c=0.91;data=95,55,~fffffffffff...[1309 chars]|>`
 - **bad calibration**: (none: no SAM call, or empty line)
 - **not calibrated**: (none: no SAM call, or empty line)
 - **unparseable SAM line**: `the arm points up`
-- **low confidence**: `1 <|box;x1=442;y1=380;x2=480;y2=480;w=38;h=100;c=0.21|><|mask;x=0;y=0;c=0.21;data=570,920,a85:zzzzzzzz...[17194 chars]|>`
-- **no confidence**: `1 <|box;x1=442;y1=380;x2=480;y2=480;w=38;h=100|><|mask;x=0;y=0;data=570,920,a85:zzzzzzzz...[17194 chars]|>`
-- **box not arm-shaped**: `1 <|box;x1=700;y1=40;x2=760;y2=90;w=60;h=50;c=0.95|><|mask;x=0;y=0;c=0.95;data=570,920,a85:abc...[7 chars]|>`
+- **low confidence**: `<0f>0<|box;x1=442;y1=380;x2=479;y2=479;w=920;h=570;c=0.21|><|mask;x=0;y=0;c=0.21;data=100,38,~fffffffffff...[951 chars]|>`
+- **no confidence**: `<0f>0<|box;x1=442;y1=380;x2=479;y2=479;w=920;h=570|><|mask;x=0;y=0;data=100,38,~fffffffffff...[951 chars]|>`
+- **box not arm-shaped**: `<0f>0<|box;x1=700;y1=40;x2=760;y2=90;w=920;h=570;c=0.95|><|mask;x=0;y=0;c=0.95;data=51,61,~abc...[4 chars]|>`
 - **command on a boundary**: (none: no SAM call, or empty line)
 
 ## Samples

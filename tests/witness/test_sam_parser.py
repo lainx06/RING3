@@ -1,110 +1,143 @@
 """SAM record-line and envelope parser (T-07 step 3): strict, bounded, never guesses."""
 
 import json
+from pathlib import Path
 
 import pytest
 
 from ring3bridge.witness import SAM_FORMAT, CantVerify
 from ring3bridge.witness.sam import MAX_RECORDS, build_request, parse_envelope, parse_line
+from ring3bridge.witness.sam import PAYLOAD_ALPHABET as ALPHABET
 
 W, H = 920, 570
-MASK = f"<|mask;x=0;y=0;c=0.9;data={H},{W},a85:9jqo^BlbD-BleB1DJ+*+F(f,q|>"
-BOX = "<|box;x1=440;y1=320;x2=480;y2=430;w=40;h=110;c=0.93|>"
-REC = f"1 {BOX}{MASK}"
+# Official grammar (dev.meta.ai/docs/sam/reading-segmentation): FRAME record ("," record)*; the id directly
+# before <|box; w/h = image size; x2/y2 inclusive; mask data=H,W with H = y2-y1+1, W = x2-x1+1; enc ~ or !.
+BOX = f"<|box;x1=440;y1=320;x2=480;y2=430;w={W};h={H};c=0.93|>"
+MASK = "<|mask;x=0;y=0;c=0.9;data=111,41,~9jqo^BlbD-BleB1DJ+*+F(fq|>"
+REC = f"0{BOX}{MASK}"
+LINE = "<0f>" + REC
 
 
-def rec(i=1, box=BOX, mask=MASK):
-    return f"{i} {box}{mask}"
+def box(x1=440, y1=320, x2=480, y2=430, w=W, h=H, c=";c=0.93"):
+    return f"<|box;x1={x1};y1={y1};x2={x2};y2={y2};w={w};h={h}{c}|>"
+
+
+def mask(mh=111, mw=41, enc="~", payload="9jqo^Bl", c=";c=0.9", xy="x=0;y=0"):
+    return f"<|mask;{xy}{c};data={mh},{mw},{enc}{payload}|>"
+
+
+def rec(i=0, b=None, m=None):
+    return f"{i}{b or BOX}{m or MASK}"
+
+
+def line(*recs, frame="<0f>"):
+    return frame + ",".join(recs)
 
 
 ACCEPT = [
-    ("one record", REC, 1),
-    ("trailing newline", REC + "\n", 1),
-    ("trailing crlf", REC + "\r\n", 1),
-    ("two records, comma", rec(1) + "," + rec(2), 2),
-    ("two records, comma space", rec(1) + ", " + rec(2), 2),
-    ("no confidence", "3 <|box;x1=1;y1=2;x2=3;y2=4;w=2;h=2|><|mask;x=0;y=0;data=4,4,zz|>", 1),
-    ("c = 1", rec(box="<|box;x1=0;y1=0;x2=5;y2=5;w=5;h=5;c=1|>"), 1),
-    ("c = 1.000000", rec(box="<|box;x1=0;y1=0;x2=5;y2=5;w=5;h=5;c=1.000000|>"), 1),
-    ("c = 0", rec(box="<|box;x1=0;y1=0;x2=5;y2=5;w=5;h=5;c=0|>"), 1),
-    ("w off by one (inclusive convention)", rec(box="<|box;x1=10;y1=10;x2=20;y2=20;w=11;h=11|>"), 1),
-    ("box touches image edge", rec(box=f"<|box;x1=0;y1=0;x2={W};y2={H};w={W};h={H}|>"), 1),
-    ("payload holds commas", rec(mask="<|mask;x=0;y=0;data=4,4,a,b,c,,d|>"), 1),
-    ("payload holds '|>' and ',2<|'", rec(mask="<|mask;x=0;y=0;data=4,4,ab|>cd,2<|ef|>"), 1),
-    ("payload ending in '|' then the record end", rec(mask="<|mask;x=0;y=0;data=4,4,ab||>"), 1),
-    ("payload with '<|box' inside", rec(1, mask="<|mask;x=0;y=0;data=4,4,q<|box;x1=1|>") + "," + rec(2), 2),
-    (f"{MAX_RECORDS} records", ",".join(rec(i) for i in range(1, MAX_RECORDS + 1)), MAX_RECORDS),
+    ("one record", LINE, 1),
+    ("trailing newline", LINE + "\n", 1),
+    ("trailing crlf", LINE + "\r\n", 1),
+    ("two records", line(rec(0), rec(1)), 2),
+    ("no confidence", line(rec(3, box(1, 2, 3, 4, c=""), mask(3, 3, c=""))), 1),
+    ("c = 1", line(rec(b=box(c=";c=1"))), 1),
+    ("c = 1.000000", line(rec(b=box(c=";c=1.000000"))), 1),
+    ("c = 0", line(rec(b=box(c=";c=0"))), 1),
+    ("c with 16 digits (as recorded)", line(rec(b=box(c=";c=0.8672199249267578"))), 1),
+    ("one-pixel box", line(rec(b=box(5, 5, 5, 5), m=mask(1, 1))), 1),
+    ("box on the last pixel", line(rec(b=box(0, 0, W - 1, H - 1), m=mask(H, W))), 1),
+    ("one-bit encoding", line(rec(m=mask(enc="!"))), 1),
+    ("payload uses the whole 85-character alphabet", line(rec(m=mask(payload="".join(sorted(ALPHABET))))), 1),
+    (f"{MAX_RECORDS} records", line(*(rec(i) for i in range(MAX_RECORDS))), MAX_RECORDS),
 ]
 
 REJECT = [
     ("garbage", "the arm is at 90 degrees"),
     ("json instead of records", json.dumps({"box": [1, 2, 3, 4]})),
-    ("missing id", f"{BOX}{MASK}"),
-    ("negative id", f"-1 {BOX}{MASK}"),
-    ("id with leading zero", f"01 {BOX}{MASK}"),
-    ("two spaces after id", f"1  {BOX}{MASK}"),
-    ("missing mask", f"1 {BOX}"),
-    ("missing box", f"1 {MASK}"),
-    ("mask before box", f"1 {MASK}{BOX}"),
-    ("float coordinate", rec(box="<|box;x1=440.5;y1=320;x2=480;y2=430;w=40;h=110|>")),
-    ("negative coordinate", rec(box="<|box;x1=-4;y1=320;x2=480;y2=430;w=484;h=110|>")),
-    ("leading zero coordinate", rec(box="<|box;x1=040;y1=320;x2=480;y2=430;w=440;h=110|>")),
-    ("exponent coordinate", rec(box="<|box;x1=4e2;y1=320;x2=480;y2=430;w=80;h=110|>")),
-    ("seven-digit coordinate", rec(box="<|box;x1=1;y1=1;x2=1000000;y2=4;w=999999;h=3|>")),
-    ("box keys reordered", rec(box="<|box;y1=320;x1=440;x2=480;y2=430;w=40;h=110|>")),
-    ("box key missing", rec(box="<|box;x1=440;y1=320;x2=480;y2=430;w=40|>")),
-    ("box extra key", rec(box="<|box;x1=440;y1=320;x2=480;y2=430;w=40;h=110;z=1|>")),
-    ("c above 1", rec(box="<|box;x1=440;y1=320;x2=480;y2=430;w=40;h=110;c=1.2|>")),
-    ("c = 1.5", rec(box="<|box;x1=440;y1=320;x2=480;y2=430;w=40;h=110;c=1.5|>")),
-    ("c negative", rec(box="<|box;x1=440;y1=320;x2=480;y2=430;w=40;h=110;c=-0.1|>")),
-    ("c without leading digit", rec(box="<|box;x1=440;y1=320;x2=480;y2=430;w=40;h=110;c=.9|>")),
-    ("c exponent", rec(box="<|box;x1=440;y1=320;x2=480;y2=430;w=40;h=110;c=9e-1|>")),
-    ("c seven decimals", rec(box="<|box;x1=440;y1=320;x2=480;y2=430;w=40;h=110;c=0.1234567|>")),
-    ("c NaN", rec(box="<|box;x1=440;y1=320;x2=480;y2=430;w=40;h=110;c=nan|>")),
-    ("x1 >= x2", rec(box="<|box;x1=480;y1=320;x2=480;y2=430;w=0;h=110|>")),
-    ("y1 > y2", rec(box="<|box;x1=440;y1=431;x2=480;y2=430;w=40;h=1|>")),
-    ("box beyond image width", rec(box=f"<|box;x1=10;y1=10;x2={W + 1};y2=20;w={W - 9};h=10|>")),
-    ("box beyond image height", rec(box=f"<|box;x1=10;y1=10;x2=20;y2={H + 5};w=10;h={H - 5}|>")),
-    ("w disagrees", rec(box="<|box;x1=440;y1=320;x2=480;y2=430;w=90;h=110|>")),
-    ("h disagrees", rec(box="<|box;x1=440;y1=320;x2=480;y2=430;w=40;h=10|>")),
-    ("mask without data", rec(mask="<|mask;x=0;y=0;c=0.9|>")),
-    ("mask data without W", rec(mask="<|mask;x=0;y=0;data=570,payload|>")),
-    ("mask data empty payload", rec(mask="<|mask;x=0;y=0;data=570,920,|>")),
-    ("mask zero height", rec(mask="<|mask;x=0;y=0;data=0,920,abc|>")),
-    ("mask huge width", rec(mask="<|mask;x=0;y=0;data=570,99999,abc|>")),
-    ("mask payload with space", rec(mask="<|mask;x=0;y=0;data=4,4,ab cd|>")),
-    ("mask unterminated", rec(mask="<|mask;x=0;y=0;data=4,4,abcd")),
-    ("duplicate object id", rec(1) + "," + rec(1)),
-    ("semicolon separator", rec(1) + ";" + rec(2)),
-    ("trailing comma", rec(1) + ","),
-    ("trailing text", rec(1) + " done"),
-    ("two lines", rec(1) + "\n" + rec(2)),
-    ("tab", rec(1).replace(" ", "\t", 1)),
-    ("non-ASCII", rec(1).replace("box", "böx")),
-    ("NUL byte", rec(1) + "\x00"),
-    ("too many records", ",".join(rec(i) for i in range(1, MAX_RECORDS + 2))),
+    ("no frame marker (the card's old grammar)", REC),
+    (
+        "old grammar: space after the id, box-size w/h",
+        "<0f>0 <|box;x1=440;y1=320;x2=480;y2=430;w=40;h=110|>" + MASK,
+    ),  # fmt: skip
+    ("frame 1 (we sent one image)", line(REC, frame="<1f>")),
+    ("frame with leading zero", line(REC, frame="<00f>")),
+    ("frame marker only", "<0f>"),
+    ("two frames", LINE + LINE),
+    ("missing id", line(BOX + MASK)),
+    ("negative id", line(rec(-1))),
+    ("id with leading zero", line("01" + BOX + MASK)),
+    ("space after id", line("0 " + BOX + MASK)),
+    ("missing mask", line("0" + BOX)),
+    ("missing box", line("0" + MASK)),
+    ("mask before box", line("0" + MASK + BOX)),
+    ("float coordinate", line(rec(b="<|box;x1=440.5;y1=320;x2=480;y2=430;w=920;h=570|>"))),
+    ("negative coordinate", line(rec(b=box(x1=-4)))),
+    ("leading zero coordinate", line(rec(b="<|box;x1=040;y1=320;x2=480;y2=430;w=920;h=570|>"))),
+    ("exponent coordinate", line(rec(b="<|box;x1=4e2;y1=320;x2=480;y2=430;w=920;h=570|>"))),
+    ("seven-digit coordinate", line(rec(b=box(x2=1000000)))),
+    ("box keys reordered", line(rec(b="<|box;y1=320;x1=440;x2=480;y2=430;w=920;h=570|>"))),
+    ("box key missing", line(rec(b="<|box;x1=440;y1=320;x2=480;y2=430;w=920|>"))),
+    ("box extra key", line(rec(b="<|box;x1=440;y1=320;x2=480;y2=430;w=920;h=570;z=1|>"))),
+    ("w is not the image width", line(rec(b=box(w=40)))),
+    ("h is not the image height", line(rec(b=box(h=110)))),
+    ("c above 1", line(rec(b=box(c=";c=1.2")))),
+    ("c = 1.5", line(rec(b=box(c=";c=1.5")))),
+    ("c negative", line(rec(b=box(c=";c=-0.1")))),
+    ("c without leading digit", line(rec(b=box(c=";c=.9")))),
+    ("c exponent", line(rec(b=box(c=";c=9e-1")))),
+    ("c 21 decimals", line(rec(b=box(c=";c=0." + "1" * 21)))),
+    ("c NaN", line(rec(b=box(c=";c=nan")))),
+    ("x1 > x2", line(rec(b=box(x1=481), m=mask(111, 1)))),
+    ("y1 > y2", line(rec(b=box(y1=431), m=mask(1, 41)))),
+    ("x2 = image width (inclusive corner off the image)", line(rec(b=box(x2=W), m=mask(111, W - 440 + 1)))),
+    ("y2 = image height", line(rec(b=box(y2=H), m=mask(H - 320 + 1, 41)))),
+    ("mask height disagrees with the box", line(rec(m=mask(110, 41)))),
+    ("mask width disagrees with the box (exclusive reading)", line(rec(m=mask(111, 40)))),
+    ("mask origin not 0", line(rec(m=mask(xy="x=1;y=0")))),
+    ("mask without data", line(rec(m="<|mask;x=0;y=0;c=0.9|>"))),
+    ("mask data without W", line(rec(m="<|mask;x=0;y=0;data=111,~payload|>"))),
+    ("mask unknown encoding marker", line(rec(m=mask(enc="a85:")))),
+    ("mask empty payload", line(rec(m="<|mask;x=0;y=0;data=111,41,~|>"))),
+    ("mask payload with space", line(rec(m=mask(payload="ab cd")))),
+    ("payload holds a comma", line(rec(m=mask(payload="a,b")))),
+    ("payload holds '|>' (would swallow the next record)", line(rec(m=mask(payload="ab|>cd")))),
+    ("payload ending in '|'", line(rec(m=mask(payload="ab|")))),
+    ("payload holds '<|box'", line(rec(0, m=mask(payload="q<|box;x1=1")), rec(1))),
+    ("payload holds '}'", line(rec(m=mask(payload="ab}cd")))),
+    ("mask unterminated", line(rec(m="<|mask;x=0;y=0;data=111,41,~abcd"))),
+    ("duplicate object id", line(rec(1), rec(1))),
+    ("comma space separator", "<0f>" + rec(0) + ", " + rec(1)),
+    ("semicolon separator", "<0f>" + rec(0) + ";" + rec(1)),
+    ("trailing comma", line(rec(0)) + ","),
+    ("trailing text", line(rec(0)) + " done"),
+    ("two lines", line(rec(0)) + "\n" + line(rec(1))),
+    ("tab", line(rec(0)).replace(";", "\t", 1)),
+    ("non-ASCII", line(rec(0)).replace("box", "b\u00f6x")),
+    ("NUL byte", line(rec(0)) + "\x00"),
+    ("too many records", line(*(rec(i) for i in range(MAX_RECORDS + 1)))),
     ("only whitespace", "   "),
     ("only a newline pair", "\n\n"),
 ]
 
 
-@pytest.mark.parametrize("name,line,n", ACCEPT, ids=[a[0] for a in ACCEPT])
-def test_parser_accepts(name, line, n):
-    assert len(parse_line(line, W, H)) == n
+@pytest.mark.parametrize("name,text,n", ACCEPT, ids=[a[0] for a in ACCEPT])
+def test_parser_accepts(name, text, n):
+    assert len(parse_line(text, W, H)) == n
 
 
-@pytest.mark.parametrize("name,line", REJECT, ids=[r[0] for r in REJECT])
-def test_parser_rejects(name, line):
+@pytest.mark.parametrize("name,text", REJECT, ids=[r[0] for r in REJECT])
+def test_parser_rejects(name, text):
     with pytest.raises(CantVerify) as e:
-        parse_line(line, W, H)
+        parse_line(text, W, H)
     assert e.value.reason == SAM_FORMAT
 
 
 def test_parser_reads_fields_as_integers():
-    (r,) = parse_line(REC, W, H)
-    assert (r.obj_id, r.x1, r.y1, r.x2, r.y2) == (1, 440, 320, 480, 430)
+    (r,) = parse_line(LINE, W, H)
+    # SAM's inclusive bottom-right corner (480, 430) is stored as the exclusive edge (481, 431)
+    assert (r.obj_id, r.x1, r.y1, r.x2, r.y2) == (0, 440, 320, 481, 431)
     assert r.c_ppm == 930_000 and r.mask_c_ppm == 900_000
-    assert (r.mask_h, r.mask_w) == (H, W)
+    assert (r.mask_h, r.mask_w) == (111, 41)
     assert all(type(v) is int for v in (r.x1, r.y1, r.x2, r.y2, r.c_ppm, r.mask_c_ppm))
 
 
@@ -115,8 +148,8 @@ def test_empty_line_is_no_records():
 
 def test_parser_is_bounded():
     with pytest.raises(CantVerify):
-        parse_line("1 " + "x" * (1 << 21), W, H)
-    big = rec(mask="<|mask;x=0;y=0;data=4,4," + "a" * 500_000 + "|>")  # long payload: linear, not stuck
+        parse_line("<0f>0" + "x" * (1 << 21), W, H)
+    big = line(rec(m=mask(payload="a" * 500_000)))  # long payload: linear, not stuck
     assert len(parse_line(big, W, H)) == 1
 
 
@@ -163,7 +196,7 @@ def test_envelope_rejects(name, body):
 def test_envelope_reads_the_line():
     from tests.witness.synth import envelope
 
-    assert parse_envelope(envelope(REC)) == REC
+    assert parse_envelope(envelope(LINE)) == LINE
     assert parse_envelope(envelope("")) == ""
 
 
@@ -191,3 +224,48 @@ def test_request_rejects_bad_prompts(prompt):
 def test_request_rejects_non_jpeg():
     with pytest.raises(ValueError):
         build_request("sam-3.1", "arm", b"\x89PNG")
+
+
+# ---- recorded real replies (tests/witness/recorded/, user's probes 2026-11-03, full 920 x 570 crop) ----
+
+RECORDED = Path(__file__).parent / "recorded"
+
+
+def _recorded(name: str) -> list:
+    return parse_line(parse_envelope((RECORDED / name).read_bytes()), W, H)
+
+
+def test_recorded_empty_reply_is_concept_not_present():
+    assert _recorded("sam-empty-black-plastic-arm.json") == []
+
+
+def test_recorded_servo_reply_parses():
+    (r,) = _recorded("sam-blue-servo-motor.json")
+    assert (r.obj_id, r.x1, r.y1, r.x2, r.y2) == (0, 393, 425, 564, 570)
+    assert (r.mask_h, r.mask_w) == (145, 171) and r.c_ppm == 867_219 and r.mask_c_ppm == 867_219
+
+
+def test_recorded_square_reply_lands_on_the_printed_markers():
+    """The real boxes, through the same box -> gauge mm mapping the arm angle uses, cover the ArUco markers
+    printed at the positions in geometry.json (clipped by the crop): the inclusive-corner reading is right."""
+    from ring3bridge.witness.angle import box_mm
+    from ring3bridge.witness.dial import load_geometry
+
+    geom = load_geometry()
+    recs = _recorded("sam-black-square.json")
+    assert [r.obj_id for r in recs] == [0, 1, 2, 3]
+    c = geom.crop
+
+    def expected(mid):  # the marker's extent in gauge mm, clipped to the crop
+        a = geom.marker_corners[mid]
+        return (max(a[:, 0].min(), c.x_min), max(a[:, 1].min(), c.y_min),
+                min(a[:, 0].max(), c.x_max), min(a[:, 1].max(), c.y_max))  # fmt: skip
+
+    for rec_id, mid in ((1, 2), (2, 1)):  # whole markers 2 (bottom right) and 1 (top right)
+        got = box_mm(recs[rec_id], c)
+        assert all(abs(g - e) <= 1.0 for g, e in zip(got, expected(mid), strict=True)), (rec_id, got)
+    for rec_id in (0, 3):  # single 5 mm cells of marker 0 (30 mm = 6 cells)
+        x0, y0, x1, y1 = box_mm(recs[rec_id], c)
+        m0 = expected(0)
+        assert m0[0] <= x0 and x1 <= m0[2] and m0[1] <= y0 and y1 <= m0[3] + 0.2
+        assert abs((x1 - x0) - 5.0) <= 0.4
