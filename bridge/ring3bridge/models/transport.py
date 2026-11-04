@@ -91,7 +91,9 @@ class TransportError(Exception):
 class Transport(Protocol):
     """``redactor`` (optional attribute): a ``Redactor`` the client applies to decoded reply strings."""
 
-    def post(self, url: str, body: bytes, timeout_s: int) -> TransportResponse: ...
+    def post(
+        self, url: str, body: bytes, timeout_s: int, content_type: str = "application/json"
+    ) -> TransportResponse: ...
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -125,11 +127,13 @@ class HttpsTransport:
     def _scrub(self, b: bytes) -> bytes:
         return self.redactor.body(b)
 
-    def post(self, url: str, body: bytes, timeout_s: int) -> TransportResponse:
+    def post(
+        self, url: str, body: bytes, timeout_s: int, content_type: str = "application/json"
+    ) -> TransportResponse:
         if not url.startswith("https://"):
             raise TransportError("network")
         req = urllib.request.Request(url, data=body, method="POST")
-        req.add_header("Content-Type", "application/json")
+        req.add_header("Content-Type", content_type)
         req.add_header("Authorization", "Bearer " + self.__key)
         failure: tuple[str, int] | None = None
         result: TransportResponse | None = None

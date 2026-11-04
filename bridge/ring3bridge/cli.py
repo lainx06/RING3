@@ -1,11 +1,12 @@
 """``uv run ring3 <command>``.
 
-Only ``run`` and ``calibrate`` (without ``--dry-run``) make network calls, and only to the endpoints in
-``config/models.toml`` through the transport in ``models/``; both need ``--budget-usd`` and both are the
-user's to run (D-57: denied to builder sessions in ``.claude/settings.json``). ``--witness-backend vision``
-(T-16) selects Muse Spark's zone reading for the camera witness: ``calibrate`` then runs the 6-image zone
-check, ``run`` needs that check's run id as ``--calibration``. Nothing here reads a key:
-``HttpsTransport`` does, from the environment, when ``run`` or ``calibrate`` constructs it.
+Only ``run``, ``calibrate`` (without ``--dry-run``) and ``console --budget-usd`` make network calls, and only
+to the endpoints in ``config/models.toml`` through the transport in ``models/``; all three need
+``--budget-usd`` and all three are the user's to run (D-57: denied to builder sessions in
+``.claude/settings.json``). ``--witness-backend vision`` (T-16) selects Muse Spark's zone reading for the
+camera witness: ``calibrate`` then runs the 6-image zone check, ``run`` needs that check's run id as
+``--calibration``. Nothing here reads a key: ``HttpsTransport`` does, from the environment, when one of them
+constructs it.
 """
 
 from __future__ import annotations
@@ -689,6 +690,9 @@ def main(argv: list[str] | None = None) -> int:
     from ring3bridge import counterfactual  # T-17: `ring3 counterfactual <bundle>`
 
     counterfactual.add_parser(sub)
+    from ring3bridge import console  # T-19: `ring3 console`, the COM1 console with push-to-talk
+
+    console.add_parser(sub)
     z = sub.add_parser("fuzz-link", help="send seeded malformed frames to a running kernel's COM2 (INV-02)")
     z.add_argument("--host", default="127.0.0.1")
     z.add_argument("--port", type=int, default=DEFAULT_PORT)

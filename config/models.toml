@@ -67,3 +67,17 @@ price_output_uusd_per_mtok = 4250000
 price_cached_input_uusd_per_mtok = 150000
 price_source = "https://dev.meta.ai/docs/pricing-rate-limits"
 price_checked = "2026-11-04"
+
+# Muse Voice Transcribe for push-to-talk requests (T-19, D-104). Facts from the official docs, checked by the
+# builder on 2026-11-04: https://dev.meta.ai/docs/api-reference/voice/transcribe,
+# https://dev.meta.ai/docs/api-reference/voice/schemas, https://dev.meta.ai/docs/speech-to-text (request shape)
+# and https://dev.meta.ai/docs/pricing-rate-limits (price). Read by bridge/ring3bridge/models/transcribe.py.
+# PRICE: $0.18 per hour of audio = 180000 µUSD per hour = 50 µUSD per second, metered in whole seconds rounded
+# down. The recording's duration, rounded up and capped at 15 s, is reserved before every call.
+[voice]
+id = "muse-voice-transcribe-1.0"
+endpoint = "https://api.meta.ai/v1/asr/transcribe"
+timeout_s = 60
+price_uusd_per_hour = 180000
+price_source = "https://dev.meta.ai/docs/pricing-rate-limits"
+price_checked = "2026-11-04"

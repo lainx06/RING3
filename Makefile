@@ -11,6 +11,8 @@
 #   make run-cell            `make run` plus the Uno as COM3 (T-04 live run; TEST=1 for the scripted hw checks)
 #   make run-cell-screen     `make run-cell` with the VGA status screen in a QEMU window (T-08, WSLg GTK);
 #                            SCREEN_DISPLAY=curses for a terminal instead (COM1 then on tcp:127.0.0.1:$(COM1_PORT))
+#   make run-cell-console    `make run-cell` with COM1 on tcp:127.0.0.1:$(COM1_PORT): QEMU waits for `uv run ring3
+#                            console` (T-19, push-to-talk); CONSOLE_DISPLAY=gtk adds the VGA status screen
 #   make screendump NAME=x   PNG of the running screen -> docs/evidence/T-08/x.png (QEMU monitor socket)
 #   make run-cell-gfx        T-18: `make run-cell-screen` with the pixel graphics screen (boot option gfx=1,
 #                            1024x768 QEMU standard VGA; falls back to the text screen when the device is absent)
@@ -185,6 +187,17 @@ run-cell-screen: $(KERNEL)
 	@mkdir -p $(dir $(SCREEN_MON))
 	@if [ "$(SCREEN_DISPLAY)" = curses ]; then echo "COM1 console: nc 127.0.0.1 $(COM1_PORT) (QEMU waits for it)"; fi
 	$(QEMU_SCREEN) -kernel $(KERNEL) -append "screen" $(QEMU_EXTRA)
+
+# T-19: run-cell with COM1 on a TCP port, for `uv run ring3 console` (the bridge may not start processes, INV-01).
+CONSOLE_DISPLAY ?= none
+.PHONY: run-cell-console
+run-cell-console: $(KERNEL)
+	@mkdir -p $(dir $(SCREEN_MON))
+	@echo "QEMU waits for the console: uv run ring3 console --port $(COM1_PORT) [--budget-usd <cap>]"
+	$(QEMU) -m 64 -display $(CONSOLE_DISPLAY) -serial tcp:127.0.0.1:$(COM1_PORT),server=on,wait=on \
+	  -monitor unix:$(SCREEN_MON),server=on,wait=off -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot \
+	  -serial tcp:127.0.0.1:$(COM2_PORT),server=on,wait=off -serial $(CELL_PORT) -kernel $(KERNEL) \
+	  $(if $(filter none,$(CONSOLE_DISPLAY)),,-append "screen") $(QEMU_EXTRA)
 
 # T-17 (D-98, D-99): tools/counterfactual_sim.py refuses any device as COM3; CELL_PORT is refused here too.
 SIM_DISPLAY ?= gtk

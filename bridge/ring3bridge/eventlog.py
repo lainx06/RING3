@@ -47,6 +47,11 @@ RECORD_TYPES = frozenset(
         "calibration",
         "sam_probe",
         "zonecheck",
+        "voice_request",
+        "voice_reply",
+        "voice_heard",
+        "voice_sent",
+        "voice_discarded",
         "run_end",
     }
 )
