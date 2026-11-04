@@ -357,8 +357,8 @@ and `git log` shows every step after it. No code from earlier projects was reuse
 content is a set of developer-tool instruction files listed in `THIRD_PARTY_NOTICES.md`, plus the Python packages
 in `pyproject.toml`.
 
-Written here: the kernel (`kernel/`, 6,827 lines of C and assembly, the policy 883 of them), the user programs
-(`user/`, 1,268), the Uno firmware (`firmware/ring3cell/`, 884), the bridge (`bridge/ring3bridge/`, 5,643 lines
+Written here: the kernel (`kernel/`, 7,019 lines of C and assembly, the policy 883 of them), the user programs
+(`user/`, 1,268), the Uno firmware (`firmware/ring3cell/`, 884), the bridge (`bridge/ring3bridge/`, 5,648 lines
 of Python), the tests, the evaluation tools and the printable gauge. Line counts are `wc -l`, comments and blank
 lines included (`docs/evidence/T-05/linecount.txt`).
 

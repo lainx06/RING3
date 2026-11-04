@@ -2,15 +2,16 @@
 
 Builder: Opus 5.5 / high, main working tree (D-93). Docs only: `README.md`, `docs/video/script.md`,
 `docs/claims/claims.md`, `docs/INVARIANTS.md` (the two lead-authorised wording edits). No code, tests, `tools/` or
-`docs/evals/` touched; no paid call, no hardware. **Step 5 (line counts, claims line references at T-12's release
-commit, header commit, final scan) is not done yet:** it waits for T-12 to be merged.
+`docs/evals/` touched; no paid call, no hardware. Items 1-4: `00e3f10`; S9 caption: `b7d5f37`; step 5 (after T-12 and T-14 were merged,
+main at `26780eb`): the commit after it, which also brings `docs/video/shots.md` up to the T-14 screen words and the
+STATUS rows for T-12 and T-14 (lead's instructions).
 
-## Acceptance (items 1-4; A2 and the line-count part wait for step 5)
+## Acceptance
 | # | Result | Evidence |
 |---|---|---|
 | A1 | **PASS for items 1-3**: every item applied (tables below); script still 180 s with timecodes, every scene at most 2.5 words/s, every caption at most 8 words | this file; `docs/video/script.md` |
-| A2 | **open (step 5)**: every changed sentence has its claims row (item 4, below), each new reference checked against the tree at `bf86664`; the full re-check at T-12's release commit and the header commit are step 5 | `docs/claims/claims.md` |
-| A3 | **PASS at this commit**: `test_inv_11_banned_words` 2 passed; manual whole-word scan of `docs/video/`, `docs/claims/`, `README.md` 0 hits; no franchise, military, medical or political framing added | scan output below |
+| A2 | **PASS at `26780eb`** (main after T-12's release commit and T-14): every claims.md line reference re-checked; 7 references pointed at the wrong lines (pre-existing, not moved by T-12) and are fixed; header names `26780eb` | step 5 below; `docs/claims/claims.md` |
+| A3 | **PASS at the step 5 commit**: `test_inv_11_banned_words` 2 passed; manual whole-word scan of `docs/video/`, `docs/claims/`, `README.md` 0 hits; no franchise, military, medical or political framing added | scan output below |
 | A4 | **PASS**: commit adds only this card's paths, `Builder:` trailer; STATUS line added | `git show --stat` |
 
 ## Item 1: README and script accuracy (D-90, D-91)
@@ -88,19 +89,51 @@ says the line references are re-verified in step 5. Every newly cited line was c
 `bf86664` (DECISIONS lines 39, 79, 95, 105; T-07 README 404-406 and 434; T-05 README 28-29; results.md lines 26
 and 138; `idt.c` 39-40; `isr.S` 72; `crt0.S` 16; `link_abi.h` 30-32 and 61-68).
 
-## Scan output (at this commit)
+## Scan output (re-run at the step 5 commit)
 ```
 $ uv run pytest -q tests/test_inv_11_banned_words.py
 ..                                                                       [100%]
-2 passed in 0.25s
+2 passed in 2.32s
 $ grep -rniwE "success|secure|safe|real-time|realtime" docs/video docs/claims README.md
 (no output, exit 1)
 ```
 
-## Step 5 (to do after T-12 is merged)
-Line counts (`wc -l`, T-05's file set) into `docs/evidence/T-05/linecount.txt` and the README numbers; every
-claims.md line reference against HEAD (results.md moves with T-12's S8); header commit; banned-word test and
-manual scan again.
+## Step 5 (at `26780eb`, after T-12 and T-14 were merged)
+**Line counts** (T-05's commands, `docs/evidence/T-05/linecount.txt`): kernel 6,827 -> **7,019** (T-14's
+`kernel/ui/` panel), bridge 5,643 -> **5,648**; policy 883, user 1,268, firmware 884 unchanged. README
+"Built during the hackathon" and claims R80 updated; the intro's "883 lines" is unchanged.
+
+**results.md** (T-12, S8) changed only in place on lines 9, 31, 49 (measured-build commit `e8de3f2` -> `985f0d5`)
+and in the E7 section at the end (from line 187), so no cited line moved and no E1-E6 number changed. Every
+README evidence table row is found verbatim in results.md (script check: 0 rows missing). Raw E4 fields cited by
+R41-R52 re-read from the JSON at HEAD: unchanged (settled 48529 / 92091 / 8358 µUSD, CHAIN/REPLAY strings, O1
+`fan_set` 100 -> -200, O2 dist 51 and 183 presence frames, O3 latched at start and after, O5 `prompted` 1, O2
+re-run 217 presence frames).
+
+**Every line reference checked** (DECISIONS: 22 `D-xx (line n)` references + the 7 "DEC lines" in R82, all
+correct; INVARIANTS rule n on line 7+n; results.md; ARCHITECTURE; policy.h; policy.c; words.c; models.toml;
+RING3_CONTEXT; wiring.md; context pack; E4 transcripts; T-04/T-06/T-07/T-09/T-10/T-05 evidence; Makefile;
+THIRD_PARTY_NOTICES; tests by line and by test name). Seven were wrong; all were already wrong at `335481d`
+(the lines they cite did not move since), so T-05's ledger had them:
+| Row | Was | Now | Why |
+|---|---|---|---|
+| R0, R2 | ARCH §1 lines 23-24 | lines 20-21 | 23-24 are the §2 heading; the quote is on 20-21 |
+| R20 | `agent-v2.md` line 3 | lines 3-4 | "two-line LCD panel" is on line 4 |
+| R39, R73 | R line 65 | R line 66 | line 65 is blank; "n = 1 per row" is on 66 |
+| R66 | `agent-v2.md` lines 25-28 | lines 25-29 | the `refuse` reply kind is on line 29 |
+| V5 | `bridge-timeline-3.txt` lines 13-14 | lines 16-17 | 13-14 are `cell_status`; `fan_set(duty=100)` and `DENY_LIMIT (fan_range)` are 16-17 |
+
+**Lead's extras in the same commit:** `docs/video/shots.md` "Expected screen" lines now use the T-14 panel words
+(`kernel/ui/screen.c` lines 399-404, 483, 523-527, 529-530; console box 5 lines, `screen.h` line 14): S0 idle panel
+(`STOPPED`, `CLEAR`, `E-STOP RELEASED`, `LINK ok`); S2 console box keeps 5 lines, so film T2 for the full action
+list, panel `TURNING` / `STOPPED`; C0/S3 panel stays `STOPPED`; S4 `TURNING` after `y`; S5 `PRESENCE YES` ->
+`PRESENCE`, `STOPPED`; S6 `E-STOP PRESSED, LATCHED` then `E-STOP LATCHED`, fan `HALTED (E-STOP)`, after the reset
+`E-STOP RELEASED` (was `E-STOP released`); S7 `TURNING` before the kill, the panel goes with the window. The reason
+word `E-STOP latched` in the decision box is unchanged (`words.c` line 48). Claims row S5 (shots) added for these.
+STATUS: T-12 row (from T-12's "Summary for STATUS" + D-95: estop-latch test wait, 20/20; full suite 887 passed),
+T-14 row "merged at `26780eb`, 913 passed", T-13 rows.
+
+**Scan (step 5 commit):** see the "Scan output" block above, re-run at this commit with the same result.
 
 ## Step 6 (queued by the lead; after filming)
 Replace the README's three D-81 screenshots ("What it looks like": `docs/evidence/T-08/real-{ask,estop,idle}.png`

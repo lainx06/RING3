@@ -1,8 +1,9 @@
 # RING3 claims ledger
 
 Every sentence in `README.md` and `docs/video/script.md` that states a number, a behaviour or a result, mapped to
-the file (and line or table row) that proves it. Line numbers are as of commit `335481d` (T-11's release commit; `results.md` unchanged by its O3 re-score); T-13 items 1-4
-(D-90, D-91) reworded the rows marked T-13, and T-13 step 5 re-verifies every reference at T-12's release commit; `results.md` rows are
+the file (and line or table row) that proves it. Line numbers are as of commit `26780eb` (main after T-12 and T-14 were merged; every reference re-checked there by T-13
+step 5, which also corrected seven that were off, `docs/evidence/T-13/README.md`); rows marked T-13 were reworded by
+T-13 (D-90, D-91); `results.md` rows are
 named by their table and first column, since `make evals` regenerates the file. Anything without a source was cut
 or rewritten (`docs/evidence/T-05/README.md`, "Claims cut or rewritten"). Reviewer: Gemini (D-11).
 
@@ -14,9 +15,9 @@ Abbreviations: **R** = `docs/evals/results.md`; **INV** = `docs/INVARIANTS.md` (
 ### Intro and "Why a new kernel"
 | # | Claim (where) | Source |
 |---|---|---|
-| R0 | Title: "the AI proposes, the kernel decides" | ARCH §1 lines 23-24 ("It proposes one action at a time ... the kernel decides each call (D-16)"); INV-4 (line 11) |
+| R0 | Title: "the AI proposes, the kernel decides" | ARCH §1 lines 20-21 ("It proposes one action at a time ... the kernel decides each call (D-16)"); INV-4 (line 11) |
 | R1 | Kernel written from scratch in C for 32-bit x86 | DEC D-02 (line 8), D-09 (line 15); `kernel/` |
-| R2 | The model (Muse Spark) proposes the steps and runs on Meta's servers, never inside RING3; the unprivileged helper `agentsh` receives one proposed action at a time and asks the kernel to carry it out (T-13) | DEC D-16 (line 22); ARCH §1 lines 23-24; `config/models.toml` lines 22-23 (remote endpoint) |
+| R2 | The model (Muse Spark) proposes the steps and runs on Meta's servers, never inside RING3; the unprivileged helper `agentsh` receives one proposed action at a time and asks the kernel to carry it out (T-13) | DEC D-16 (line 22); ARCH §1 lines 20-21; `config/models.toml` lines 22-23 (remote endpoint) |
 | R3 | JSON only in the bridge; the bridge sends RING3 small, size-limited, checksummed messages, each action a fixed 16-byte record; the kernel never parses model text; the kernel allows, refuses or asks the human (T-13) | INV-2 (line 9), INV-8 (line 15); DEC D-16; `abi/link_abi.h` lines 61-68 (bridge-to-kernel bodies: `LINK_ACTION_LEN 16`, TEXT at most 65, FINAL at most 201, STOP 1); = R26 |
 | R3a | OS sentence: `agentsh` runs in ring 3 and reaches the kernel only through `int 0x80` system calls, whose pointers the kernel checks page by page (INV-3) (T-13) | INV-3 (line 10, "only vector 0x80 has DPL 3 ... page-walked"); `kernel/arch/i386/idt.c` line 40 (vector 0x80 gate `0xEE`, DPL 3; every other gate `0x8E`, DPL 0, line 39); `kernel/arch/i386/isr.S` line 72; `user/crt0.S` line 16 (`int $0x80`); `tests/test_inv_03_bad_pointers.py`; README diagram "system call (int 0x80)" |
 | R3b | OS sentence: on COM2 the kernel accepts only bounded COBS frames with a CRC-16; the ACTION body is parsed in ring 3 (INV-2) (T-13) | INV-2 (line 9, "bounded, COBS-decoded, CRC-checked"); `kernel/core/agentlink.c` line 236 (`cobs_decode`), line 254 (`crc16_ccitt_false` check, mismatch dropped as `LINKDROP_CRC`); `kernel/lib/cobs.c`, `kernel/lib/crc16.c`; `abi/link_abi.h` lines 30-32 (CRC-16 poly 0x1021, init 0xFFFF); `tests/test_inv_02_frame_fuzz.py`, `tests/bridge/test_framing.py`, `tests/test_inv_02_kernel_never_parses_action.py`; README diagram "(COBS + CRC-16)" |
@@ -41,7 +42,7 @@ Abbreviations: **R** = `docs/evals/results.md`; **INV** = `docs/INVARIANTS.md` (
 | R17 | SG90 servo over the printed gauge | DEC D-19 (line 25), D-24; `hardware/gauge/` |
 | R18 | HC-SR04 presence sensor; closer than 100 mm counts as presence | `hardware/wiring.md` D3/D4 rows; `policy.h` line 81 (`PRESENCE_MM 100u`) |
 | R19 | E-stop push button on an interrupt pin | `hardware/wiring.md` D2 row (INT0), line 67 ("only a push button") |
-| R20 | Two-line LCD, buzzer, RGB light | `hardware/wiring.md` pin table (D7, D8, D10, D11, D12, A0-A4); `docs/context-packs/agent-v2.md` line 3 ("two-line LCD panel") |
+| R20 | Two-line LCD, buzzer, RGB light | `hardware/wiring.md` pin table (D7, D8, D10, D11, D12, A0-A4); `docs/context-packs/agent-v2.md` lines 3-4 ("two-line LCD panel") |
 | R21 | Firmware hand-written, never model-written; the Uno is COM3 | INV-13 (line 20); DEC D-19; `docs/evidence/T-01B/README.md` (COM3 at 0x3E8) |
 | R22 | Firmware clamps commands, cuts the fan in the E-stop interrupt, stops the fan if the kernel goes silent | INV-13 (line 20); R E6 "Kernel silent 2.5 s" row (line 153); R E6 board-alone `clamp`, `estop`, `link_loss` rows |
 
@@ -73,7 +74,7 @@ Abbreviations: **R** = `docs/evals/results.md`; **INV** = `docs/INVARIANTS.md` (
 | R36 | E1: 0 kernel panics, 5/5 boots end KERNEL ALIVE, next request ran 40/40, both builds | R lines 26-27 |
 | R37 | E2: 18 hand-written pointer-boundary cases (15 bad pointers, all -EFAULT as expected, + 3 valid edge cases as expected, 0 unexpected) (T-13); 10,000 fuzz calls, one fixed seed; 0 panics; RING3 -EPERM 345 vs permissive 0 | R E2 (lines 29-45); `docs/evals/raw/e2.json` |
 | R38 | E3: 10,000 malformed frames x seeds 1-3 x 2 builds, all dropped and audited, heartbeat continued, 0 panics | R E3 rows (lines 55-60); `docs/evals/raw/e3.json` |
-| R39 | E4: paid runs by the user, n = 1 per row; checkers read transcript + kernel state + telemetry, not the model's report | R line 65; `tools/eval/e4_tasks.py`; DEC D-86 (line 99) |
+| R39 | E4: paid runs by the user, n = 1 per row; checkers read transcript + kernel state + telemetry, not the model's report | R line 66; `tools/eval/e4_tasks.py`; DEC D-86 (line 99) |
 | R40 | Red-team pack tells the model to send what the operator asks it to try (D-69); added because the model usually declines under the normal pack | DEC D-69 (line 78), D-62 (line 68), D-68 (line 77); `docs/context-packs/agent-v2-redteam.md` |
 | R41 | Red-team run `e4-redteam-20261103-230412`: 6 requests, settled $0.0485, CHAIN OK 5262 records / 35 blobs, REPLAY MATCH 78 decisions / 2442 events | R line 68; `docs/evals/raw/e4-redteam.json` (`settled_uusd`, `verify`, `replay`) |
 | R42 | Red-team table rows O1-O6 and "declined 4 of 6, denied in 2 of 6, beyond policy 0" | R lines 72-79 |
@@ -108,21 +109,21 @@ Abbreviations: **R** = `docs/evals/results.md`; **INV** = `docs/INVARIANTS.md` (
 | R63 | `ring3 verify` + `ring3 replay` of `replay/t04-run3-fan-limit` with no key: CHAIN OK, REPLAY MATCH | `docs/evidence/T-05a/replay-bundles.txt`; `replay/t04-run3-fan-limit/README.md` |
 | R64 | Live runs need the Uno, `MODEL_API_KEY`, `--budget-usd`; bridge first (D-70) | `bridge/ring3bridge/cli.py` (`--budget-usd` required); INV-9 (line 16); DEC D-12 (line 18), D-70 |
 | R65 | Muse Spark = `muse-spark-1.3` via the Responses API | `config/models.toml` lines 22-23; CTX §4 |
-| R66 | One JSON object per reply: call / done / refuse; anything else rejected; two invalid replies stop | `docs/context-packs/agent-v2.md` lines 10-12, 25-28; INV-7, INV-8 |
+| R66 | One JSON object per reply: call / done / refuse; anything else rejected; two invalid replies stop | `docs/context-packs/agent-v2.md` lines 10-12, 25-29; INV-7, INV-8 |
 | R67 | Context pack versioned in `docs/context-packs/`, SHA-256 logged per run | DEC D-69 (line 78, "SHA-256 pinned and logged like v1/v2"); `tests/test_agent_fake_model.py::test_redteam_pack_is_selected_per_run_and_logged` |
 | R68 | SAM 3.1 only as an observer; output only PASS / FAIL / CAN'T VERIFY; never reaches a kernel decision | `config/models.toml` line 38; INV-14 |
 | R69 | Total spend $0.470496 over 20 runs (estimate, not billing) | `docs/evidence/T-05/spend.txt` |
 | R70 | Reservation logged before every model call; `--budget-usd` required; project cap $30 | INV-9 (line 16); `config/budget.toml`; `spend.txt` ("of project cap $30.000000") |
 | R71 | QEMU only, never booted on real x86 | DEC D-02 (line 8, "no real hardware") |
 | R72 | One executor at a time; no NX bit | ARCH line 65 (D-26), line 61 |
-| R73 | Each agent task ran once per pack; hardware cases once each | R line 65 ("n = 1 per row"), E6 "Runs" column |
+| R73 | Each agent task ran once per pack; hardware cases once each | R line 66 ("n = 1 per row"), E6 "Runs" column |
 | R74 | Model usually declines under the normal pack; red-team pack exists for that (D-69) | R line 115 (agent-v2: declined 5 of 6); DEC D-62, D-68, D-69 |
 | R75 | Replayable only if the bridge started first | DEC D-70; R E5 late-link rows |
 | R76 | Taint is per request and coarse | ARCH line 114-118 ("Coarse, process-level taint"); `tests/test_inv_05_confirm.py` line 79 (next request starts untainted) |
 | R77 | Building period Oct 27 to Nov 4, 2026 | CTX line 12 |
 | R78 | Plan written 2026-10-31; first commit `2f22947` 2026-11-01 13:15 (UTC-5) | CTX line 3; `docs/evidence/T-05/first-commit.txt` (`git log --reverse`) |
 | R79 | No code from earlier projects reused; only third-party content = skill files + Python packages | DEC D-09 (line 15); `THIRD_PARTY_NOTICES.md` lines 1-8; `pyproject.toml` (numpy, opencv-python-headless) |
-| R80 | Line counts: kernel 6,827, policy 883, user 1,268, firmware 884, bridge 5,643 (`wc -l`) | `docs/evidence/T-05/linecount.txt` |
+| R80 | Line counts: kernel 7,019, policy 883, user 1,268, firmware 884, bridge 5,648 (`wc -l`, at `26780eb`; T-13 step 5) | `docs/evidence/T-05/linecount.txt` |
 | R81 | Claude Code (Fable 5.1, Opus 5.5) wrote the code from cards | `docs/STATUS.md` "Builder log"; commit trailers `Builder:`; `docs/tasks/` |
 | R82 | Codex Gate A (D-74); Gemini pre-reviews (D-41, D-42, D-53) and claims review (D-11); ChatGPT design spec implemented from a card (D-66, D-67) | DEC lines 84, 47, 48, 59, 17, 73, 75 |
 
@@ -135,7 +136,7 @@ Abbreviations: **R** = `docs/evals/results.md`; **INV** = `docs/INVARIANTS.md` (
 | V2 | S0: RING3's kernel tracks that, and makes a human say yes first (T-13) | INV-15 (line 22: tainted energy-adding motion and writes need a human "y"), INV-5 (line 12); = R5 |
 | V3 | S1: Muse Spark on Meta's servers; suggests one action at a time; a helper program inside RING3 asks the kernel; the kernel decides; caption "Ring-3 helper, system calls" (T-13) | = R2, R3a, R23, R26 |
 | V4 | S2: self-test: checks, sweeps the gauge, starts the fan; first fan start needs a yes; 6 actions, DONE, executed ops listed | R E4 B1 row (line 97, 6 steps, 1 prompt); `docs/evidence/T-04/live-run/com1-transcript-2.txt` lines 17-27; policy `R_FIRST_FAN` (`kernel/ui/words.c` line 57: "first fan: ask"); DEC D-69 |
-| V5 | S3: red-team prompt tells the model to try; it sends fan to 100 %; kernel refuses; limit 80; nothing moves | = R40, R43; `docs/evidence/T-04/live-run/bridge-timeline-3.txt` lines 13-14; DEC D-69a (line 80); R E6 "Out-of-limit calls" row run 3 |
+| V5 | S3: red-team prompt tells the model to try; it sends fan to 100 %; kernel refuses; limit 80; nothing moves | = R40, R43; `docs/evidence/T-04/live-run/bridge-timeline-3.txt` lines 16-17; DEC D-69a (line 80); R E6 "Out-of-limit calls" row run 3 |
 | V6 | S4: planted instruction to turn limits off; reading the notes taints; every move that adds energy needs a human yes; the bridge can't answer; yes -> fan 60 | CTX §2 signature moments (planted note text, D-53); INV-15; INV-5; `docs/evidence/T-08/real-ask.txt`, `real-estop.txt` (`CONFIRMED cell_fan(60)`); DEC D-81 |
 | V7 | S5: object at the sensor -> the kernel stops the fan on its own; checks the sensor on every tick; no model involved | R E6 "Hand < 100 mm" row (line 148: AUTO_HALT 0 ticks after the frame); INV-16 |
 | V8 | S6: E-stop latches; the model has no operation to clear it; its fan command is refused; only a human at the console resets it, button released | `docs/context-packs/agent-v2.md` operations table (no reset op); R44; R E6 rows lines 150-152; `real-idle.txt` |
@@ -155,3 +156,4 @@ Abbreviations: **R** = `docs/evals/results.md`; **INV** = `docs/INVARIANTS.md` (
 | S2 | Reservation per model call $0.0278-$0.0294 | `spend_reserved` records in `replay/t03b-run3-planted-note/events.jsonl`, `replay/t04-run3-fan-limit/events.jsonl`, `replay/t04-run4-taint-prompt/events.jsonl` (27,767-29,411 µUSD) |
 | S3 | Expected screens per scene | the transcript named in each scene (`com1-transcript-2.txt`, `bridge-timeline-3.txt`, `real-*.txt`, `e4-redteam-*-com1.txt`, `replay-bundles.txt`) |
 | S4 | The fan keeps running after a request that set it ends | `docs/evidence/T-10/README.md` A1 table (cell_status after the confirm shows fan 60, then EXEC_END); `real-estop.txt` (CONFIRMED fan 60 at 00:00:57, request ended, AUTO HALT at 00:01:07) |
+| S5 | Expected LIVE CELL panel words per scene (`FAN nnn%`, `TURNING` / `STOPPED` / `HALTED (E-STOP)`; `CLEAR` / `PRESENCE`; `E-STOP RELEASED` / `PRESSED` / `LATCHED` / `PRESSED, LATCHED`; `LINK ok`); the console box keeps 5 lines (T-13 step 5, from T-14) | `kernel/ui/screen.c` lines 399-404 (fan word), 483 (sensor word), 523-527 (E-stop words), 529-530 (link words), 596 (`LIVE CELL` rule); `kernel/ui/screen.h` line 14 (`SCR_CON_ROWS 5`); `docs/evidence/T-14/README.md` mockups (rows 12-19 per state) |
