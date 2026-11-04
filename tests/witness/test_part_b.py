@@ -350,7 +350,9 @@ def test_witness_frame_through_the_capture_folder(tmp_path, capsys, monkeypatch)
             for req in tmp_path.glob("*.req"):
                 n = req.stem
                 now = _time.time_ns()
-                (tmp_path / f"{n}.tmp.jpg").write_bytes(add_frame_comment(jpeg, n, now, now + 100_000_000, 3))
+                (tmp_path / f"{n}.tmp.jpg").write_bytes(
+                    add_frame_comment(jpeg, n, now, now + 100_000_000, 3, 0)
+                )
                 (tmp_path / f"{n}.tmp.jpg").replace(tmp_path / f"{n}.jpg")
             _time.sleep(0.02)
 

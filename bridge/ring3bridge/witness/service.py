@@ -22,7 +22,7 @@ import numpy as np
 from ring3bridge.witness import CANT_VERIFY, NO_MOVE, CantVerify
 from ring3bridge.witness.angle import DEFAULT_ARM, ArmModel
 from ring3bridge.witness.calibrate import Calibration
-from ring3bridge.witness.capture import request_frame
+from ring3bridge.witness.capture import REQUEST_TIMEOUT_S, request_frame
 from ring3bridge.witness.dial import Crop, Geometry, find_dial
 from ring3bridge.witness.pipeline import WitnessResult, calibration_point, check
 from ring3bridge.witness.sam import DEFAULT_PROMPT, SamClient
@@ -188,7 +188,7 @@ def frame_report(img: np.ndarray, geom: Geometry) -> FrameReport:
 class FolderCamera:
     """One fresh still per call through the shared folder (``capture.request_frame``)."""
 
-    def __init__(self, folder: Path, timeout_s: float = 5.0) -> None:
+    def __init__(self, folder: Path, timeout_s: float = REQUEST_TIMEOUT_S) -> None:
         self.folder = Path(folder)
         self.timeout_s = timeout_s
 

@@ -325,3 +325,30 @@ fixture still say `not found` (fails safe; not tuned further, time-box). Test-pr
 hub scene draws the screw hole (r 1.2 mm) every real horn has; the negative cases became no hole / two hubs /
 hub 9 mm away / no hub; the recorded side-mount frame's expected text follows the new reason; new test on the
 real frame (committed as `tests/witness/recorded/frame-upright-213006.jpg`).
+
+### Helper timeouts after the D-80 restart (user, 2026-11-03): v3 freshness proof
+Symptom: every `witness-frame` timed out (`no frame within 5.0 s`), the helper printed nothing per request,
+the folder was left empty. Two causes in the D-80 helper could each produce exactly that, silently:
+(a) the only proof was ">= 2 grabs that waited >= 12 ms". If a backend's `grab()` returns the newest
+frame without waiting (DSHOW, which the helper selects, is believed to behave so `[UNVERIFIED]` on this
+C922), that never passes; worse, instant grabs burnt the 300-grab limit in milliseconds (reproduced in a
+test); (b) the helper dropped requests whose file time looked > 10 s old, comparing a WSL-stamped file time
+with the Windows clock, and the bridge compared Windows capture times with its clock within 2 s: WSL2's
+clock can drift from Windows'. Fix (`tools/witness_capture_win.py`, `witness/capture.py`):
+- two same-clock proofs: queue backends -> >= 2 grabs that waited; latest-frame backends -> >= 250 ms after
+  the helper saw the request and the frame differs from one retrieved after seen (a frozen stream repeats it
+  exactly, so it is refused); grabs that do not wait are paced 5 ms, so the 300-grab limit spans >= 1.5 s;
+  give-up at 3 s; the comment is v3 (`...;live=..;changed=..`);
+- no file-time comparison in the helper (requests present at start are deleted instead); the bridge's
+  cross-clock checks remain only as a gross-age guard (120 s); the same-clock proof plus causality (the
+  helper can see a request only after the bridge wrote it) carries the freshness;
+- one log line per request: request id, camera open time, backend, buffer-size result, grabs, waiting grabs,
+  grab-time range, changed, `wrote frame (ms)` or `wrote nothing: <reason>`; `--backend dshow|msmf|any`;
+  `--selftest` (3 captures without a request, same lines, exit 0 only if 3/3);
+- bridge timeout `REQUEST_TIMEOUT_S` = 3.0 + 0.05 + 1.0 + 2.0 s margin = 6.05 s (test: >= helper limit +
+  poll + 1 s + 1 s).
+Tests: queued frame (no waiting grab, unchanged) and a too-early latest-frame proof -> STALE_FRAME; both
+proofs accepted; never-waiting camera with a live stream -> frame via the latest-frame proof; frozen stream
+-> nothing and a log line; the grab limit and give-up bound with a fake clock; old request file time still
+served; leftovers deleted at start; per-request log line; selftest 3/3 and 0/3.
+Not shown yet: the real C922 behaviour under DSHOW and MSMF; `--selftest` prints it.

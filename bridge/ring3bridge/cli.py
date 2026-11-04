@@ -240,7 +240,7 @@ def cmd_witness_frame(a: argparse.Namespace) -> int:
     folder = _witness_dir(a.witness_dir)
     assert folder is not None
     try:
-        img, jpeg = FolderCamera(folder, a.timeout)()
+        img, jpeg = (FolderCamera(folder, a.timeout) if a.timeout else FolderCamera(folder))()
     except CantVerify as e:
         print(f"witness-frame: {e} (is the Windows helper running on this folder?)")
         return 1
@@ -515,7 +515,9 @@ def main(argv: list[str] | None = None) -> int:
     u.set_defaults(fn=cmd_run)
     wf = sub.add_parser("witness-frame", help="setup check: one frame, markers, camera axis (free, no SAM)")
     wf.add_argument("--witness-dir", required=True, help="capture folder shared with the Windows helper")
-    wf.add_argument("--timeout", type=float, default=5.0)
+    wf.add_argument(
+        "--timeout", type=float, default=None, help="seconds (default: the helper's worst case + margin)"
+    )
     wf.set_defaults(fn=cmd_witness_frame)
     c = sub.add_parser(
         "calibrate", help="witness calibration: scripted servo moves through the kernel (paid SAM)"
