@@ -34,16 +34,20 @@ a research prototype, not a replacement operating system.**
 
 ## What it looks like
 
-These are real screenshots of the kernel's VGA status screen during a live Muse Spark run on the real work cell
-(run `20261103-214504`, D-81).
+The first picture is the graphics screen (`make run-cell-gfx`, 1024x768) during a filming run on the real work cell.
+The next two are the same screen on the simulated cell (no hardware). The last two are the text-mode screen from the
+first live run on the real cell (run `20261103-214504`, D-81).
 
 | | |
 |---|---|
-| ![The kernel asks for a human y](docs/evidence/T-08/real-ask.png) | **ASK:** the agent read the operator notes, so it is tainted; the kernel holds `cell_fan(60)` until a human answers `y` or `N`. |
-| ![E-stop latched, AUTO HALT](docs/evidence/T-08/real-estop.png) | **AUTO HALT:** the E-stop button was pressed with the fan running; the kernel latched it and the fan is at 0. |
-| ![Console E-stop reset](docs/evidence/T-08/real-idle.png) | **CONFIRMED:** only a human at the console can reset the latch, with the button released and fresh telemetry. |
+| ![Graphics screen, real cell: the human's y was given and the fan turns at 60 %](docs/evidence/T-08/film-ask.png) | **Real cell, graphics screen.** The agent read the operator notes (`obj_read(maint_notes)`), so the kernel asked a human about `cell_fan(60)` (`ASK`, tainted); the human answered `y` (`CONFIRMED`) and the fan turns at 60 %. The decision list at the bottom keeps the `ASK` and the `CONFIRMED` rows. |
+| ![E-stop latched, AUTO HALT, simulated cell, graphics screen](docs/evidence/T-18/sim-estop.png) | **Simulated cell.** `AUTO HALT`: the E-stop was pressed, the kernel latched it, the fan is at 0 and the rotor is at rest. |
+| ![Idle, simulated cell, graphics screen](docs/evidence/T-18/sim-idle.png) | **Simulated cell.** Idle after boot: fan stopped, servo at 90, nothing tainted. |
+| ![E-stop latched, AUTO HALT, real cell, text mode](docs/evidence/T-08/real-estop.png) | **Real cell, text mode.** `AUTO HALT`: the E-stop button was pressed with the fan running; the kernel latched it and the fan is at 0. |
+| ![Console E-stop reset, real cell, text mode](docs/evidence/T-08/real-idle.png) | **Real cell, text mode.** `CONFIRMED`: only a human at the console can reset the latch, with the button released and fresh telemetry. |
 
-Exact text of each screen: `docs/evidence/T-08/real-{ask,estop,idle}.txt`.
+Exact text of the text-mode screens: `docs/evidence/T-08/real-{estop,idle}.txt`. The graphics screen has no text
+dump (it draws pixels, so the text screen is blank); the simulated-cell pictures come from `docs/evidence/T-18/`.
 
 **The work cell** (`hardware/wiring.md`): an Arduino Uno on two breadboards, built only from the ELEGOO Super
 Starter Kit parts plus a breadboard power module, no cutting or soldering:

@@ -184,3 +184,15 @@ line 95 -> 103); `DECISIONS.md` gained rows D-95..D-106 after line 108; `config/
 cited file is byte-identical between the two commits (`git diff --name-only 26780eb 21757f6` against every path in
 the ledger), so the references verified at `26780eb` hold. New rows V0-V20 (script) and R83-R100 (README) cite lines read at
 `21757f6`. Not independently verifiable here: the T-19 helper self-test output, and the camera/zone-check run folders (git-ignored).
+
+## Step 8: step 6 (README screenshots), lead's file choice
+
+- README "What it looks like": main picture is `docs/evidence/T-08/film-ask.png` (real cell, `gfx=1`, filming run);
+  then `docs/evidence/T-18/sim-estop.png` and `sim-idle.png` captioned "Simulated cell"; below them the D-81
+  real-cell text-mode `real-estop.png` and `real-idle.png` captioned "Real cell, text mode". `real-ask.png` is no longer
+  shown (its text file stays and claims V8 still cites it).
+- Claims: R11 and R12 rewritten, R13 and R14 labelled "real cell, text mode", R102 and R103 added for the two simulated shots.
+- Caveats written into R11 and R12: `film-ask.png` has no run id; its text dump `film-ask.txt` is blank (the graphics
+  screen draws pixels), so it is not linked and not committed. The picture is taken after the human's y
+  (`CONFIRMED`, `TAINTED: NO`), so it shows ASK and CONFIRMED in the decision list, not the open prompt. The caption says so.
+- `docs/evidence/T-20/` untouched.
