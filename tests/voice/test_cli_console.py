@@ -25,8 +25,8 @@ class FakeStd:
 def no_com1(monkeypatch):
     seen = {}
 
-    def fake_serve(com1, in_fd, out_fd, voice=None, events=None):
-        seen["voice"] = voice
+    def fake_serve(com1, in_fd, out_fd, voice=None, events=None, tidy=False):
+        seen["voice"], seen["tidy"] = voice, tidy
         return 0
 
     monkeypatch.setattr(console, "_connect", lambda *a: FakeSock())
@@ -42,7 +42,7 @@ def test_without_a_budget_voice_is_off_and_no_key_is_read(no_com1, monkeypatch, 
 
     monkeypatch.setattr("ring3bridge.models.transport.HttpsTransport.__init__", no_key)
     assert cli.main(["console"]) == 0
-    assert no_com1["voice"] is None
+    assert no_com1["voice"] is None and no_com1["tidy"] is False  # byte for byte unless asked
     assert "Voice off" in capfd.readouterr().out
 
 
@@ -65,3 +65,8 @@ def test_a_bad_budget_is_refused(no_com1, tmp_path):
     for bad in ("0", "-1", "lots", "0.0000001"):
         with pytest.raises(ValueError):
             cli.main(["console", "--budget-usd", bad, "--voice-dir", str(tmp_path)])
+
+
+def test_tidy_echo_is_opt_in(no_com1):
+    assert cli.main(["console", "--tidy-echo"]) == 0
+    assert no_com1["tidy"] is True

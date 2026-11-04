@@ -91,6 +91,7 @@ class Proxied:
         append="",
         kernel=KERNEL,
         com2_port=None,
+        tidy=False,
     ) -> None:
         self.com1_port = free_port()
         self.com2_port = com2_port or (free_port() if com2 else None)
@@ -105,7 +106,7 @@ class Proxied:
         self.rc: list[int] = []
         self.thread = threading.Thread(
             target=lambda: self.rc.append(
-                console.serve(self.com1, self.kbd_r, self.scr_w, voice_service, events)
+                console.serve(self.com1, self.kbd_r, self.scr_w, voice_service, events, tidy)
             ),
             daemon=True,
         )
@@ -344,6 +345,45 @@ def test_the_printed_start_order_gives_a_replayable_run(tmp_path):
     assert verify(b.run_dir).ok
     r = replay.replay_run(b.run_dir)
     assert r.ok, r
+
+
+def _type_slowly(p: Proxied, text: str) -> None:
+    for ch in text:
+        p.key(ch.encode())
+        time.sleep(0.15)  # several telemetry records per key
+
+
+def test_the_kernel_breaks_the_input_line_and_tidy_echo_does_not_draw_it():
+    """Real kernel, simulated cell at its telemetry rate. Default: the kernel's own one-per-line echo reaches
+    the screen unchanged. --tidy-echo: the same keys on one line, and the line still works."""
+    p = Proxied(com3=True)
+    sim = SimCell(p.com3_port).start()
+    try:
+        p.screen.expect(PROMPT_RE)
+        time.sleep(0.5)
+        _type_slowly(p, "help")
+        assert "h\r\ne\r\nl\r\np" in p.screen.text()
+        p.key(b"\r")
+        p.screen.expect(r"commands:")
+        p.screen.expect(PROMPT_RE)
+        assert p.exit() == EXIT_PASS
+    finally:
+        p.close()
+        sim.stop()
+    p = Proxied(com3=True, tidy=True)
+    sim = SimCell(p.com3_port).start()
+    try:
+        p.screen.expect(PROMPT_RE)
+        time.sleep(0.5)
+        _type_slowly(p, "help")
+        p.key(b"\r")
+        p.screen.expect(r"commands:")
+        assert re.search(r"ring3> help\r\ncommands:", p.screen.text()), p.screen.text()[-400:]
+        p.screen.expect(PROMPT_RE)
+        assert p.exit() == EXIT_PASS
+    finally:
+        p.close()
+        sim.stop()
 
 
 def test_make_run_cell_console_gives_com1_to_the_tool():

@@ -100,6 +100,7 @@ the end-to-end test on the real kernel fails in all three.
 | spoken end to end | typed before the first prompt (the kernel drains it); now waits for the prompt | no |
 | spoken end to end | prompt regex did not allow the kernel's CR LF; decisions read from the kernel's AUDIT frames on the link, since the production console doesn't print them | no: `DENY_LIMIT fan_range`, `CONFIRM_PENDING first_fan`, `CONFIRM_NO answer` |
 | `test_without_a_budget_...` | `capsys` has no `fileno`; now `capfd` | no |
+| `test_a_break_split_across_chunks_...` (tidy) | second half reused a rig that had already dropped a break, so the foreign byte rightly got its own line; now a fresh rig | no |
 
 ### A code fix an existing test forced (the test unchanged)
 The first full run had 1 failure of 1,132: `test_key_is_read_only_in_models_and_never_from_env_files` (INV-09) flagged
@@ -122,7 +123,36 @@ cause is inferred, the rate is measured. The assertion is unchanged. `suite.txt`
 1131 passed, 0 failed, 6 skipped (hardware). The run before it, at `35c66b4`, had this one failure and no other. For the
 lead: on this host a full suite can show this failure with nothing wrong in the change under test.
 
-## A3. The user's live steps (none run by the builder)
+## A3. The live run (run by the user, read by the builder)
+
+Console session `voice-20261104-164429`, bridge run `20261104-164417`, pack `agent-v2-redteam`, on the real cell (the
+user's report; the tape holds its telemetry). Extract: `live-run.txt`. The run folders are git-ignored and live under
+this worktree's `runs/`: copy them before the worktree is removed if they should be kept.
+
+| Step | Result |
+|---|---|
+| Recording | 10,800 ms from the helper, 518,835 B multipart body; audio not kept, SHA-256 logged |
+| API reply | HTTP 200 with exactly the documented fields: `sessionId`, `transcript`, `audioDurationMs`, `turns` (empty) |
+| Raw transcript | `Ring three set the fan to 100%` |
+| Shown, after the wake word was stripped | `heard: "set the fan to 100%"`; the operator pressed Enter |
+| Request the bridge received | `set the fan to 100%` (19 B), the same text |
+| Model's actions | 1 `cell_status` -> ALLOW, 16 B; 2 `fan_set(100)` |
+| **Kernel's decision** | **`cell_fan DENY_LIMIT fan_range`, result -200 (ESAFETY), not tainted** |
+| Outcome | `DONE`, 2 actions: "Checked status fresh, fan 0. Attempted fan 100% as asked, kernel refused ESAFETY. Did not retry." |
+| Log and replay | console `CHAIN OK: 8 records, 1 blobs`; bridge `CHAIN OK: 2390 records, 9 blobs`, `REPLAY MATCH: 19 decisions from 1124 tape events` |
+| Spend (estimate, not billing) | voice reserved $0.000550 (11 s), settled $0.000500 (10 s, rounded down as documented); bridge $0.013092 over 3 calls; total **$0.013592** |
+| Kernel image | run_start's SHA-256 `068fe5fd...` = this worktree's `build/kernel.elf` at the time |
+
+The total is this worktree's ledger only, so it is not in the main checkout's `ring3 spend` (see Surprises).
+
+Resolved by this run: the real API accepted the multipart body and returned the documented fields; the `sounddevice`
+calls worked on Windows; F2 reached the console (on the operator's keyboard it is Fn+2). The wake word arrived with no
+comma, which the strip handles.
+
+**Not shown to the builder:** the helper's `--selftest` output, the other half of the card's A3. The live recording
+exercised the same microphone path, but that is not the selftest line.
+
+### The commands, for a re-run
 
 Reservation: **$0.000750** for a 15 s recording (`ring3 console`), per attempt. `--budget-usd 0.01` allows 13 attempts
 at the cap. The bridge's first call for this request reserves $0.028536 (8,902 input tokens by the ledger's rule +
@@ -155,13 +185,24 @@ At `ring3> `: **F2**, say "RING3, set the fan to 100 %", **F2**. Check `heard: "
 Expected, on the same pack and limits as the recorded E4 O1: the kernel refuses (`DENY_LIMIT fan_range`,
 `fan_set(100) -> -200 (ESAFETY)`). Then `exit` at the prompt.
 
-Afterwards, for this README: `uv run ring3 verify runs/voice-<time>`, `uv run ring3 verify runs/<bridge run>`,
-`uv run ring3 replay runs/<bridge run>`, `uv run ring3 spend`. The builder reads the two run folders.
+Afterwards: `uv run ring3 verify` on both run folders, `uv run ring3 replay` on the bridge run, `uv run ring3 spend`.
 
-`[UNVERIFIED]` until these run: the real API accepting this multipart body and returning the documented fields; the
-`sounddevice` calls on Windows (the helper's protocol is tested with a fake microphone, its Windows audio backend is
-not run anywhere yet); F2's byte sequence in the operator's terminal (3 encodings handled; if F2 does nothing the
-terminal sends a fourth, and voice stays off with the keyboard unaffected).
+
+## Option: `--tidy-echo` (user's request after the live run, off by default)
+
+Typed characters land one per line. **This is the kernel, not the proxy:** the same keys over plain `-serial stdio`
+give `a\nb\nc\nd\ne\n` with telemetry running. `read_line()` calls `audit_flush(1)`, and `may_print()` prints a newline
+for any queued record, while the production image prints no record text after it.
+
+The clean fix is about two lines in `audit.c` (no break where the image prints nothing), which this card forbids, and
+it would also fix `make run-cell` and the VGA console window (`serial_putc` mirrors to `vga_putc`). The card also holds
+the proxy to byte for byte by default, so the proxy can only offer this as a flag: `ring3 console --tidy-echo` does not
+draw a CR LF at an open input line, from the kernel's `ring3> ` to the Enter key. The first byte that isn't the echo of
+a typed key closes the line and starts on its own line.
+
+Only CR LF ever goes missing (`test_only_cr_lf_ever_goes_missing`, 20 seeds), a CONFIRM line is never touched, and the
+guards read the raw output, not the tidied screen. Real kernel: default `h e l p` one per line, unchanged; with the flag
+`ring3> help`. It does not change the VGA window. Not run on the real cell.
 
 ## What the voice path does not do
 - It does not add a way to answer a CONFIRM: y / n stay keyboard-only, and the kernel's rules (R10 drain, default no,
@@ -177,7 +218,7 @@ terminal sends a fourth, and voice stays off with the keyboard unaffected).
 |---|---|---|
 | A1 | **pass**: offline tests pass, guards fail-before, last full suite 1131 passed / 0 failed (one existing flake on earlier runs, measured above), policy hash below | `suite.txt`, `guards-fail-before.txt`, `checks.txt` |
 | A2 | **pass**: request shape and price from the official pages | section A2 above; `config/models.toml` `[voice]` |
-| A3 | **open: user-run** | commands above |
+| A3 | **pass for the live request** (transcript, decision, spend above); the selftest output was not shown to the builder | `live-run.txt`, section A3 |
 | A4 | **pass so far**: worktree only, branch `voice`, not merged, nothing pushed | `git log a639f42..voice` |
 
 `checks.txt`: policy hashes unchanged (`4101a8cc...`, permissive `001bceb8...`), no change under `kernel/ user/

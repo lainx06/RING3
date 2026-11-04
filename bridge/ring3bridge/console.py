@@ -92,7 +92,7 @@ def _split_keep(data: bytes) -> list[bytes]:
 class Core:
     PASS, STARTING, REC, WORKING, HEARD = "pass", "starting", "rec", "working", "heard"
 
-    def __init__(self, write_kernel, write_screen, voice) -> None:  # noqa: ANN001
+    def __init__(self, write_kernel, write_screen, voice, tidy: bool = False) -> None:  # noqa: ANN001
         self.write_kernel = write_kernel
         self.write_screen = write_screen
         self.voice = voice
@@ -103,11 +103,70 @@ class Core:
         self.pending: Cleaned | None = None
         self.rec_t0 = 0.0
         self.rec_shown = -1
+        self.tidy = tidy  # --tidy-echo: see _tidied
+        self.input_open = False
+        self.typed = bytearray()
+        self.echoes: collections.deque[int] = collections.deque()
+        self.recent = b"\n"  # the kernel's last bytes, as sent
+        self.held_cr = False
+        self.dropped_break = False
+
+    # ---- --tidy-echo ----
+    def _tidied(self, data: bytes) -> bytes:
+        """kernel/core/audit.c may_print() breaks the input line for every queued telemetry record, on the
+        production image too, where the record prints nothing: typed characters land one per line. With the
+        flag on, a CR LF at an open input line (from the kernel's ``ring3> `` to the Enter key) is not drawn.
+        The first byte that isn't the echo of a typed key closes the input line and starts on a line of its own,
+        so only CR LF ever goes missing. The guards read the raw output, never this."""
+        out = bytearray()
+        for b in data:
+            if self.input_open:
+                if b == 0x0D and not self.held_cr:
+                    self.held_cr = True
+                    continue
+                if self.held_cr:
+                    self.held_cr = False
+                    if b == 0x0A:
+                        self.dropped_break = True
+                        continue
+                    out.append(0x0D)
+                if self.echoes and b == self.echoes[0]:
+                    self.echoes.popleft()
+                    self.typed.append(b)
+                    out.append(b)
+                    continue
+                self.input_open = False
+                if self.dropped_break:
+                    out += b"\r\n"
+            out.append(b)
+            self.recent = (self.recent + bytes([b]))[-(len(PROMPT) + 1) :]
+            if self.recent == b"\n" + PROMPT:
+                self.input_open, self.dropped_break = True, False
+                self.typed.clear()
+                self.echoes.clear()
+        return bytes(out)
+
+    def _send_keys(self, data: bytes) -> None:
+        """Every byte for the kernel. With the flag on: which echoes to expect; Enter ends the line."""
+        if self.tidy and self.input_open:
+            for b in data:
+                if b in (0x0D, 0x0A):
+                    self.input_open = False
+                    if self.held_cr:
+                        self.held_cr = False
+                        self.write_screen(b"\r")
+                    break
+                if 0x20 <= b < 0x7F:
+                    self.echoes.append(b)
+        self.write_kernel(data)
 
     # ---- screen ----
     def _say(self, msg: str) -> None:
         """A tool line of its own; the kernel's current line is drawn again under it."""
-        tail = PROMPT if self.watch.at_prompt else bytes(self.watch.line)
+        if self.tidy and self.input_open:
+            tail = PROMPT + bytes(self.typed)
+        else:
+            tail = PROMPT if self.watch.at_prompt else bytes(self.watch.line)
         self.write_screen(b"\r\n[voice] " + msg.encode("ascii", "replace") + b"\r\n" + tail)
 
     def _show_rec(self, seconds: int) -> None:
@@ -116,7 +175,7 @@ class Core:
 
     # ---- from the kernel ----
     def from_kernel(self, data: bytes) -> None:
-        self.write_screen(data)
+        self.write_screen(self._tidied(data) if self.tidy else data)
         self.watch.feed(data)
         if self.state != self.PASS and self.watch.confirm_open:
             self._drop(CONFIRM_DISCARD, "a CONFIRM prompt is open: voice stopped, answer on the keyboard")
@@ -173,7 +232,7 @@ class Core:
     def _plain(self, data: bytes, lone_esc: bool = False) -> None:
         for i, b in enumerate(data):
             if self.state == self.PASS:
-                self.write_kernel(data[i:])
+                self._send_keys(data[i:])
                 return
             if b == ESC:
                 if lone_esc:
@@ -206,7 +265,7 @@ class Core:
             return False
         if is_bare_answer(text) or is_console_command(text):
             return False
-        self.write_kernel(text.encode("ascii") + b"\r")
+        self._send_keys(text.encode("ascii") + b"\r")
         return True
 
     def _f2(self) -> None:
@@ -278,10 +337,17 @@ def _write_all(fd: int, data: bytes) -> None:
         view = view[os.write(fd, view) :]
 
 
-def serve(com1: socket.socket, in_fd: int, out_fd: int, voice=None, events=None) -> int:  # noqa: ANN001
+def serve(  # noqa: ANN201
+    com1: socket.socket,
+    in_fd: int,
+    out_fd: int,
+    voice=None,
+    events=None,
+    tidy: bool = False,  # noqa: ANN001
+) -> int:
     """Runs until COM1 closes (QEMU exited). ``voice``/``events``: a VoiceService and its event queue."""
     events = events if events is not None else collections.deque()
-    core = Core(com1.sendall, lambda b: _write_all(out_fd, b), voice)
+    core = Core(com1.sendall, lambda b: _write_all(out_fd, b), voice, tidy)
     before = _console_termios(in_fd)
     sel = selectors.DefaultSelector()
     try:
@@ -332,6 +398,11 @@ def add_parser(sub: argparse._SubParsersAction) -> None:
         "--budget-usd", help="turns voice on: the cap for this session; absent: no key, no network"
     )
     p.add_argument("--voice-dir", help="the folder tools/voice_capture_win.py serves (voice only)")
+    p.add_argument(
+        "--tidy-echo",
+        action="store_true",
+        help="keep typed characters on one line (drops the kernel's empty breaks)",
+    )
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=DEFAULT_COM1_PORT, help="QEMU's COM1 (make run-cell-console)")
     p.add_argument("--connect-timeout", type=float, default=60.0)
@@ -406,7 +477,7 @@ def _cmd(a: argparse.Namespace) -> int:
     )
     rc = 0
     try:
-        rc = serve(com1, sys.stdin.fileno(), sys.stdout.fileno(), voice, events)
+        rc = serve(com1, sys.stdin.fileno(), sys.stdout.fileno(), voice, events, a.tidy_echo)
     except KeyboardInterrupt:
         print("\r\nconsole: left; QEMU keeps running (Ctrl-C in its terminal)", flush=True)
     finally:
