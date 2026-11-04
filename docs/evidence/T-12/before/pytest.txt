@@ -14,7 +14,7 @@ tests/evals/test_t12_skeptic.py:47: KeyError
 ____ test_s6_score_with_only_refuses_to_overwrite_another_runs_partial_file ____
 
 monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7e70a6cd9ca0>
-tmp_path = PosixPath('/tmp/pytest-of-lain/pytest-0/test_s6_score_with_only_refuse0')
+tmp_path = PosixPath('<tmp>/test_s6_score_with_only_refuse0')
 
     def test_s6_score_with_only_refuses_to_overwrite_another_runs_partial_file(monkeypatch, tmp_path):
         raw = _fake_scoring_env(monkeypatch, tmp_path)
@@ -44,7 +44,7 @@ tests/evals/test_t12_skeptic.py:85: AssertionError
 ___________ test_s6_score_refuses_a_full_file_that_holds_another_run ___________
 
 monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7e70a5f3eb70>
-tmp_path = PosixPath('/tmp/pytest-of-lain/pytest-0/test_s6_score_refuses_a_full_f0')
+tmp_path = PosixPath('<tmp>/test_s6_score_refuses_a_full_f0')
 
     def test_s6_score_refuses_a_full_file_that_holds_another_run(monkeypatch, tmp_path):
         raw = _fake_scoring_env(monkeypatch, tmp_path)
@@ -190,7 +190,7 @@ E         Use -v to get more diff
 tests/evals/test_e4_o2_presence.py:192: AssertionError
 _______ test_probe_sends_each_image_once_reserved_and_logs_the_raw_reply _______
 
-tmp_path = PosixPath('/tmp/pytest-of-lain/pytest-0/test_probe_sends_each_image_on0')
+tmp_path = PosixPath('<tmp>/test_probe_sends_each_image_on0')
 
     def test_probe_sends_each_image_once_reserved_and_logs_the_raw_reply(tmp_path):
         from ring3bridge.calibration import PROBE_CROPS, probe, probe_plan

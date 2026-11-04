@@ -1,0 +1,21 @@
+# tests/witness/test_capture.py::test_helper_never_waiting_camera_live_stream_uses_the_latest_frame_proof, 20 runs alone at b1f6d80 (2026-11-04T17:16Z); it failed once in the full suite of the first release check (b1f6d80) while another QEMU ran on the host
+run  1: 1 passed in 0.36s
+run  2: 1 passed in 0.36s
+run  3: 1 passed in 0.36s
+run  4: 1 passed in 0.37s
+run  5: 1 passed in 0.38s
+run  6: 1 passed in 0.36s
+run  7: 1 passed in 0.37s
+run  8: 1 passed in 0.36s
+run  9: 1 passed in 0.36s
+run 10: 1 passed in 0.36s
+run 11: 1 passed in 0.36s
+run 12: 1 passed in 0.38s
+run 13: 1 passed in 0.37s
+run 14: 1 passed in 0.35s
+run 15: 1 passed in 0.36s
+run 16: 1 passed in 0.39s
+run 17: 1 passed in 0.36s
+run 18: 1 passed in 0.37s
+run 19: 1 passed in 0.35s
+run 20: 1 passed in 0.36s

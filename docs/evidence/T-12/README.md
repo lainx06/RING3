@@ -70,6 +70,18 @@ None added.
 ## Surprising
 - The secret scanner flags long pytest test ids in `before/pytest.txt` and `after/pytest.txt` as key-shaped
   tokens (as it did for T-11's transcripts); the release check lists and classifies every one (0 needles).
+- `before/pytest.txt` is edited in one way: pytest's `tmp_path` in three failure dumps carried the local
+  user name (`/tmp/pytest-of-<user>/pytest-0`), which `tools/check-paths.sh` rejects; it reads `<tmp>` now.
+  Nothing else in the transcript changed. The first release check (at `b1f6d80`, before this edit) caught
+  it; that run also had three defects of my own script (it scanned the scanner's directory, left its log
+  files in the tree, and printed the scratch worktree's path), so it was fixed and re-run at the final commit.
+- **One flaky test in the first release check's full suite (not this card's code):**
+  `tests/witness/test_capture.py::test_helper_never_waiting_camera_live_stream_uses_the_latest_frame_proof`
+  failed once (886 passed, 1 failed) while another QEMU ran on the host; it is a real-clock timing test
+  (threaded fake camera, a 250 ms freshness wait). Alone it passes 20 of 20 (`capture-test-20-runs.txt`),
+  5 of 5 before that, and its file passes 29 of 29 twice. My script had deleted that run's pytest log, so
+  the failure text is not kept; the re-run's log is. Nothing in `bridge/ring3bridge/witness/` or that test
+  changed in T-12. Not fixed (no test change on release day without the lead; D-89 precedent).
 - `uv run pytest tests/evals tests/witness tests/bridge` passed 811 / 0 failed / 2 skipped at the fixed tree
   before the release check (23 s, no QEMU).
 
