@@ -11,11 +11,11 @@
 
 #define SCR_ROWS 25
 #define SCR_COLS 80
-#define SCR_CON_ROWS 7          /* console window: screen rows 7-13 */
+#define SCR_CON_ROWS 5          /* console window: screen rows 7-11 (T-14: the cell panel took 2 rows) */
 #define SCR_CON_COLS 76         /* columns 3-78 */
 #define SCR_DECISIONS 4         /* the ticker: rows 21-24 */
 #define SCR_NO_CALL 0xFFFFFFFFu /* scr_decision.nr when the decision is not about a call */
-#define SCR_DIST_SPAN_MM 400u   /* distance bar: 0-400 mm, longer = full bar (T-08 correction 5) */
+#define SCR_DIST_SPAN_MM 400u   /* sensor beam: 0-400 mm, longer = full beam (T-08 correction 5) */
 /* The banner colours reach rows 3, 4 and 5 at ~0, 70 and 140 ms after the decision (motion table). */
 #define SCR_WIPE_ROW4_MS 70u
 #define SCR_WIPE_ROW5_MS 140u
@@ -64,6 +64,13 @@ struct screen_model {
 
 /* Fills cells[row][col] (0-based) for the snapshot `m`. */
 void screen_render(const struct screen_model *m, uint16_t cells[SCR_ROWS][SCR_COLS]);
+
+/* T-14 cell panel: the fan rotor's frame (0..SCR_FAN_FRAMES-1) for the snapshot, from the reported duty and the
+ * tick count only; 0 (the rest frame) while frozen (no telemetry, duty 0, E-stop latched, link STALE or LOST).
+ * `screen_fan_ticks` is the fixed table: ticks per frame for a duty, 0 = still. */
+#define SCR_FAN_FRAMES 4
+uint32_t screen_fan_ticks(uint8_t duty);
+uint32_t screen_fan_frame(const struct screen_model *m);
 
 /* VGA attributes (foreground | background << 4); blinking is off, so backgrounds 8-15 are bright colours. */
 #define SCR_ATTR(fg, bg) ((uint8_t)((fg) | ((bg) << 4)))

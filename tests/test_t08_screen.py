@@ -68,19 +68,19 @@ GOLDEN = {
 ║                                    ALLOW                                     ║
 ║ cell_fan(0)                                                                  ║
 ╠═ CONSOLE ════════════════════════════════════════════════════════════════════╣
-║                                                                              ║
-║ agentsh: action 2 servo_set(90) -> 0                                         ║
 ║ agentsh: action 3 fan_set(0) -> 0                                            ║
 ║ OUTCOME DONE: gauge at 90, fan off                                           ║
 ║ EXECUTED 3 operation(s):                                                     ║
 ║ END pid=6 EXIT ticks=388 uptime=13300                                        ║
 ║ ring3>                                                                       ║
-╠═ LIVE CELL ══════════════════════════════════════════════════════════════════╣
-║ FAN 000%         [                    ]                                      ║
-║ SERVO 090°       [---|------^------|---]   0° |30-150 limits| 180°           ║
-║ DIST 320 mm      [████████████████    ]                                      ║
-║ E-STOP released                         LINK ok                              ║
-║ PRESENCE NO                             TELEMETRY AGE 10 ms                  ║
+╠═ LIVE CELL ══════╤═══════════════════════╤═══════════════════════════════════╣
+║       ▀███       │       ▄▄█▀█▀█▄▄       │ DIST 320 mm                 CLEAR ║
+║        ▀█▀       │    ▄█▀▀   ▀   ▀▀█▄    │ █▓▓▓▓▓▓▓▓▓▒▒▒▒▒▒▒▒░░░░░░░░█······ ║
+║     ▄▄▄▄█▄▄▄▄    │   █▀      █      ▀█   │          ┴100 mm           400 mm ║
+║     ▀██▀ ▀██▀    │  █▀█      █      █▀█  │                                   ║
+║      ▀▀    ▀     │  █        █        █  │ ▄███▄ E-STOP RELEASED             ║
+║     FAN 000%     │ █▀        ▀        ▀█ │ ▀███▀ LINK ok                     ║
+║      STOPPED     │  SERVO 090° (30-150)  │       TELEMETRY AGE 10 ms         ║
 ╠═ LAST 4 KERNEL DECISIONS / OLDEST TO NEWEST ═════════════════════════════════╣
 ║ 00:00:00  REQ -  BOARD BOOT  fresh boot                                      ║
 ║ 00:02:10  REQ 6  ALLOW       cell_status                                     ║
@@ -95,19 +95,19 @@ GOLDEN = {
 ║                                     ASK                                      ║
 ║ cell_fan(60): tainted: ask; waiting for y/N                                  ║
 ╠═ CONSOLE ════════════════════════════════════════════════════════════════════╣
-║                                                                              ║
-║                                                                              ║
 ║ agentsh: request "read the operator notes, then set the fan to 60%"          ║
 ║ agentsh: action 1 read_object(1) -> 216                                      ║
 ║ agentsh: action 2 fan_set(100) -> -200 (ESAFETY)                             ║
 ║ agentsh: action 3 cell_status(0) -> 16                                       ║
 ║ CONFIRM: agentsh wants cell_fan(60) [tainted]. Allow? [y/N]                  ║
-╠═ LIVE CELL ══════════════════════════════════════════════════════════════════╣
-║ FAN 000%         [                    ]                                      ║
-║ SERVO 090°       [---|------^------|---]   0° |30-150 limits| 180°           ║
-║ DIST 220 mm      [███████████         ]                                      ║
-║ E-STOP released                         LINK ok                              ║
-║ PRESENCE NO                             TELEMETRY AGE 40 ms                  ║
+╠═ LIVE CELL ══════╤═══════════════════════╤═══════════════════════════════════╣
+║       ▀███       │       ▄▄█▀█▀█▄▄       │ DIST 220 mm                 CLEAR ║
+║        ▀█▀       │    ▄█▀▀   ▀   ▀▀█▄    │ █▓▓▓▓▓▓▒▒▒▒▒▒░░░░░█·············· ║
+║     ▄▄▄▄█▄▄▄▄    │   █▀      █      ▀█   │          ┴100 mm           400 mm ║
+║     ▀██▀ ▀██▀    │  █▀█      █      █▀█  │                                   ║
+║      ▀▀    ▀     │  █        █        █  │ ▄███▄ E-STOP RELEASED             ║
+║     FAN 000%     │ █▀        ▀        ▀█ │ ▀███▀ LINK ok                     ║
+║      STOPPED     │  SERVO 090° (30-150)  │       TELEMETRY AGE 40 ms         ║
 ╠═ LAST 4 KERNEL DECISIONS / OLDEST TO NEWEST ═════════════════════════════════╣
 ║ 00:03:05  REQ 7  ALLOW       obj_read(maint_notes)                           ║
 ║ 00:03:06  REQ 7  DENIED      cell_fan(100): fan max 80%                      ║
@@ -123,18 +123,18 @@ GOLDEN = {
 ║ E-STOP latched                                                               ║
 ╠═ CONSOLE ════════════════════════════════════════════════════════════════════╣
 ║                                                                              ║
-║                                                                              ║
-║                                                                              ║
 ║ agentsh: action 3 cell_status(0) -> 16                                       ║
 ║ CONFIRM: agentsh wants cell_fan(60) [tainted]. Allow? [y/N] y                ║
 ║ agentsh: action 4 fan_set(60) -> 0                                           ║
 ║                                                                              ║
-╠═ LIVE CELL ══════════════════════════════════════════════════════════════════╣
-║ FAN 000%         [                    ]                                      ║
-║ SERVO 090°       [---|------^------|---]   0° |30-150 limits| 180°           ║
-║ DIST 120 mm      [██████              ]                                      ║
-║ E-STOP PRESSED, LATCHED                 LINK ok                              ║
-║ PRESENCE NO                             TELEMETRY AGE 30 ms                  ║
+╠═ LIVE CELL ══════╤═══════════════════════╤═══════════════════════════════════╣
+║       ▀███       │       ▄▄█▀█▀█▄▄       │ DIST 120 mm                 CLEAR ║
+║        ▀█▀       │    ▄█▀▀   ▀   ▀▀█▄    │ █▓▓▓▒▒▒░░░█······················ ║
+║     ▄▄▄▄█▄▄▄▄    │   █▀      █      ▀█   │          ┴100 mm           400 mm ║
+║     ▀██▀ ▀██▀    │  █▀█      █      █▀█  │                                   ║
+║      ▀▀    ▀     │  █        █        █  │ ▄███▄ E-STOP PRESSED, LATCHED     ║
+║     FAN 000%     │ █▀        ▀        ▀█ │ ▀███▀ LINK ok                     ║
+║  HALTED (E-STOP) │  SERVO 090° (30-150)  │       TELEMETRY AGE 30 ms         ║
 ╠═ LAST 4 KERNEL DECISIONS / OLDEST TO NEWEST ═════════════════════════════════╣
 ║ 00:03:07  REQ 7  ALLOW       cell_status                                     ║
 ║ 00:03:09  REQ 7  ASK         cell_fan(60): tainted: ask                      ║
@@ -163,8 +163,8 @@ def test_render_colours_idle():
     # ALLOW: light cyan on black across the banner rows
     assert s.attrs(3, 3, 57) == {INFO} and s.attrs(4, 3, 78) == {INFO} and s.attrs(5, 3, 78) == {INFO}
     assert s.attrs(3, 60, 70) == {INFO}  # TAINTED: NO
-    assert s.attrs(13, 3, 8) == {INFO} and s.attr(2, 3) == INFO  # prompt, uptime
-    assert s.attrs(18, 3, 17) == {TEXT} and s.attrs(18, 43, 49) == {INFO}  # released, LINK ok
+    assert s.attrs(11, 3, 8) == {INFO} and s.attr(2, 3) == INFO  # prompt, uptime (T-14: console rows 7-11)
+    assert s.attrs(17, 52, 66) == {TEXT} and s.attrs(18, 52, 58) == {INFO}  # RELEASED, LINK ok (T-14 panel)
     assert s.attrs(24, 20, 24) == {INFO}  # ticker ALLOW
 
 
@@ -173,7 +173,7 @@ def test_render_colours_ask():
     for r, c1 in ((3, 57), (4, 78), (5, 78)):
         assert s.attrs(r, 3, c1) == {ASK}, r  # ASK: black on yellow, the band across the field
     assert s.attrs(3, 60, 71) == {ASK}  # TAINTED: YES
-    assert s.attrs(13, 3, 78) == {ASK}  # the CONFIRM line
+    assert s.attrs(11, 3, 78) == {ASK}  # the CONFIRM line (T-14: console rows 7-11)
     assert s.attrs(22, 20, 25) == {ALARM} and s.attrs(24, 20, 22) == {ASK}  # DENIED, ASK in the ticker
     assert s.attr(2, 17) == TEXT  # EXEC RUNNING
 
@@ -182,7 +182,7 @@ def test_render_colours_estop():
     s = render("estop")
     for r, c1 in ((3, 57), (4, 78), (5, 78)):
         assert s.attrs(r, 3, c1) == {ALARM}, r  # AUTO HALT: white on dark red
-    assert s.attrs(18, 3, 25) == {ALARM}  # E-STOP PRESSED, LATCHED
+    assert s.attrs(17, 52, 74) == {ALARM}  # E-STOP PRESSED, LATCHED (T-14 panel)
     assert s.attrs(23, 20, 28) == {INFO}  # CONFIRMED
     assert s.attrs(2, 17, 34) == {TEXT}  # correction 3: RUNNING, not a KILLED alarm
     assert "KILLED" not in "\n".join(s.text())
@@ -198,9 +198,11 @@ def test_render_banner_wipe():
 
 
 def test_render_no_cell_shows_no_values():
-    """Without telemetry nothing is drawn as a reading: dashes, empty bars, no needle, no decisions."""
+    """Without telemetry nothing is drawn as a reading: dashes, no beam, no decisions (T-14 panel rows; the
+    gauge without a needle is checked by pixel colour in test_t14_panel)."""
     t = render("nocell").text()
-    assert "FAN ---" in t[14] and "^" not in t[15] and "\u2588" not in t[16]
+    assert "FAN ---" in t[17] and "SERVO ---" in t[18] and "DIST ---" in t[12]
+    assert not set("\u2591\u2592\u2593") & set(t[13])  # no beam shades
     assert "LINK no cell (COM3 absent)" in t[17] and "LAST KERNEL DECISION: -" in t[2]
     assert all(r.strip("║ ") == "" for r in t[20:24])
 
@@ -327,12 +329,18 @@ def test_t08_vga_buffer(tmp_path):
         assert rows[2].startswith("║ LAST KERNEL DECISION: DENIED ") and "TAINTED: NO" in rows[2]
         assert rows[3].strip("║ ") == "DENIED" and rows[4].startswith("║ cell_fan(90): fan max 80%")
         assert v.attrs(4, 3, 78) == {ALARM}
-        console = "\n".join(rows[6:13])
-        assert "cellcmd: servo 120 -> 0" in console and "cellcmd: fan 90 -> -200" in console, console
+        console = "\n".join(rows[6:11])  # T-14: console rows 7-11
+        # T-14: the 5-row window has scrolled past the servo/fan result lines (both are in the ticker below);
+        # it must show the newest COM1 lines, in order, with the test-image TAPE/AUDIT records left out
+        com1 = [ln.rstrip() for ln in c.s.output.replace("\r", "").split("\n")]
+        com1 = [ln for ln in com1 if ln and not ln.startswith(("TAPE ", "AUDIT "))]
+        shown = [r[2:78].rstrip() for r in rows[6:11] if r[2:78].strip()]
+        assert shown == com1[-len(shown):] and "cellcmd: done" in shown, (shown, com1[-8:])
+        assert "cellcmd: servo 120 -> 0" in com1 and "cellcmd: fan 90 -> -200" in com1
         # the prompt; on test images COM1 starts a new line after it when the tape records print
-        assert any(r.startswith("║ ring3>") for r in rows[11:13]), rows[11:13]
+        assert any(r.startswith("║ ring3>") for r in rows[9:11]), rows[9:11]
         assert "TAPE " not in console and "AUDIT " not in console  # test-image records stay off the window
-        assert "SERVO 120°" in rows[15] and "LINK ok" in rows[17] and "E-STOP released" in rows[17]
+        assert "SERVO 120°" in rows[18] and "LINK ok" in rows[17] and "E-STOP RELEASED" in rows[16]  # T-14 panel
         ticker = rows[20:24]
         assert re.match(r"^║ \d\d:\d\d:\d\d  REQ \d+ +ALLOW       cell_servo\(120\) +║$", ticker[2]), ticker
         assert re.match(r"^║ \d\d:\d\d:\d\d  REQ \d+ +DENIED      cell_fan\(90\): fan max 80% +║$", ticker[3])
@@ -376,7 +384,7 @@ def test_t08_screenshots_sim(tmp_path):
         screendump(mon, folder / "sim-estop.png")
         assert "EXEC RUNNING REQ" in es.row(2) and "KILLED" not in es.row(2)
         assert es.row(4).strip("║ ") == "AUTO HALT" and es.row(5).startswith("║ E-STOP latched")
-        assert "E-STOP PRESSED, LATCHED" in es.row(18) and "FAN 000%" in es.row(15)
+        assert "E-STOP PRESSED, LATCHED" in es.row(17) and "FAN 000%" in es.row(18)  # T-14 panel
         assert "CONFIRMED   cell_fan(60)" in es.row(23) and "AUTO HALT   E-STOP latched" in es.row(24)
 
         c.sim.estop = False
