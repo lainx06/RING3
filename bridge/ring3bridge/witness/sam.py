@@ -278,6 +278,10 @@ class SamClient:
         self._transport = transport
         self._spend = spend
         self._stopped: str | None = None
+        self.last_reply: bytes = (
+            b""  # the last reply body as the transport returned it (scrubbed), for the log
+        )
+        self.last_uusd: int = 0  # the last settled image (also when the reply did not parse)
 
     @property
     def stopped(self) -> str | None:
@@ -286,6 +290,7 @@ class SamClient:
     def segment(self, jpeg: bytes, img_w: int, img_h: int, prompt: str = DEFAULT_PROMPT) -> SamResult:
         if self._stopped is not None:
             raise SamStop(f"stopped earlier: {self._stopped}")
+        self.last_reply, self.last_uusd = b"", 0
         body = build_request(self._cfg.model_id, prompt, jpeg)
         token = self._spend.reserve_image()  # BudgetRefused propagates: nothing is sent
         failure: str | None = None
@@ -295,6 +300,9 @@ class SamClient:
         except TransportError as e:
             failure = f"transport {e.kind}"
         uusd = self._spend.settle_image(token)
+        self.last_uusd = uusd
+        if resp is not None:
+            self.last_reply = resp.body[:MAX_LINE]
         if failure is None and resp is not None and resp.status != 200:
             failure = f"HTTP {resp.status}"
         if failure is not None:

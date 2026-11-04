@@ -22,7 +22,7 @@ from ring3bridge.witness import CANT_VERIFY, NO_MOVE, CantVerify
 from ring3bridge.witness.angle import DEFAULT_ARM, ArmModel
 from ring3bridge.witness.calibrate import Calibration
 from ring3bridge.witness.capture import request_frame
-from ring3bridge.witness.dial import Geometry, find_dial
+from ring3bridge.witness.dial import Crop, Geometry, find_dial
 from ring3bridge.witness.pipeline import WitnessResult, calibration_point, check
 from ring3bridge.witness.sam import DEFAULT_PROMPT, SamClient
 from ring3bridge.witness.verdict import commanded_zone
@@ -59,6 +59,7 @@ class FrameReport:
     ok: bool
     lines: list[str]
     crop_img: np.ndarray | None = None
+    pivot_img: np.ndarray | None = None  # 4x zoom of +-30 mm around the pivot (is the horn visible?)
 
 
 def frame_report(img: np.ndarray, geom: Geometry) -> FrameReport:
@@ -74,6 +75,10 @@ def frame_report(img: np.ndarray, geom: Geometry) -> FrameReport:
     x, y = c[0] / c[2], c[1] / c[2]
     off = float(np.hypot(x, y))
     axis_ok = off <= AXIS_OK_MM
+    mm_to_img = np.linalg.inv(dial.img_to_mm)
+    p0, p1 = (mm_to_img @ np.array([0.0, 0.0, 1.0])), (mm_to_img @ np.array([10.0, 0.0, 1.0]))
+    px_mm = float(np.hypot(p1[0] / p1[2] - p0[0] / p0[2], p1[1] / p1[2] - p0[1] / p0[2])) / 10
+    pivot_img = find_dial(img, Geometry(geom.marker_corners, Crop(-30.0, 30.0, -12.0, 30.0, 20))).crop_img
     lines += [
         f"markers 0-3 found, worst marker corner fit {dial.reproj_mm_max:.2f} mm",
         f"image centre is over gauge point x={x:+.1f} y={y:+.1f} mm, {off:.1f} mm from the pivot "
@@ -82,8 +87,10 @@ def frame_report(img: np.ndarray, geom: Geometry) -> FrameReport:
             if axis_ok
             else f"(move the camera so the pivot is under the image centre, <= {AXIS_OK_MM:g} mm)"
         ),
+        f"camera resolves {px_mm:.2f} px/mm at the gauge: the 15 mm horn spans ~{15 * px_mm:.0f} px "
+        "(look at pivot.jpg: the horn must stand out from the grey dial)",
     ]
-    return FrameReport(axis_ok, lines, dial.crop_img)
+    return FrameReport(axis_ok, lines, dial.crop_img, pivot_img)
 
 
 class FolderCamera:

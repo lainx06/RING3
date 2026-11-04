@@ -371,3 +371,97 @@ def test_calibrate_checks_dry_run(capsys, monkeypatch):
     assert "reservation: 12 images x $0.002500 = $0.030000 over 4 request(s)" in out
     assert cli.main(["calibrate", "--budget-usd", "0.05", "--checks", "--witness-dir", "."]) == 2
     assert "--calibration <run> is required" in capsys.readouterr().err
+
+
+# ---- after the first real calibration (cal-20261103-194227: NOT_FOUND at all 5 points) ----
+
+
+def test_raw_sam_reply_is_kept_even_when_it_does_not_parse(tmp_path):
+    """The run log keeps SAM's reply body (as the transport returned it) for every check, also for
+    SAM_FORMAT, so a real reply can be compared with the documented grammar without a second paid call."""
+    cal, _ = synth.calibrate(GEOM, tmp_path)
+    frame, _, _ = synth.render(Scene([90.0 + OFFSET_DEG]))
+    bad = synth.envelope("the arm points up")
+    client, _, _ = make_client(tmp_path, ok(bad))
+    r = Witness(lambda: (frame, b"\xff\xd8"), client, cal, GEOM).check(90).result
+    assert (r.verdict, r.reason) == (CANT_VERIFY, "SAM_FORMAT")
+    assert r.sam_reply == bad and r.spend_uusd == 2500
+    empty = synth.envelope("")
+    (tmp_path / "e").mkdir()
+    client, _, _ = make_client(tmp_path / "e", ok(empty))
+    r = Witness(lambda: (frame, b"\xff\xd8"), client, cal, GEOM).check(90).result
+    assert (r.reason, r.detail, r.sam_reply) == ("NOT_FOUND", "SAM found no arm", empty)
+
+
+def _probe_frame(tmp_path, deg=90.0):
+    frame, _, labels = synth.render(Scene([deg + OFFSET_DEG], quad="flat"))
+    p = tmp_path / "frame.jpg"
+    p.write_bytes(cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 95])[1].tobytes())
+    return p, frame, labels
+
+
+def test_probe_plan_caps_at_five_images(tmp_path):
+    from ring3bridge.calibration import PROBE_MAX, probe_plan
+
+    f = tmp_path / "f.jpg"
+    assert len(probe_plan([f], ["a", "b", "c"], ["full"])) == 3
+    assert len(probe_plan([f], ["a", "b"], ["full", "tight"])) == 4
+    with pytest.raises(ValueError, match="at most 5"):
+        probe_plan([f], ["a", "b", "c"], ["full", "tight"])
+    with pytest.raises(ValueError):
+        probe_plan([f], ["a"], ["wide"])
+    assert PROBE_MAX == 5
+
+
+def test_probe_sends_each_image_once_reserved_and_logs_the_raw_reply(tmp_path):
+    from ring3bridge.calibration import PROBE_CROPS, probe, probe_plan
+    from ring3bridge.witness.dial import Crop, Geometry
+
+    path, frame, labels = _probe_frame(tmp_path)
+    tight = Geometry(GEOM.marker_corners, Crop(*PROBE_CROPS["tight"]))
+    replies = [
+        ok(synth.envelope("")),  # full, "white plastic arm": concept not present
+        ok(synth.envelope(synth.line_for(frame, labels, GEOM))),  # full, "servo horn"
+        ok(
+            synth.envelope(synth.sam_line(synth.label_boxes(frame, labels, tight), tight))
+        ),  # tight, servo horn
+    ]
+    client, t, ledger = make_client(tmp_path, *replies)  # asserts one reserved image at every post
+    log = eventlog.EventLog(tmp_path / "probe")
+    log.append("run_start", run_id="probe")
+    items = probe_plan([path], ["white plastic arm", "servo horn"], ["full", "tight"])[:3]
+    rows = probe(items, GEOM, client, log, out=lambda _s: None)
+    assert [(r["crop"], r["phrase"], r["reason"]) for r in rows] == [
+        ("full", "white plastic arm", "NOT_FOUND"),
+        ("full", "servo horn", "MEASURED"),
+        ("tight", "white plastic arm", "MEASURED"),
+    ]
+    assert abs(rows[1]["dial_mdeg"] - rows[2]["dial_mdeg"]) < 3000  # both crops measure the same arm
+    assert len(t.posts) == 3 and ledger.settled_uusd() == 3 * 2500
+    assert [json.loads(b)["input"][0]["content"][0]["text"] for _, b, _ in t.posts] == [
+        "white plastic arm", "servo horn", "white plastic arm"]  # fmt: skip
+    recs = [json.loads(x) for x in (tmp_path / "probe" / "events.jsonl").read_text().splitlines()]
+    probes = [r for r in recs if r["type"] == "sam_probe"]
+    assert len(probes) == 3 and all("sam_reply_blob" in r and "crop_blob" in r for r in probes)
+    assert eventlog.verify(tmp_path / "probe").ok
+
+
+def test_frame_report_gives_resolution_and_a_pivot_zoom():
+    from ring3bridge.witness.service import frame_report
+
+    frame, _, _ = synth.render(Scene([90.0], quad="flat"))
+    rep = frame_report(frame, GEOM)
+    assert any(line.startswith("camera resolves ") and "15 mm horn spans" in line for line in rep.lines)
+    assert rep.pivot_img is not None and rep.pivot_img.shape[:2] == (840, 1200)  # 60 x 42 mm at 20 px/mm
+
+
+def test_calibrate_probe_dry_run_and_cap(capsys, monkeypatch, tmp_path):
+    monkeypatch.delenv("MODEL_API_KEY", raising=False)
+    path, _, _ = _probe_frame(tmp_path)
+    args = ["calibrate", "--budget-usd", "0.02", "--dry-run", "--probe", str(path),
+            "--phrases", "white plastic arm;servo horn;small white lever", "--crops", "full"]  # fmt: skip
+    assert cli.main(args) == 0
+    out = capsys.readouterr().out
+    assert "3 image(s) (max 5) x $0.002500 = $0.007500" in out and "phrase='servo horn'" in out
+    args[-1] = "full,tight"
+    assert cli.main(args) == 2 and "6 images planned, at most 5" in capsys.readouterr().err

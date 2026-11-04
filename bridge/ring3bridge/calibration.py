@@ -253,3 +253,64 @@ def load_calibration(run_dir: Path, geom_sha: str) -> tuple[Calibration, dict, s
     if cal.ok and stored != (cal.ok, cal.slope_ppm, cal.offset_mdeg, cal.residual_mdeg):
         raise CalibrationError("stored fit differs from the re-fit of its points")
     return cal, doc, sha
+
+
+# ---- SAM probe (``ring3 calibrate --probe``): saved frames x phrases x crops, at most PROBE_MAX images ----
+
+PROBE_MAX = 5
+#: the pipeline's crop (geometry.json) and a tighter one around the pivot at a higher scale: the 15 mm horn is
+#: ~75 px in the full 920 x 570 crop and ~180 px in the 720 x 504 tight crop (no new detail, a larger object)
+PROBE_CROPS = {"full": None, "tight": (-30.0, 30.0, -12.0, 30.0, 12)}
+
+
+def probe_plan(frames: list[Path], phrases: list[str], crops: list[str]) -> list[tuple[Path, str, str]]:
+    if not frames or not phrases or not crops or any(c not in PROBE_CROPS for c in crops):
+        raise ValueError(f"need frames, phrases and crops from {sorted(PROBE_CROPS)}")
+    plan_ = [(f, c, p) for f in frames for c in crops for p in phrases]
+    if len(plan_) > PROBE_MAX:
+        raise ValueError(f"{len(plan_)} images planned, at most {PROBE_MAX}")
+    return plan_
+
+
+def probe(items: list[tuple[Path, str, str]], geom, sam, log: eventlog.EventLog, out=print) -> list[dict]:
+    """One SAM image per item (reserved first, by ``sam``): markers -> crop -> SAM -> arm filter. Logs a
+    ``sam_probe`` record per item with the raw reply as a blob; never touches the kernel link."""
+    import cv2
+    import numpy as np
+
+    from ring3bridge.witness import CantVerify
+    from ring3bridge.witness.angle import DEFAULT_ARM
+    from ring3bridge.witness.dial import Crop, Geometry
+    from ring3bridge.witness.pipeline import Evidence, measure
+
+    rows = []
+    for frame, crop_name, phrase in items:
+        data = Path(frame).read_bytes()
+        img = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
+        g = (
+            geom
+            if PROBE_CROPS[crop_name] is None
+            else Geometry(geom.marker_corners, Crop(*PROBE_CROPS[crop_name]))
+        )
+        ev = Evidence()
+        reason, detail, dial = "MEASURED", "", None
+        try:
+            if img is None:
+                raise ValueError("frame does not decode")
+            dial = measure(img, g, sam, DEFAULT_ARM, phrase, ev).dial_mdeg
+        except CantVerify as e:
+            reason, detail = e.reason, e.detail
+        n_rec = ev.sam_line.count("<|box;")
+        blobs = {"frame_blob": log.blob(data)}
+        if ev.jpeg:
+            blobs["crop_blob"] = log.blob(ev.jpeg)
+        if ev.sam_reply:
+            blobs["sam_reply_blob"] = log.blob(ev.sam_reply)
+        row = {"frame_sha256": hashlib.sha256(data).hexdigest(), "crop": crop_name, "phrase": phrase,
+               "records": n_rec, "line_bytes": len(ev.sam_line), "reason": reason, "detail": detail,
+               "dial_mdeg": dial, "spend_uusd": ev.spend_uusd}  # fmt: skip
+        log.append("sam_probe", **row, **blobs)
+        rows.append(row)
+        deg = "" if dial is None else f" dial {dial / 1000:.1f} deg"
+        out(f"  {crop_name:5s} {phrase!r:24s} -> {n_rec} record(s), {reason}{deg} {detail}")
+    return rows

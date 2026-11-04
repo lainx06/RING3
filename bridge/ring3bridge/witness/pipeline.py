@@ -39,6 +39,7 @@ class WitnessResult:
     sam_line: str  # raw SAM line ("" when none)
     spend_uusd: int
     crop_jpeg: bytes = b""  # the cropped JPEG sent to SAM (b"" when none was sent), for the run's blobs
+    sam_reply: bytes = b""  # SAM's reply body as received (scrubbed by the transport), for the run's blobs
 
 
 @dataclass
@@ -47,6 +48,7 @@ class Evidence:
 
     image_sha256: str = ""
     jpeg: bytes = b""
+    sam_reply: bytes = b""
     sam_line: str = ""
     spend_uusd: int = 0
     reading: ArmReading | None = field(default=None)
@@ -60,8 +62,11 @@ def measure(
     jpeg = encode_jpeg(dial.crop_img)
     ev.image_sha256, ev.jpeg = hashlib.sha256(jpeg).hexdigest(), jpeg
     w, h = geom.crop.size
-    res = sam.segment(jpeg, w, h, prompt)
-    ev.sam_line, ev.spend_uusd = res.line, res.uusd
+    try:
+        res = sam.segment(jpeg, w, h, prompt)
+    finally:  # kept also when the reply does not parse (SAM_FORMAT): the raw reply is the evidence
+        ev.sam_reply, ev.spend_uusd = sam.last_reply, sam.last_uusd
+    ev.sam_line = res.line
     ev.reading = arm_angle(res.records, geom.crop, arm)
     return ev.reading
 
@@ -86,10 +91,10 @@ def check(
     except CantVerify as e:
         dial = ev.reading.dial_mdeg if ev.reading else None
         return WitnessResult(CANT_VERIFY, e.reason, e.detail, commanded_deg, cz, "", dial, None,
-                             ev.image_sha256, ev.sam_line, ev.spend_uusd, ev.jpeg)  # fmt: skip
+                             ev.image_sha256, ev.sam_line, ev.spend_uusd, ev.jpeg, ev.sam_reply)  # fmt: skip
     return WitnessResult(j.verdict, j.reason, "", commanded_deg, j.commanded_zone, j.measured_zone,
                          reading.dial_mdeg, cal, ev.image_sha256, ev.sam_line, ev.spend_uusd,
-                         ev.jpeg)  # fmt: skip
+                         ev.jpeg, ev.sam_reply)  # fmt: skip
 
 
 def calibration_point(
@@ -109,7 +114,7 @@ def calibration_point(
         reading = measure(img, geom, sam, arm, prompt, ev)
     except CantVerify as e:
         return WitnessResult(CANT_VERIFY, e.reason, e.detail, commanded_deg, "", "", None, None,
-                             ev.image_sha256, ev.sam_line, ev.spend_uusd, ev.jpeg)  # fmt: skip
+                             ev.image_sha256, ev.sam_line, ev.spend_uusd, ev.jpeg, ev.sam_reply)  # fmt: skip
     return WitnessResult(CANT_VERIFY, CALIBRATION, "calibration point", commanded_deg, "", "",
                          reading.dial_mdeg, None, ev.image_sha256, ev.sam_line, ev.spend_uusd,
-                         ev.jpeg)  # fmt: skip
+                         ev.jpeg, ev.sam_reply)  # fmt: skip

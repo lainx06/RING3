@@ -469,6 +469,8 @@ class Runner:
             blobs["crop_blob"] = self.log.blob(r.crop_jpeg)
         if r.sam_line:
             blobs["sam_line_blob"] = self.log.blob(r.sam_line.encode("ascii", "replace"))
+        if r.sam_reply:
+            blobs["sam_reply_blob"] = self.log.blob(r.sam_reply)
         self.log.append("witness", action=req.actions, commanded_deg=r.commanded_deg,
                         commanded_zone=r.commanded_zone, measured_zone=r.measured_zone, verdict=r.verdict,
                         reason=r.reason, detail=r.detail, dial_mdeg=r.dial_mdeg,

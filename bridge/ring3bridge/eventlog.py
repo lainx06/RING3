@@ -44,6 +44,7 @@ RECORD_TYPES = frozenset(
         "spend_settled",
         "witness",
         "calibration",
+        "sam_probe",
         "run_end",
     }
 )

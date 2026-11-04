@@ -17,7 +17,15 @@ from pathlib import Path
 
 from ring3bridge import abi, context_pack, eventlog, replay, selftest, style
 from ring3bridge.config import REPO, load_model_config, load_project_cap
-from ring3bridge.ledger import DEFAULT_LEDGER, Ledger, cost_uusd, fmt_usd, request_tokens, usd_to_uusd
+from ring3bridge.ledger import (
+    DEFAULT_LEDGER,
+    BudgetRefused,
+    Ledger,
+    cost_uusd,
+    fmt_usd,
+    request_tokens,
+    usd_to_uusd,
+)
 
 RUNS = REPO / "runs"
 DEFAULT_PORT = 4555
@@ -242,10 +250,63 @@ def cmd_witness_frame(a: argparse.Namespace) -> int:
     (out / "frame.jpg").write_bytes(jpeg)
     if rep.crop_img is not None:
         (out / "crop.jpg").write_bytes(encode_jpeg(rep.crop_img))
+    if rep.pivot_img is not None:
+        (out / "pivot.jpg").write_bytes(encode_jpeg(rep.pivot_img))
     print("\n".join(rep.lines))
     shown = out.relative_to(REPO) if out.is_relative_to(REPO) else out.name
     print(f"saved {shown}/frame.jpg" + (" and crop.jpg" if rep.crop_img is not None else ""))
     return 0 if rep.ok else 1
+
+
+def _cmd_probe(a: argparse.Namespace, sam_cfg, geom, budget: int, per: int) -> int:  # noqa: ANN001
+    """``ring3 calibrate --probe``: re-send saved frames to SAM with candidate phrases and crops (paid, at
+    most 5 images, one reserved before each call). No kernel, no link, no servo move."""
+    from ring3bridge.calibration import PROBE_MAX, probe, probe_plan
+
+    frames = [Path(f) for f in a.probe]
+    phrases = [p.strip() for p in a.phrases.split(";") if p.strip()]
+    crops = [c.strip() for c in a.crops.split(",") if c.strip()]
+    try:
+        items = probe_plan(frames, phrases, crops)
+        missing = [str(f) for f in frames if not f.is_file()]
+        if missing:
+            raise ValueError(f"no such frame file: {missing}")
+    except ValueError as e:
+        print(f"calibrate --probe: {e}", file=sys.stderr)
+        return 2
+    print(f"ring3 calibrate --probe{' --dry-run (no network, no key read)' if a.dry_run else ''}: "
+          f"{len(items)} image(s) (max {PROBE_MAX}) x {fmt_usd(per)} = {fmt_usd(len(items) * per)}, one "
+          f"reserved before each SAM call; --budget-usd {a.budget_usd} = {fmt_usd(budget)}")  # fmt: skip
+    for f, c, p in items:
+        print(f"  {f.name[:16]} crop={c} phrase={p!r}")
+    if a.dry_run:
+        return 0
+    from ring3bridge.models.transport import HttpsTransport, TransportError
+    from ring3bridge.witness.sam import LedgerImageSpend, SamClient, SamStop
+
+    run_id = a.run_id or "probe-" + time.strftime("%Y%m%d-%H%M%S")
+    run_dir = RUNS / run_id
+    try:
+        transport = HttpsTransport()
+    except TransportError as e:
+        print(f"calibrate: {e} (the API key comes from the environment, never from a file)", file=sys.stderr)
+        return 2
+    log = eventlog.EventLog(run_dir)
+    log.append("run_start", run_id=run_id, model_id=sam_cfg.model_id, budget_uusd=budget, t_ns=time.time_ns())
+    ledger = Ledger(load_project_cap(), DEFAULT_LEDGER)
+    sam = SamClient(sam_cfg, transport, LedgerImageSpend(ledger, run_id, sam_cfg, budget))
+    rc = 0
+    try:
+        probe(items, geom, sam, log)
+    except (SamStop, BudgetRefused) as e:
+        print(f"probe stopped: {e}")
+        rc = 1
+    log.append("run_end", records=log.seq)
+    print(f"probe {run_id}: {run_dir.relative_to(REPO)}/events.jsonl (raw SAM replies as sam_reply_blob)")
+    print(ledger.report())
+    v = eventlog.verify(run_dir)
+    print(v.message)
+    return rc if v.ok else 1
 
 
 def cmd_calibrate(a: argparse.Namespace) -> int:
@@ -277,6 +338,8 @@ def cmd_calibrate(a: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return 2
+    if a.probe:
+        return _cmd_probe(a, sam_cfg, geom, budget, per)
     planner, what = (route, "targets") if a.checks else (plan, "points")
     points = CHECK_TARGETS if a.checks else CAL_POINTS
     arg = a.targets if a.checks else a.points
@@ -474,6 +537,13 @@ def main(argv: list[str] | None = None) -> int:
         "--dry-run-start", type=int, default=90, help="kernel servo angle to plan the dry run from"
     )
     c.add_argument("--points", help="calibration angles, comma-separated (default 60,70,90,110,120, D-72)")
+    c.add_argument(
+        "--probe", nargs="+", help="saved camera frames (JPEG) to re-send to SAM: no kernel, <= 5 images"
+    )
+    c.add_argument("--phrases", default="white plastic arm", help="--probe: noun phrases separated by ';'")
+    c.add_argument(
+        "--crops", default="full", help="--probe: full (the pipeline's crop) and/or tight, comma-separated"
+    )
     c.add_argument("--checks", action="store_true", help="scripted zone checks with --calibration (step 4)")
     c.add_argument("--calibration", help="--checks: run id (or directory) of a ring3 calibrate run")
     c.add_argument("--targets", help="--checks: zone-centre angles per request (default 50,90,130)")

@@ -132,7 +132,8 @@ def test_witness_op_pass_no_move_and_no_frame(tmp_path):
         50,
     )
     assert type(p["dial_mdeg"]) is int and type(p["calibrated_mdeg"]) is int and p["spend_uusd"] == 2500
-    assert {"frame_blob", "crop_blob", "sam_line_blob"} <= p.keys() and p["ms"] >= 500  # settled + 500 ms
+    assert {"frame_blob", "crop_blob", "sam_line_blob", "sam_reply_blob"} <= p.keys()
+    assert p["ms"] >= 500  # settled + 500 ms
     assert ledger.settled_uusd() == 2500 and ledger.unsettled_uusd() == 0
     # what the model saw for the PASS
     prompts = b.model.prompts()

@@ -190,3 +190,32 @@ Windows helper on Windows, and the 5 mm camera-axis advice *(prov.)*.
    -> `checks.md` (table + image hashes; images showing a hand stay in `runs/`).
 4. `ring3 run --pack agent-v3 --witness-dir ... --calibration ...` with `--budget-usd 0.50`: "move the gauge
    to LOW and confirm it really moved", then the same to MID with the arm held at LOW -> FAIL -> halt.
+
+## First real calibration: `cal-20261103-194227` (user, 2026-11-03) and diagnosis (builder, no paid call)
+Run: bridge first (D-70), camera 1.3 mm from the pivot, horn re-seated at 90, lamp from the far side. Every
+servo move `ALLOW`, `CHAIN OK` (1046 records), $0.0125 (5 images). **All 5 points `CAN'T VERIFY: NOT_FOUND`
+("SAM found no arm") -> witness disabled** (`no measurement at commanded [60, 70, 90, 110, 120] deg`). Card
+stop rule: the arm was not found with the short prompt.
+
+1. **SAM replies.** `NOT_FOUND` with that detail is raised only for zero records, and no witness record has a
+   `sam_line_blob` (written only for a non-empty line): every reply passed the envelope check (`completed`,
+   exactly one `output_text`) and its line was empty = "concept not present", a documented normal result.
+   The parser and the arm filter rejected nothing; there were no records to compare with the grammar.
+   **Gap:** the raw reply body was not logged, so its bytes can't be shown. Fixed: `SamClient.last_reply`
+   -> `WitnessResult.sam_reply` -> `sam_reply_blob` in every witness record, also when the reply does not
+   parse (and `spend_uusd` is now kept in that case too).
+2. **Crops.** Marker fit 1.03 mm; the frame resolves **4.84 px/mm** (horn ~73 px in the 920 x 570 crop).
+   Grey levels (0-255): white paper 187-199, inner dial 150-155, horn/hub 152-170. The horn is **darker
+   than the paper and almost the same grey as the dial under it** (lit from the far side, so the camera sees
+   its unlit face; soft focus). Median-subtracting the five crops leaves only a ~6 mm pale patch beside the
+   hub that changes between angles (mean change 2-3.5 grey levels in the pivot region; 60 vs 110 differ by
+   1.1, the noise floor); no 15 mm bar is distinguishable at any angle, also in a 12 px/mm re-crop. SAM's
+   "not present" is a fair answer for these images: the problem is the image, not the parser or the filter.
+3. **Proposal (smallest first; 1-2 are free to check with `ring3 witness-frame`, which now prints px/mm and
+   saves `pivot.jpg`, a 20 px/mm zoom of the pivot):**
+   1. Light the horn's top face: lamp next to the camera / overhead, not from the far side.
+   2. Contrast: blacken the horn's top face with a permanent marker (no cutting, no fabrication; it changes
+      the horn's colour, so it is a lead call next to D-24), phrase then "black plastic arm".
+   3. Camera a little closer (all 4 markers span 186 x 142 mm: at most ~6.5 px/mm at 1080 p).
+   4. Phrase and crop: test with `ring3 calibrate --probe` (new; paid; <= 5 images; saved frames, no kernel)
+      on a new frame after 1-3, or on the saved 90 deg frame as a control.
