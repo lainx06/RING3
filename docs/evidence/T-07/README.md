@@ -290,3 +290,24 @@ all 126 recorded frames (calibration, probes, every `runs/witness-frame-*`) pred
 `not found` (or stop at missing markers); none says OK. A positive detection on a real frame is therefore
 **not yet shown**: the first `witness-frame` after the remount is the real test (if it says not found,
 measure `pivot.jpg` by hand).
+
+## Stale frames (D-80): fresh-frame proof from the helper
+`witness-frame-20261103-211527` showed the side mount after the remount, while 211814 / 211823 already show
+the upright servo. Each frame carried its own request nonce, so the old protocol only proved when the helper
+*wrote* the file, not when the camera *captured* it: an OpenCV backend can hand out a queued frame on
+`grab()`. Fix (`tools/witness_capture_win.py`, `witness/capture.py`):
+- helper: `CAP_PROP_BUFFERSIZE=1` where supported; per request it notes when it saw the request, then grabs
+  and discards; a grab that blocks >= 12 ms waited for a new sensor frame ("live"); it captures only after
+  >= 6 grabs, >= 2 live ones and >= 100 ms since it saw the request, else (3 s or 300 grabs) writes nothing;
+  the JPEG comment is now `ring3-frame:v2;id=<request id>;seen_ns=..;cap_ns=..;live=..`.
+- bridge (`check_frame`, used by `witness-frame`, `calibrate` and the live witness): `CAN'T VERIFY:
+  STALE_FRAME` for a frame without the v2 proof (an old helper's nonce-only frame says "restart it"), another
+  request id, a capture before the helper saw the request, a capture before the bridge's request (2 s
+  clock-skew allowance; the helper's times are the Windows clock), fewer than 2 live grabs, an old file, or
+  an undecodable one.
+- tests: mismatched id, buffered (captured 600 s before the request), captured before seen, no live grab,
+  old helper, no comment, undecodable, old file -> STALE_FRAME; a correct fresh v2 frame accepted; helper
+  round trip with a camera that queues 4 frames; a camera that never blocks -> no file; the flush loop is
+  bounded even with a bad clock (a hang found while writing the tests, fixed).
+**The Windows helper must be restarted** to pick this up (it is a long-running Windows Python process that
+reads the script once); until then every capture is `STALE_FRAME` ("nonce-only frame from an old helper").

@@ -10,7 +10,12 @@ import pytest
 import witness_capture_win as helper
 
 from ring3bridge.witness import STALE_FRAME, CantVerify
-from ring3bridge.witness.capture import add_nonce_comment, read_nonce_comment, request_frame
+from ring3bridge.witness.capture import (
+    add_frame_comment,
+    add_nonce_comment,
+    read_frame_comment,
+    request_frame,
+)
 
 NONCE = "0123456789abcdef0123456789abcdef"
 
@@ -22,13 +27,20 @@ def jpeg(value=128):
 
 
 class FakeCam:
-    def __init__(self, fail=False):
+    """Like an OpenCV backend: ``buffered`` queued frames return at once, then every grab waits ``live_s`` for
+    the next sensor frame (``live_s=0``: a camera that only ever hands out buffered frames)."""
+
+    def __init__(self, fail=False, buffered=4, live_s=0.015):
         self.grabs = 0
         self.retrieves = 0
         self.fail = fail
+        self.buffered = buffered
+        self.live_s = live_s
 
     def grab(self):
         self.grabs += 1
+        if self.grabs > self.buffered and self.live_s:
+            time.sleep(self.live_s)
         return not self.fail
 
     def retrieve(self):
@@ -40,12 +52,13 @@ def encode(frame):
     return cv2.imencode(".jpg", frame)[1].tobytes()
 
 
-def test_nonce_comment_round_trip_and_helper_copy_agrees():
+def test_frame_comment_round_trip_and_helper_copy_agrees():
     j = jpeg()
-    assert add_nonce_comment(j, NONCE) == helper.add_nonce_comment(j, NONCE)
-    assert read_nonce_comment(add_nonce_comment(j, NONCE)) == NONCE
-    assert read_nonce_comment(j) is None
-    assert cv2.imdecode(np.frombuffer(add_nonce_comment(j, NONCE), np.uint8), cv2.IMREAD_COLOR) is not None
+    args = (NONCE, 1_793_000_000_000_000_000, 1_793_000_000_150_000_000, 3)
+    assert add_frame_comment(j, *args) == helper.add_frame_comment(j, *args)
+    assert read_frame_comment(add_frame_comment(j, *args)) == args
+    assert read_frame_comment(j) is None and read_frame_comment(add_nonce_comment(j, NONCE)) is None
+    assert cv2.imdecode(np.frombuffer(add_frame_comment(j, *args), np.uint8), cv2.IMREAD_COLOR) is not None
 
 
 def _serve_in_background(folder, cam, stop):
@@ -67,8 +80,9 @@ def test_fresh_frame_round_trip(tmp_path):
     finally:
         stop.set()
         th.join()
-    assert img.shape == (48, 64, 3) and read_nonce_comment(data) == nonce
-    assert cam.grabs >= 5 and cam.retrieves == 1  # buffered frames discarded before decoding
+    fid, seen_ns, cap_ns, live = read_frame_comment(data)
+    assert img.shape == (48, 64, 3) and fid == nonce and cap_ns > seen_ns and live >= 2
+    assert cam.grabs >= 6 and cam.grabs > cam.buffered + 1 and cam.retrieves == 1  # buffered ones discarded
     assert list(tmp_path.iterdir()) == []  # request and frame cleaned up
 
 
@@ -105,23 +119,81 @@ def _answer(tmp_path, data, mtime=None):
     return th
 
 
-@pytest.mark.parametrize(
-    "case",
-    ["other nonce", "no nonce", "old file", "undecodable"],
-)
-def test_bad_frames_are_stale(tmp_path, case):
-    other = "f" * 32
-    data, mtime = {
-        "other nonce": (lambda n: add_nonce_comment(jpeg(), other), None),
-        "no nonce": (lambda n: jpeg(), None),
-        "old file": (lambda n: add_nonce_comment(jpeg(), n), time.time() - 600),
-        "undecodable": (lambda n: add_nonce_comment(b"\xff\xd8garbage", n), None),
-    }[case]
-    th = _answer(tmp_path, data, mtime)
+def _v2(nonce, seen_s=0.0, cap_s=0.15, live=3, fid=None):
+    """A v2 frame for ``nonce``: helper saw the request ``seen_s`` and captured ``cap_s`` seconds from now."""
+    now = time.time_ns()
+    return add_frame_comment(jpeg(), fid or nonce, now + int(seen_s * 1e9), now + int(cap_s * 1e9), live)
+
+
+STALE_CASES = {
+    "mismatched request id": (lambda n: _v2(n, fid="f" * 32), "does not match"),
+    "captured before the request (buffered frame)": (lambda n: _v2(n, -601.0, -600.0), "before the request"),
+    "captured before the helper saw the request": (lambda n: _v2(n, 0.0, -0.05), "before the helper saw"),
+    "no live grab": (lambda n: _v2(n, live=0), "live grab"),
+    "old helper, nonce only (restart it)": (lambda n: add_nonce_comment(jpeg(), n), "restart it"),
+    "no comment": (lambda n: jpeg(), "no frame proof"),
+    "undecodable": (lambda n: add_frame_comment(b"\xff\xd8garbage", n, 1, 2, 3), None),
+}
+
+
+@pytest.mark.parametrize("case", list(STALE_CASES))
+def test_stale_or_unproven_frames_are_cant_verify(tmp_path, case):
+    """D-80: a frame is evidence only if it proves it was captured for this request, after it."""
+    make, why = STALE_CASES[case]
+    th = _answer(tmp_path, make)
     with pytest.raises(CantVerify) as e:
         request_frame(tmp_path, timeout_s=3.0, poll_s=0.01)
     th.join()
     assert e.value.reason == STALE_FRAME, case
+    assert why is None or why in e.value.detail, e.value.detail
+
+
+def test_fresh_v2_frame_is_accepted(tmp_path):
+    th = _answer(tmp_path, lambda n: _v2(n))
+    nonce, img, data = request_frame(tmp_path, timeout_s=3.0, poll_s=0.01)
+    th.join()
+    assert read_frame_comment(data)[0] == nonce and img.shape == (48, 64, 3)
+
+
+def test_old_file_is_stale(tmp_path):
+    th = _answer(tmp_path, lambda n: _v2(n), mtime=time.time() - 600)
+    with pytest.raises(CantVerify) as e:
+        request_frame(tmp_path, timeout_s=3.0, poll_s=0.01)
+    th.join()
+    assert e.value.reason == STALE_FRAME and "older than the request" in e.value.detail
+
+
+def test_helper_writes_nothing_when_only_buffered_frames_come(tmp_path, monkeypatch):
+    """A camera whose grabs never wait for the sensor (all frames queued): no live frame, no file."""
+    monkeypatch.setattr(helper, "MAX_FLUSH_S", 0.3)
+    (tmp_path / f"{NONCE}.req").write_text(NONCE)
+    cam = FakeCam(buffered=10**6, live_s=0)
+    assert helper.serve_once(tmp_path, cam, encode) == 0
+    assert not (tmp_path / f"{NONCE}.jpg").exists() and cam.retrieves == 0
+
+
+def test_helper_counts_live_grabs_only_after_the_request_was_seen():
+    t = [100.0]
+
+    def clock():
+        return t[0]
+
+    class Cam:
+        grabs = 0
+
+        def grab(self):
+            Cam.grabs += 1
+            t[0] += 0.04  # every grab blocks 40 ms (live)
+            return True
+
+        def retrieve(self):
+            return True, np.full((8, 8, 3), 9, np.uint8)
+
+    got = helper.grab_fresh_jpeg(Cam(), encode, seen=100.0, clock=clock, wall_ns=lambda: 5)
+    assert got is not None and got[2] >= 2 and Cam.grabs >= 6 and t[0] - 100.0 >= 0.1
+    t[0], Cam.grabs = 100.0, 0  # request "seen" in the future: no grab counts as live, and the loop ends
+    assert helper.grab_fresh_jpeg(Cam(), encode, seen=1e9, clock=clock, wall_ns=lambda: 5) is None
+    assert Cam.grabs <= helper.MAX_FLUSH_GRABS
 
 
 def test_helper_ignores_old_or_malformed_requests(tmp_path):
@@ -158,4 +230,4 @@ def test_helper_writes_atomically(tmp_path, monkeypatch):
     monkeypatch.setattr(helper.os, "replace", spy)
     assert helper.serve_once(tmp_path, FakeCam(), encode) == 1
     assert seen == [(f"{NONCE}.tmp.jpg", f"{NONCE}.jpg", False)]
-    assert read_nonce_comment((tmp_path / f"{NONCE}.jpg").read_bytes()) == NONCE
+    assert read_frame_comment((tmp_path / f"{NONCE}.jpg").read_bytes())[0] == NONCE

@@ -338,7 +338,7 @@ def test_witness_frame_through_the_capture_folder(tmp_path, capsys, monkeypatch)
     import threading
     import time as _time
 
-    from ring3bridge.witness.capture import add_nonce_comment
+    from ring3bridge.witness.capture import add_frame_comment
 
     monkeypatch.setattr(cli, "RUNS", tmp_path / "runs")
     frame, _, _ = synth.render(Scene([90.0], quad="flat"))
@@ -349,7 +349,8 @@ def test_witness_frame_through_the_capture_folder(tmp_path, capsys, monkeypatch)
         while not stop.is_set():
             for req in tmp_path.glob("*.req"):
                 n = req.stem
-                (tmp_path / f"{n}.tmp.jpg").write_bytes(add_nonce_comment(jpeg, n))
+                now = _time.time_ns()
+                (tmp_path / f"{n}.tmp.jpg").write_bytes(add_frame_comment(jpeg, n, now, now + 100_000_000, 3))
                 (tmp_path / f"{n}.tmp.jpg").replace(tmp_path / f"{n}.jpg")
             _time.sleep(0.02)
 
