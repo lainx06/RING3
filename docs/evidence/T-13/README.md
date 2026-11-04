@@ -150,3 +150,37 @@ The rule-13 scope fix is README-only: INV-13 in `docs/INVARIANTS.md` already lis
 the kernel driver and the clamps, E-stop interrupt and watchdogs under the firmware, so it was not edited.
 Banned-word test re-run after these edits: 2 passed; manual scan of `docs/video/`, `docs/claims/`, `README.md`: 0
 hits.
+
+## Step 7: the lead's founder-voice narration, with the lead's decisions (main at `21757f6`)
+Builder: Sonnet 5.5 / high, main tree, docs only (`README.md`, `docs/video/`, `docs/claims/`, `docs/evidence/T-05/linecount.txt`,
+this file, STATUS). No code, tests, `tools/`, `docs/evals/` or `docs/evidence/T-20/` touched; no paid call, no hardware.
+Banned-word test: 2 passed; whole-word scan of `docs/video`, `docs/claims`, `README.md`: 0 hits; ruff clean.
+
+**Script.** The lead's table, re-timed: 0:00-2:59 = 179 s, every scene at most 2.5 words/s (the draft had two scenes at
+3.4 and 3.1). Changes to the lead's text, each listed in `script.md`: "I wrote" -> "built" (R81); S4 says the replies are
+recorded and the taint and confirmation checks are off (a host replay on a simulated cell, fan 100 % still denied, D-99);
+replay line scoped to "all eight replayable runs"; "forty faulty-program runs"; the lead's decisions: C0 "I built the part
+that tells it no" kept, camera line "that's not where it is", self-test line "every step checked by the kernel, and I confirm
+the first fan start" (timing S5 1:40-1:57, S6 1:57-2:07, S7 2:07-2:33 so S7 stays at 2.46 words/s).
+
+**shots.md** rewritten for C0, S0-S9: spoken cold open on the red-team pack (`heard:` line and Enter in frame;
+`run-cell-console` shows the text screen, the Makefile has no `gfx=1` for it, so the graphics screen is S0 and the other
+takes), `make run-cell-gfx`, the permissive replay (caption "Recorded replies, simulated cell, permissive build"), the
+recorded loose-wire zone check, "never speak / no voice input" removed. Budget: caps sum to $0.33; the ledgers are per
+checkout, so the voice and vision spend is not in the main ledger.
+
+**README** (new sections, each a claims row R83-R100): camera witness as measured (two backends; vision 2/6, 1/3, 3/6, 3/6;
+21 images, 9 PASS, 10 FAIL, 2 CAN'T VERIFY, no false PASS; MID 8/8, LOW 2/5, HIGH 0/6; 4 of the 10 FAILs after the wire fix;
+D-102 loose wire); spoken requests with the host-side guards and the one live request; the graphics screen; the
+counterfactual; "Try it" commands; Meta models list (vision, voice); limitations (witness off, voice one request,
+counterfactual is a replay); spend over three ledgers. Spend (`uv run ring3 spend`, read in each checkout, offline):
+main $0.470496 (20 runs) + `~/dev/RING3-t16` $0.086560 (4 runs, 21 requests) + `~/dev/RING3-voice` $0.013592 (2 runs) =
+**$0.570648 over 26 runs**. Line counts at `21757f6` (kernel 8,454, user 1,292, bridge 8,015; policy 883 and firmware 884
+unchanged) in `docs/evidence/T-05/linecount.txt`, README "Built during the hackathon" and R80. Step 6 (screenshots) is not
+in the lead's list and is still waiting for file names.
+
+**Claims re-pinned to `21757f6`.** Of the files the ledger cites by line, only the `Makefile` changed since `26780eb` (R62:
+line 95 -> 103); `DECISIONS.md` gained rows D-95..D-106 after line 108; `config/models.toml` gained lines after 43. Every other
+cited file is byte-identical between the two commits (`git diff --name-only 26780eb 21757f6` against every path in
+the ledger), so the references verified at `26780eb` hold. New rows V0-V20 (script) and R83-R100 (README) cite lines read at
+`21757f6`. Not independently verifiable here: the T-19 helper self-test output, and the camera/zone-check run folders (git-ignored).

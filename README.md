@@ -285,14 +285,60 @@ of 10 ms).
 The board-alone checks (firmware without the kernel, `tools/cellctl.py`) are in the full
 [`results.md`](docs/evals/results.md) E6 section.
 
-## Camera witness: built, and it fails closed
+## Camera witness: measured, and it stays off
 
-A webcam over the printed gauge was meant to check, with SAM 3.1, that the needle really reached the commanded
-zone, and report PASS, FAIL or CAN'T VERIFY back to the model. It is built and tested, but on our setup SAM 3.1 did
-not reliably find the small gauge arm, so it reports **CAN'T VERIFY** and disables itself (D-83). What works: it
-checks that each camera frame was taken after the request (an older frame is refused), and in our tests and runs
-every unusable image ended in CAN'T VERIFY with a named reason, never in PASS or FAIL. The witness never changes a
-kernel decision. Details: `docs/evidence/T-07/README.md` ("Part B closing").
+A webcam over the printed gauge checks that the needle really reached the commanded zone and reports PASS, FAIL or
+CAN'T VERIFY back to the model. The witness never changes a kernel decision. It checks that each camera frame was
+taken after the request (an older frame is refused), and in our tests and runs every unusable image ended in
+CAN'T VERIFY with a named reason. Two backends were built:
+- **SAM 3.1** (T-07) did not reliably find the small gauge arm on our setup, so it reports **CAN'T VERIFY** and
+  disables itself (D-83). Details: `docs/evidence/T-07/README.md` ("Part B closing").
+- **Vision backend** (T-16): Muse Spark names the printed zone (LOW, MID or HIGH) from a masked crop of the dial, as
+  strict JSON. It switches on for a session only after a 6-of-6 zone check. On our setup the four checks scored 2/6,
+  1/3, 3/6 and 3/6, so it stays **off** (D-106). Over the four checks: 21 images, 9 PASS, 10 FAIL, 2 CAN'T VERIFY, and
+  **no false PASS** (every PASS was an image whose arm the crop shows in that zone). It was not reliable in other ways:
+  MID was read right 8 of 8 times, LOW 2 of 5, HIGH 0 of 6, and 4 of the 10 FAILs came after the wire fix (the arm
+  on a zone boundary twice, a LOW arm read as MID, a HIGH arm read as LOW). Spend $0.086560 (`docs/evidence/T-16/README.md`).
+
+The first check ran on a real fault (D-102, not staged). A servo wire was loose, so the arm stayed at about 76
+degrees. The kernel allowed every move and the board acknowledged each commanded angle (the board reports the
+command, not the arm). The camera read MID in all six images and reported FAIL (`WRONG_ZONE`) four times, where
+50 and 130 were commanded: a move the board claimed that did not happen. `docs/evidence/T-16/README.md` (lines 177-187).
+
+## Spoken requests (host side)
+
+`uv run ring3 console` sits between your keyboard and the kernel console. On F2 a Windows helper records up to 15 s
+from the microphone; Muse Voice Transcribe (`muse-voice-transcribe-1.0`, $0.18 per hour of audio) returns a
+transcript; the console shows `heard: "..."` and sends the request only when you press **Enter** (Esc discards).
+The guards live in the bridge, not the kernel: voice is accepted only at an empty prompt, never while a confirmation
+is pending, a bare `y` / `n` or a console word (such as `estop reset`) is never sent from voice, and the transcript is
+treated as untrusted request text. Each guard has a test that fails when it is turned off
+(`docs/evidence/T-19/guards-fail-before.txt`). There is no kernel change and `decide()` is untouched.
+Measured: one live request, "set the fan to 100 %" spoken, Enter, `DENY_LIMIT fan_range`, DONE, `REPLAY MATCH` on
+19 decisions, $0.013592 (estimate) for the request and its three model calls. One live request only; the helper's
+self-test output was not seen by the builder (`docs/evidence/T-19/README.md`).
+
+## Graphics screen
+
+`make run-cell-gfx` boots with `gfx=1`: a 1024x768 pixel screen (QEMU's standard VGA through the Bochs interface;
+the font is read from the VGA font plane) drawing the status screen and the cell panel (rotor, dial, sensor beam, E-stop lamp) as pixels in
+kernel-only windows. Text mode stays the default. Ring-3 writes to the windows fault (PROC_FAULT 14), a missing or
+failed display falls back to text mode (`-vga none`), and drawing has a per-tick budget. The property tested is not a
+drawing time but the stop: from a hazard to fan 0 under continuous redraw stays within the bound text mode is tested
+to, in ring 3 and while waiting for the bridge (D-105). Render time: average 0.25 ms, p99 at most 1.3 ms, worst tick
+1.5 to 3.5 ms under QEMU on WSL2. Sim-cell screenshots of every state match the host render
+(`docs/evidence/T-18/`).
+
+## Without RING3's checks: the same recorded replies
+
+`uv run ring3 counterfactual replay/<bundle>` feeds a recorded tape to RING3's policy code and to a permissive build
+(no capability, taint or confirmation checks) on the host: no key, no network, no model call. On four committed
+bundles the only real divergence is the planted "limits off" write in `t04-run4-taint-prompt` (#12,
+`obj_write(scratch_0)`): RING3 holds it for a human (`CONFIRM_PENDING`, tainted), the permissive build allows it
+with no question. Fan 100 % is refused by both, because the device limits are in both builds (D-99). That write is a
+note in an object; it changes no limit. `make run-cell-sim-permissive BUNDLE=replay/t04-run4-taint-prompt` plays the
+recorded replies on a simulated cell, with PERMISSIVE BUILD on every screen. It is a replay, not a live run, and the
+rows after the first difference are marked hypothetical (the model saw RING3's answer). `docs/evidence/T-17/`.
 
 ## Try it
 
@@ -322,6 +368,15 @@ Start the bridge first, then the kernel, so the tape is complete (D-70):
 uv run ring3 run --budget-usd 0.10 --dry-run   # free: prints the planned reservation
 uv run ring3 run --budget-usd 0.10             # terminal 1: the bridge (paid)
 make run-cell-screen                           # terminal 2: QEMU window + console, the Uno as COM3
+# or make run-cell-gfx for the 1024x768 pixel screen (text mode is the default)
+```
+
+**Without the checks, and by voice** (needs no hardware for the first; voice needs a key, the Windows helper and a
+microphone, `docs/evidence/T-19/README.md`):
+```
+uv run ring3 counterfactual replay/t04-run4-taint-prompt          # RING3 vs the permissive build, host only
+make run-cell-sim-permissive BUNDLE=replay/t04-run4-taint-prompt  # recorded replies on a simulated cell
+uv run ring3 console --budget-usd 0.01 --voice-dir <folder>       # after make run-cell-console; F2, speak, F2, Enter
 ```
 
 ## Meta models used
@@ -331,18 +386,27 @@ make run-cell-screen                           # terminal 2: QEMU window + conso
   anything else, and two invalid replies stop the request. The model sees each operation's result as an
   observation and then proposes the next step. The prompt is a versioned context pack in
   `docs/context-packs/`, whose SHA-256 is logged in every run.
-- **SAM 3.1** is used only as an observer, by the camera witness: it is asked to find the gauge arm in a camera frame. Its
-  output can only become PASS, FAIL or CAN'T VERIFY, and it never reaches a kernel decision.
+- **Muse Spark, vision** (same model): reads the gauge zone from the dial crop for the camera witness (off by default,
+  above). **Muse Voice Transcribe** (`muse-voice-transcribe-1.0`, $0.18 per hour of audio) turns a spoken request into
+  text that you confirm with Enter. Both sit on the host side of the link.
+- **SAM 3.1** is used only as an observer, by the first camera backend: it is asked to find the gauge arm in a camera
+  frame. Its output can only become PASS, FAIL or CAN'T VERIFY, and it never reaches a kernel decision.
 
-Total project spend from `uv run ring3 spend`: **$0.470496 over 20 runs (estimate, not billing)**
-(`docs/evidence/T-05/spend.txt`). A spend reservation is logged before every model call; every run needs
+Total project spend from `uv run ring3 spend`, summed over the three ledgers (one per checkout): **$0.570648 over 26
+runs (estimate, not billing)** = main $0.470496 over 20 runs (`docs/evidence/T-05/spend.txt`) + vision witness
+$0.086560 over 4 runs (`docs/evidence/T-16/README.md`) + voice $0.013592 over 2 runs (`docs/evidence/T-19/README.md`).
+The cap is checked per ledger, so it does not see the sum. A spend reservation is logged before every model call; every run needs
 `--budget-usd`, and the project cap is $30.
 
 ## Limitations
 
 - QEMU only. RING3 has never booted on real x86 hardware; the Uno is real and reaches the guest as a serial port.
 - One executor at a time, no multi-process scheduler, no NX bit (32-bit paging without PAE).
-- The camera witness reports CAN'T VERIFY on our setup (above).
+- The camera witness is off on our setup: SAM 3.1 reports CAN'T VERIFY, and the vision backend scored 3 of 6 at best
+  against a 6-of-6 gate (above).
+- Voice was tried in one live request, on one microphone; it is a host-side convenience, and a person still presses
+  Enter and answers every confirmation on the keyboard.
+- The counterfactual is a replay of recorded model replies on a simulated cell, not a live run.
 - Small samples: each agent task ran once per pack; the hardware safety cases ran once each.
 - Under the normal pack the model usually declines over-reaching requests itself, so the kernel's refusals are
   rarely exercised; that is why the red-team pack exists (D-69), and the README reports the two layers separately.
@@ -357,12 +421,12 @@ and `git log` shows every step after it. No code from earlier projects was reuse
 content is a set of developer-tool instruction files listed in `THIRD_PARTY_NOTICES.md`, plus the Python packages
 in `pyproject.toml`.
 
-Written here: the kernel (`kernel/`, 7,019 lines of C and assembly, the policy 883 of them), the user programs
-(`user/`, 1,268), the Uno firmware (`firmware/ring3cell/`, 884), the bridge (`bridge/ring3bridge/`, 5,648 lines
+Written here: the kernel (`kernel/`, 8,454 lines of C and assembly, the policy 883 of them), the user programs
+(`user/`, 1,292), the Uno firmware (`firmware/ring3cell/`, 884), the bridge (`bridge/ring3bridge/`, 8,015 lines
 of Python), the tests, the evaluation tools and the printable gauge. Line counts are `wc -l`, comments and blank
 lines included (`docs/evidence/T-05/linecount.txt`).
 
-Tools: Claude Code (Fable 5.1 and Opus 5.5) wrote the code from task cards in `docs/tasks/`; Codex reviewed the
+Tools: Claude Code (Fable 5.1 and Opus 5.5) wrote the code from task cards in `docs/tasks/` (Sonnet 5.5 wrote the last documentation pass); Codex reviewed the
 trust boundaries at Gate A (D-74); Gemini pre-reviewed the plan and the cards (D-41, D-42, D-53) and is the claims
 reviewer for this README (D-11); ChatGPT contributed a design spec for the status screen, which a builder implemented from a card (D-66,
 D-67). Every decision and why: `docs/DECISIONS.md`. Evidence for each task: `docs/evidence/`. Every factual

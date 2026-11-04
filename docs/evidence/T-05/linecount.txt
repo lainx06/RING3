@@ -1,6 +1,6 @@
-# wc -l at commit 26780eb (comments and blank lines included; cloc is not installed; same commands as T-05 at 7dc4ad4)
+# wc -l at commit 21757f6 (comments and blank lines included; cloc is not installed; same commands as T-05 at 7dc4ad4; T-13 step 7)
 $ find kernel -name "*.[chS]" | xargs cat | wc -l
-7019
+8454
 $ wc -l kernel/policy/*
   660 kernel/policy/policy.c
   209 kernel/policy/policy.h
@@ -8,8 +8,8 @@ $ wc -l kernel/policy/*
     8 kernel/policy/variant_permissive.h
   883 total
 $ find user -name "*.[chS]" | xargs cat | wc -l
-1268
+1292
 $ cat firmware/ring3cell/*.ino firmware/ring3cell/*.h | wc -l
 884
 $ find bridge/ring3bridge -name "*.py" | xargs cat | wc -l
-5648
+8015
