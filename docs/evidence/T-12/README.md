@@ -105,5 +105,12 @@ eval files), in a clean detached worktree with no key in the environment:
   (the capture freshness test, 20 of 20 alone afterwards). **Lead decision needed:** both are test timing
   gaps; nothing was changed. The release-check verdict line reads "1 FAILURE(S)" for this reason.
 
-Release candidate for Gate B: the head of `t12` (this commit, rebased onto main). The main tree is untouched;
-`t12` fast-forwards main on the user's word (D-93).
+Release candidate for Gate B: the head of `t12`, rebased onto main. The main tree is untouched; `t12`
+fast-forwards main on the user's word (D-93).
+
+**Commit map after the rebase onto `b7d5f37` (T-13's last docs commit):** the hashes in `release-check.txt`
+and above are pre-rebase. `b1f6d80` -> `a21c0c2` (the fixes), `985f0d5` -> `e6d6158` (the checked commit),
+`be8492a` -> `5777b39` (this evidence). The rebase changed no file of this card; between the checked tree
+`985f0d5` and `e6d6158` the only difference is T-13's `b7d5f37` (4 files under `docs/`): `git diff --stat
+985f0d5..e6d6158 -- kernel user firmware tools bridge tests abi config` is empty. The pre-rebase commits
+stay reachable by hash until garbage collection.
