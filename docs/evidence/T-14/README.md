@@ -209,7 +209,7 @@ the same artifact (not changed: outside this card's need).
 ## Acceptance
 | # | Result | Evidence |
 |---|---|---|
-| A1 | **pass**: clean build, zero warnings (`-Werror`; kernel, test, ktest, permissive, host images); full default suite in the worktree, before and after `git rebase main` (b7d5f37): **902 passed, 6 skipped** (hw + 2 by design); ruff clean; new goldens (fan60, presence, noecho, stale) and updated T-08 goldens (idle, ask, estop) pass; `make test-kernel` 20/20 | `build.txt`, `pytest.txt`, `golden-tests.txt`, `host-render.txt` |
+| A1 | **pass**: clean build, zero warnings (`-Werror`; kernel, test, ktest, permissive, host images); full default suite in the worktree, before and after `git rebase main` (b7d5f37): **902 passed, 6 skipped**; after the rebase onto T-12 (29a9e92): **913 passed, 6 skipped** (hw + 2 by design); ruff clean; new goldens (fan60, presence, noecho, stale) and updated T-08 goldens (idle, ask, estop) pass; `make test-kernel` 20/20 | `build.txt`, `pytest.txt`, `golden-tests.txt`, `host-render.txt` |
 | A2 | **pass**: `test_fan_frame_motion` (0 changes at duty 0 / latched / stale / lost; 80 % > 60 % > 40 %), `test_needle_cells[30,90,150]`, `test_needle_mirror_and_marks`; render avg 34-35 µs, max 498-720 µs over four runs, 0 ≥ 1 ms | `fan-count.txt`, `render-time.txt` |
 | A3 | **pass**: `git diff --stat main...t14` = `kernel/ui/screen.c`, `kernel/ui/screen.h`, `tests/host/screen_test.c`, `tests/test_t08_screen.py`, `tests/test_t14_panel.py`, `docs/evidence/T-14/` (+ `docs/STATUS.md` at the end, per CLAUDE.md); policy hash `4101a8cc30507872...` unchanged; `kernel/policy`, `kernel/drivers`, `abi`, `firmware`, `bridge` untouched | this README |
 | A4 | **pass**: sim-cell PNG + exact text of every state: `sim-idle`, `sim-fan60` (rotor turning, checked across 6 reads), `sim-ask` (tainted ASK), `sim-estop` (AUTO HALT, latched, lamp red, rotor halted), `sim-presence` (70 mm), `sim-noecho`, `sim-stale`; mockups above | `sim-*.png`, `sim-*.txt` |
@@ -221,3 +221,11 @@ the same artifact (not changed: outside this card's need).
 - The console window shows 5 lines instead of 7; long request lines still wrap at 76 columns as before.
 - The real-cell shots come from the filming session (`make run-cell-screen`, `make screendump NAME=<x>`, which
   writes into `docs/evidence/T-08/`).
+
+## Path and secret scans (before the merge)
+`tools/check-paths.sh`: OK (656 tracked files). Secret scanner (`docs/evidence/T-04/live-run/scan_run_secrets.py`,
+unchanged) on `docs/evidence/T-14`: 21 files, 4 hits, all of them pytest test names from
+`tests/test_t14_panel.py`, not keys: `test_fan_colours_follow_the_reported_duty` (41 chars, `golden-tests.txt`),
+`test_no_needle_without_data_grey_when_stale` (43, `golden-tests.txt` and this README),
+`test_presence_threshold_matches_the_kernel_constant` (51, `golden-tests.txt`). The pytest tmp path is
+scrubbed to `<tmp>` in `pytest.txt`.
