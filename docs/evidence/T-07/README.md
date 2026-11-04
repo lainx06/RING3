@@ -1,8 +1,9 @@
-# T-07 evidence: camera witness (Part A offline; Part B code + simulated cell done, live steps open)
+# T-07 evidence: camera witness (Part A offline; Part B done: CAN'T VERIFY on hardware, D-83)
 
-**Part B status (2026-11-03, Opus 5.5 / high, D-57):** everything up to the live steps is built and tested on
-the simulated cell; A2-A4 need the real camera and paid SAM calls, which are the user's (D-57). See
-"Part B" at the end. Part A text below is unchanged except where a Part B test change is logged.
+**Part B status (closed 2026-11-03, Opus 5.5 / high, D-57, D-83):** the witness is built and works end to end
+on the simulated cell; on the real cell SAM 3.1 never returned the servo arm as a usable record, so every
+real check ended `CAN'T VERIFY` and the lead closed the witness as CAN'T VERIFY (D-83). Summary in "Part B
+closing" at the end. Part A text below is unchanged except where a Part B test change is logged.
 
 Builder: Opus 5.5 / high, auto mode (D-57) · 2026-11-02, finished 11:20 ET, second terminal (T-03b ran in the
 other one on disjoint paths; scoped test runs only). **Offline only:** fake transport, no camera, no paid call,
@@ -13,9 +14,9 @@ no `MODEL_API_KEY`, no network except the package install. No change to `kernel/
 | A | Check | Result | Evidence |
 |---|---|---|---|
 | A1 | Gauge PDF + geometry generated; INV-14 tests and the synthetic-fixture tests pass; parser rejects malformed SAM lines; ledger reserves one image before every SAM call (fake transport) | **PASS.** `hardware/gauge/make_gauge.py` writes `ring3_gauge.pdf` (Letter), `ring3_gauge_a4.pdf`, `ring3_gauge.png` (300 dpi) and `geometry.json`, deterministically; tests check geometry.json is in sync, markers are detected in the PNG **and in the PDF's own raster** within 0.3 mm of geometry.json, and the true page size. `test_inv_14_cant_verify_cases` (13 cases) + `test_inv_14_never_upgraded` + `test_inv_14_not_in_decision_path` pass. Fixtures: 10 verdict cases × 3 camera/light variants, 12 accuracy variants, dead-zone and off-axis cases. Parser: **48 malformed lines + 8 malformed envelopes rejected** (`SAM_FORMAT`), 16 accepted. Spend: the fake transport re-reads the ledger file **at post time** and fails the test unless exactly one image (2500 µUSD) is reserved and unsettled; no price / no budget / run cap / project cap → nothing sent. **witness 253 passed, 2 skipped by design; + INV-01 (29) = 282 passed, ~10 s.** 15/15 mutations caught. | `pytest.txt`, `fixtures.md`, `gauge.png`, `mutation.txt` |
-| A2 | Calibration residual reported and under the limit, or the witness disables itself | **open (user, live)**. `ring3 calibrate` built and run end to end on the simulated cell: 5 of 5 points, every move ALLOWed by the kernel, fit under the unchanged 3.0 deg limit; a missing point / refused move / bad fit disables the witness with the message | `sim-calibrate.txt`, `tests/test_witness_loop.py`, `tests/witness/test_part_b.py` |
-| A3 | Blocked arm and unplugged signal never PASS; covered marker CAN'T VERIFY; PASS rate over 10 moves | **open (user, live)**. Simulated: held arm -> `FAIL WRONG_ZONE` (board says 50, camera says MID) and the scripted model halts; `ring3 calibrate --checks` normal round 3/3 PASS, held round 50 and 130 FAIL; covered marker -> `MARKERS` (Part A) | `sim-witness-held.txt`, `sim-checks.txt` |
-| A4 | Live closed loop: the model receives the witness result and reacts to FAIL; `CHAIN OK`; spend <= budget | **open (user, live)**. Simulated with a scripted model: witness observation in the prompt (`PASS` / `FAIL` / `CAN'T VERIFY` + reason), `halt` after `FAIL`, SAM 401 -> STOP `model_auth`, run ends; `CHAIN OK` | `sim-witness-loop.txt`, `sim-witness-held.txt` |
+| A2 | Calibration residual reported and under the limit, or the witness disables itself | **PASS as "disables itself"** (real cell): 3 calibrations (`cal-20261103-194227`, `-220157`, `-220845`), every servo move ALLOWed by the kernel, `CHAIN OK`; all 15 points `CAN'T VERIFY` (NOT_FOUND x10, SHAPE x5) -> "no measurement at commanded [...] deg", witness disabled with that message. No residual exists because no point was measured. Simulated cell: 5 of 5 points, fit under 3.0 deg | `sim-calibrate.txt`; run dirs under `runs/` (git-ignored); "Part B closing" |
+| A3 | Blocked arm and unplugged signal never PASS; covered marker CAN'T VERIFY; PASS rate over 10 moves | **Not run on hardware** (needs a calibration; D-83). The never-PASS rules hold on the simulated cell (held arm -> FAIL, checks rounds) and in the synthetic tests (covered marker -> MARKERS) | `sim-witness-held.txt`, `sim-checks.txt`, `fixtures.md` |
+| A4 | Live closed loop: the model receives the witness result and reacts to FAIL; `CHAIN OK`; spend <= budget | **Not run live** (no calibration; D-83). Simulated with a scripted model: verdict in the prompt, halt after FAIL, SAM 401 stops the run, `CHAIN OK`. The pack agent-v3 tells the model that only PASS confirms a move | `sim-witness-loop.txt`, `sim-witness-held.txt` |
 | A5 | Commits: real `Builder:` trailer, only this card's paths | PASS for Part A: see `git log` (card + DECISIONS merge first, then deps/config, gauge, witness + tests + helper, evidence + STATUS) | `git log` |
 
 `test_inv_14_never_upgraded` is skipped for `boundary band` and `command on a boundary`: the test replaces the
@@ -321,7 +322,7 @@ within 6 mm of the printed pivot, and >= 70 % white plastic in the ring 0.5-2 mm
 lines at the horn's edges). Same rule: exactly one candidate, else `not found`, never OK. **Real frame 213006:
 `hub offset: dx -2.3 mm, dy -0.1 mm, 2.26 mm MOVE: move servo RIGHT 2.3 mm, UP 0.1 mm`** (lead's hand
 measurement about -2.4 / 0.0). The other upright frames of that session (211814...212913) and the side-mount
-fixture still say `not found` (fails safe; not tuned further, time-box). Test-program change 8: the synthetic
+fixture still say `not found` (a refusal, never OK; not tuned further, time-box). Test-program change 8: the synthetic
 hub scene draws the screw hole (r 1.2 mm) every real horn has; the negative cases became no hole / two hubs /
 hub 9 mm away / no hub; the recorded side-mount frame's expected text follows the new reason; new test on the
 real frame (committed as `tests/witness/recorded/frame-upright-213006.jpg`).
@@ -395,3 +396,59 @@ groups, and the first 4 decoded bytes are a big-endian length equal to the rest 
 does not sum to H x W; a 23 x 25 mask of an almost full square takes 130 bytes (its raw bitmap would be 72),
 so it is some other lossless encoding the docs do not describe. Without a documented decoder the mask's long
 axis can't be measured, so D-82 (a) was not applied and the arm filter is unchanged. (b) skipped (time-box).
+
+
+# Part B closing (D-83): CAN'T VERIFY on hardware
+
+**Outcome.** The camera witness is built, tested and wired into the bridge, and on the real cell it answers
+`CAN'T VERIFY` every time, because SAM 3.1 did not return the servo arm as a record the arm filter could use.
+The lead closed T-07 Part B on that result (D-83). Nothing in the witness can change a kernel decision
+(INV-14), and a CAN'T VERIFY was never turned into PASS or FAIL.
+
+## Tonight's real-cell runs (user, 2026-11-03; all `CHAIN OK`; spend estimate from the ledger)
+| run | setup | result | why |
+|---|---|---|---|
+| `cal-20261103-194227` | servo on its side (D-78), white horn, lamp from the far side | NOT_FOUND x5 | horn seen end-on, white on light grey; SAM: concept not present |
+| `probe-20261103-202522` | same frame, "black plastic arm" / "servo horn", full + tight crop | 0 records x4 | same |
+| `probe-20261103-202557` | control: "blue servo motor", "black square" | SAM_FORMAT x2 | real format differed from the card's paraphrase (D-77 parser fix) |
+| `probe-20261103-220132` | control after the parser fix | 1 servo record, 4 square records | parser reads real replies; markers land within 1 mm |
+| `cal-20261103-220157` | upright mount (D-78), arm taped black, hub white | NOT_FOUND x5 | default phrase was still "white plastic arm" |
+| `probe-20261103-220356` | "black bar" / "black stick" / "black rectangle" / "black lever" | "black bar": 11 records, one is the arm (near end 5.5 mm from the pivot, ~88 deg, c 0.58) | tape stopped at the white hub, so the arm box did not contain the pivot (SHAPE) |
+| `cal-20261103-220845` | tape over the hub, ~6 mm tail, "black bar" (new default) | SHAPE x5 | SAM returned only the 8 boundary bands and 2 marker parts; no arm record |
+| `probe-20261103-221556` | "black bar" / "black tape" / "black strip" / "black paddle" | 10 / 0 / 10 / 0 records, bands and markers only | no arm record |
+| `probe-20261103-222636` | narrow strip over the hub, "black bar", full + tight | full: 10 records, bands and markers only; tight: 0 | no arm record |
+Witness spend tonight: 33 images, $0.0825 (estimate, not billing).
+
+## What works
+- **Kernel path for calibration.** `ring3 calibrate` drives every servo move through bridge -> kernel ->
+  agentsh; all 3 real calibrations had every move ALLOWed and audited, no rate or step denial.
+- **Fresh frames (D-80).** The helper proves on its own clock that a frame was taken after the request
+  (grabs that waited, or a changed frame >= 250 ms after seen, decided on the exact recorded fields the bridge
+  checks); the bridge refuses anything else as STALE_FRAME. Real C922 on DSHOW: `--selftest` 3/3, then
+  `witness-frame` frames accepted.
+- **SAM parser (D-77).** Follows the official grammar; real replies parse, and the black-square records land
+  on the printed markers within 0.5-0.7 mm, so the box -> gauge-mm mapping is right on real data. Raw replies
+  are kept in every run log.
+- **Readouts.** `witness-frame` reports markers, camera axis vs pivot, resolution, and the hub offset from the
+  dark screw hole (real frame 213006: dx -2.3 / dy -0.1 mm against the lead's hand measurement -2.4 / 0.0).
+- **Refusals.** Every unsure case ended CAN'T VERIFY with a named reason (NOT_FOUND, SHAPE, SAM_FORMAT,
+  STALE_FRAME, CALIBRATION); no PASS or FAIL was produced from an unusable image.
+
+## What did not work, and why
+1. **SAM did not find the arm.** A 15 mm horn is ~73 px in the 920 x 570 dial crop. White, it matched the
+   light-grey dial; taped black, SAM returned it once ("black bar", c 0.58) when the tape left the white hub
+   showing, and never once the tape covered the hub: then it returned only the larger, regular black shapes
+   on the paper (boundary bands, marker cells). Object names ("arm", "horn", "lever", "stick", "paddle")
+   returned nothing.
+2. **The one arm record could not be used.** Its box started 5.5 mm from the pivot, and the arm filter
+   requires the pivot inside the box (unchanged, by design: it is what stops a band or a shadow from being
+   read as the arm).
+3. **The mask could not help.** D-82 asked for the arm's long axis from the mask; the payload is a 4-byte
+   length plus an undocumented lossless encoding (not zlib/deflate/gzip/run lengths), so it was not decoded.
+4. **Setup issues found on the way** (each fixed or recorded): servo mounted on its side (D-78), hub 2.3 mm off
+   the pivot mark, stale camera frames (D-80), helper timeouts from a backend whose grabs never wait and from
+   a helper/bridge timing mismatch (244 ms vs 250 ms).
+
+## Left for a later card (not started)
+Decode the mask (needs the format), a tighter dial crop for SAM, or an arm that SAM names reliably (e.g. a
+larger flat pointer); then A3/A4 on hardware.

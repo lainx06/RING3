@@ -65,18 +65,17 @@ the end of every card and at each milestone.
   D-58 box-centre angle sticks at 90 deg within ~5 deg (SG90 hub), so calibration passes only with the paper
   aligned to <= ~2 deg (else the witness disables itself, limit kept at 3 deg); camera axis must be over the
   pivot (parallax). `docs/evidence/T-07/README.md`.
-- **T-07 Part B: code + simulated cell done, live steps are the user's** (2026-11-03, Opus 5.5 / high, D-57;
-  no paid call, no key read by the builder). Ruff fix (`9e6158b`); `calibrate` deny rule (`aea614c`);
-  pack **agent-v3** = agent-v2 + witness section, pinned `c98d2955...` (`70514fc`); `witness` op in the run loop
-  (no COM2 frame, kernel-allowed `servo_set` + settled telemetry else `NO_MOVE`, `witness` record, SAM stop ends
-  the run), `ring3 calibrate` (scripted, through the kernel, D-72 points 60/70/90/110/120, <= 7 moves),
-  `calibrate --checks`, free `ring3 witness-frame`, `run --witness-dir/--calibration`; measured 15 mm horn
-  (`aaa5063`, `f121368`, `6edd716`). Simulated cell: PASS / NO_MOVE / held-arm FAIL + halt / SAM 401 stop /
-  calibration 5 of 5 / checks rounds. Full default suite at `6edd716` in a clean worktree: 731 passed, 6 skipped (hw + 2 by design), 161 s. 4 test-program changes logged
-  (none loosened). Findings: D-59 point set fails the limit on synthetic frames (-> D-72); 15 mm horn raw error
-  up to ~7 deg, shape filter fits on-axis, refuses 35 mm off-axis; agentsh ends a request after its 8th
-  ACTION. A2-A4 open: Windows helper + `witness-frame` -> `calibrate` -> `calibrate --checks` -> live
-  `ring3 run --pack agent-v3` (user). `docs/evidence/T-07/README.md` "Part B".
+- **T-07 Part B: done: CAN'T VERIFY on hardware (D-83)** (closed 2026-11-03, Opus 5.5 / high, D-57; no paid
+  call or key read by the builder). Built and tested: `witness` op in the run loop (no COM2 frame), `ring3
+  calibrate` through the kernel (D-72 points), `calibrate --checks` / `--probe`, `witness-frame` (markers,
+  camera axis, hub offset from the screw hole), pack agent-v3, SAM parser on the official grammar (D-77),
+  fresh-frame proof in the Windows helper (D-80, v3 + recorded-field decision). Simulated cell: PASS / FAIL /
+  NO_MOVE / SAM stop / calibration all as designed. Real cell (user, 3 calibrations + 6 probes, 33 images,
+  $0.0825 estimate, all `CHAIN OK`): every servo move ALLOWed, but SAM 3.1 never returned the arm as a usable
+  record (white horn: not present; taped black: one record 5.5 mm short of the pivot, then only boundary bands
+  and markers), so every check was `CAN'T VERIFY` and the witness disabled itself (A2 as "disables itself";
+  A3/A4 not run on hardware). Mask payload undocumented (D-82 not applied). Test-program changes 2-8 logged,
+  no limit loosened. `docs/evidence/T-07/README.md` "Part B closing".
 - **T-08 code complete** (2026-11-03 evening, Opus 5.5 / high, D-57, offline): A1-A5 pass, A6 partial. Kernel VGA
   status screen behind the `screen` boot option (pure `screen_render()` in `kernel/ui/`, host goldens; one
   verdict/reason table `kernel/ui/words.c` shared with the LCD, so the **panel now says CONFIRMED / DECLINED**
@@ -168,7 +167,7 @@ the end of every card and at each milestone.
 | T-06 | 2026-11-01 16:58 ET | Opus 5.5 / high | **2026-11-03 16:50 ET, card finished (v2 two-board build, D-63/D-64/D-64b/D-65): A1 A2 A3 A5 A6 A7 pass; A4 pass except the fan min duty on the NPN switch (50 % recorded on the L293D only).** A5.8 link loss 1056 ms + alarm seen by the user (LCD `LINK LOST - STOP`, red blinking; beeps heard, count 2 or 3 unconfirmed). Open for the lead: NPN min duty (`bringup` `f`), beep count, D-46 boot screen on the LCD. wiring.md rewritten for v2; DECISIONS = lead's D-01..D-71; `ring3cell` unchanged since `222d26d` (.hex identical). 10 test-program changes logged, none loosened an expectation | `docs/evidence/T-06/README.md` |
 | T-07 Part A | 2026-11-02 | Opus 5.5 / high | 2026-11-02 11:20 ET; A1 pass (Part B: A2-A4 open); offline, no paid call; 1 test-program change logged (fixture offset 4 -> 2 deg + new disable cases), no limit loosened | `docs/evidence/T-07/README.md` |
 | T-05a | 2026-11-03 evening | Opus 5.5 / high | 2026-11-03: A1-A5, A7 pass; A6 (E4, paid) open for the user; no paid call, no hardware run; no existing test changed, 2 first-run fixes in new tests logged | `docs/evidence/T-05a/README.md` |
-| T-07 Part B | 2026-11-03 | Opus 5.5 / high | code + simulated cell done (A2-A4 open: live, user); D-72 points, 15 mm horn, agent-v3; 4 test-program changes logged, no limit changed; no paid call by the builder | `docs/evidence/T-07/README.md` (Part B) |
+| T-07 Part B | 2026-11-03 | Opus 5.5 / high | done: CAN'T VERIFY on hardware (D-83); A2 as "witness disables itself", A3/A4 not run on hardware; simulated cell complete; test-program changes 2-8 logged, no limit loosened; no paid call by the builder | `docs/evidence/T-07/README.md` (Part B closing) |
 | T-09 | 2026-11-03 evening | Fable 5.1 / high | 2026-11-03 evening: A1-A4 pass; F1/F4 kernel + F2/F3 bridge, each with a fails-before/passes-after test; `decide()` untouched; no existing test changed (two sim-cell helpers added); no paid call, no hardware | `docs/evidence/T-09/README.md` |
 | T-08 | 2026-11-03 16:50 ET | Opus 5.5 / high | 2026-11-03 evening: A1-A5 pass, A6 partial (sim-cell shots filed, real-run PNGs open for the user); no paid call, no hardware; 2 existing tests changed (LCD word CONFIRMED, scanner file pointer) + optional harness `monitor=`, none loosened | `docs/evidence/T-08/README.md` |
 
