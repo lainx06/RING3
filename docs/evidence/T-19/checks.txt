@@ -1,4 +1,5 @@
-$ at commit 8f175fe
+$ at commit f3258d4
+(the only commit after this one adds these evidence files; no code changes)
 $ policy hashes (Makefile recipe: cat policy.h policy.c variant_<v>.h | sha256sum)
 4101a8cc305078722afb56a4eb09e2b4c3705e2d2c697b418c7ef02885cdef0b  -
 001bceb872bb722bcc8a3eea4d695a6a323512f6c73b6f6056a6de90b90d771f  -
@@ -19,4 +20,4 @@ $ ruff
 All checks passed!
 232 files already formatted
 $ tools/check-paths.sh
-check-paths: OK (755 tracked files scanned)
+check-paths: OK (757 tracked files scanned)

@@ -114,12 +114,13 @@ pass, `avg_us` staying at 36-47 (`max_us` seen: 1091-2570).
 |---|---|---|
 | Clean checkout of `a639f42` (no T-19 code), 20 runs of this test alone | 17 | 3 |
 | Branch `voice`, 20 runs of this test alone, right after | 18 | 2 |
-| Branch `voice`, everything else this card ran (10 repeats + full suites) | see `suite.txt` | |
+| Branch `voice`, everything else this card ran (10 repeats + 5 full suites) | 12 | 3 |
 
 So it predates this card and fails at about the same rate without it. `kernel/` is identical to `a639f42` and the
 test uses no voice code. It fits the TCG host stalls T-18 measured, with other sessions' QEMUs on this machine; that
-cause is inferred, the rate is measured. The assertion is unchanged. A full suite can therefore show this one failure,
-and `suite.txt` says which it was. For the lead: it makes "full suite passes" a matter of luck on this host.
+cause is inferred, the rate is measured. The assertion is unchanged. `suite.txt` is the last full run, at `f3258d4`:
+1131 passed, 0 failed, 6 skipped (hardware). The run before it, at `35c66b4`, had this one failure and no other. For the
+lead: on this host a full suite can show this failure with nothing wrong in the change under test.
 
 ## A3. The user's live steps (none run by the builder)
 
@@ -148,7 +149,7 @@ uv run ring3 run --budget-usd 0.06 --requests 1 --pack agent-v2-redteam --style 
 make run-cell-console
 
 # WSL terminal 3: the console; the kernel boots when this attaches
-uv run ring3 console --budget-usd 0.01 --voice-dir <the same folder under /mnt/c>
+uv run ring3 console --budget-usd 0.01 --voice-dir <the same folder, as WSL sees it>
 ```
 At `ring3> `: **F2**, say "RING3, set the fan to 100 %", **F2**. Check `heard: "..."`, press **Enter** (Esc discards).
 Expected, on the same pack and limits as the recorded E4 O1: the kernel refuses (`DENY_LIMIT fan_range`,
@@ -174,7 +175,7 @@ terminal sends a fourth, and voice stays off with the keyboard unaffected).
 ## Acceptance
 | # | Result | Evidence |
 |---|---|---|
-| A1 | **pass**: offline tests pass, guards fail-before, full suite and policy hash below | `suite.txt`, `guards-fail-before.txt`, `checks.txt` |
+| A1 | **pass**: offline tests pass, guards fail-before, last full suite 1131 passed / 0 failed (one existing flake on earlier runs, measured above), policy hash below | `suite.txt`, `guards-fail-before.txt`, `checks.txt` |
 | A2 | **pass**: request shape and price from the official pages | section A2 above; `config/models.toml` `[voice]` |
 | A3 | **open: user-run** | commands above |
 | A4 | **pass so far**: worktree only, branch `voice`, not merged, nothing pushed | `git log a639f42..voice` |
