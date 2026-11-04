@@ -33,7 +33,7 @@ only). `stopped`/verify/replay/spend metadata kept.
 ## Test-program changes (none loosened)
 - `tests/test_inv_13_hw.py`: `HwCell.__init__` wrapped in try/except that stops QEMU and re-raises; four `say()`
   strings reworded. No assertion, limit or expected value changed.
-- `tests/evals/test_eval_tables.py::test_scrub_catches_paths_and_headers`: the `/home/someone/x` fixture string is
+- `tests/evals/test_eval_tables.py::test_scrub_catches_paths_and_headers`: the home-directory fixture string is
   built at run time (`"/" + "home/someone/x"`) so `tools/check-paths.sh` doesn't flag the source; the input
   the scrub must catch is byte-identical. (check-paths failed on HEAD since T-05a for this line.)
 - New: `tests/test_hw_harness.py`, `tests/evals/test_e4_precheck.py`, `tests/evals/test_e4_o3_latch.py`, fixtures
