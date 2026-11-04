@@ -25,13 +25,15 @@ commit, header commit, final scan) is not done yet:** it waits for T-12 to be me
 | Script S10 | "Forty crashing program runs, ..." | "Forty faulty-program runs, ..." (narration note: 35 crashes from 7 programs + 5 endless loops from `spin`) |
 | claims.md | no rows for `int 0x80` or COBS + CRC-16 | R3a (`int 0x80`, INV-3: `idt.c:40`, `isr.S:72`, `crt0.S:16`) and R3b (COBS + CRC-16, INV-2: `agentlink.c:236`, `:254`, `abi/link_abi.h:30-32`) |
 
+| Script S9 caption (lead, after items 1-4) | "Camera witness: CAN'T VERIFY, by design" | "Unsure? It says CAN'T VERIFY" (5 words; credits only the refusal, not SAM's misses); claims V11 updated |
+
 ## Item 2: INVARIANTS.md (lead-authorised, the only two changes)
 | Rule | Before | After |
 |---|---|---|
 | INV-13 (line 20) | "goes to the safe state on its hardware watchdog" | "goes to its halt state (fan 0) on its hardware watchdog" |
 | INV-7 (line 14) | "(120 s wall clock, D-58, prov.)" | "(120 s wall clock, D-58)" |
 
-Not changed (outside the authorisation): the test name `test_inv_13_watchdog_safe_state` in the INV-13 row, and
+Not changed (outside the authorisation; the lead confirmed the test name stays, a rename is out of scope): the test name `test_inv_13_watchdog_safe_state` in the INV-13 row, and
 INV-11, which quotes the banned words as the rule itself. Line count of INVARIANTS unchanged, so claims.md's
 "rule n is on line 7+n" still holds.
 
@@ -99,3 +101,8 @@ $ grep -rniwE "success|secure|safe|real-time|realtime" docs/video docs/claims RE
 Line counts (`wc -l`, T-05's file set) into `docs/evidence/T-05/linecount.txt` and the README numbers; every
 claims.md line reference against HEAD (results.md moves with T-12's S8); header commit; banned-word test and
 manual scan again.
+
+## Step 6 (queued by the lead; after filming)
+Replace the README's three D-81 screenshots ("What it looks like": `docs/evidence/T-08/real-{ask,estop,idle}.png`
+and their `.txt`) with the new T-14 screen shots from the filming run; the lead gives the file names. Update the
+captions and claims rows R11-R14 to the new files and run id, and re-run the banned-word test and scan.

@@ -27,7 +27,7 @@ frames counted, all audited, no panic; not reproduced in 6 re-runs; root cause u
 | T-09 | done: A1-A4 pass; real-board recheck D-75 (evidence committed in T-11) |
 | T-10 | done: A1-A4 pass; O2 = setup + checker defect, no kernel bug (D-85) |
 | T-11 | A1 A2 A4 A5 pass (A4: item 5 skipped, string is in `confirm.c`); **A3: one E3 shortfall at `6fd1e0e`**, see above |
-| T-13 | items 1-4 done (README/script accuracy, INVARIANTS wording, plain-English intro and first 30 s, claims rows; banned-word test + scan 0 hits); **step 5 waits for T-12's merge** (line counts, claims line refs + header commit, final scan). `docs/evidence/T-13/README.md` |
+| T-13 | items 1-4 done (README/script accuracy, INVARIANTS wording, plain-English intro and first 30 s, claims rows; banned-word test + scan 0 hits); **step 5 waits for T-12's merge** (line counts, claims line refs + header commit, final scan). S9 caption reworded (uncommitted, goes in with step 5). **Step 6 after filming:** README's three D-81 shots -> T-14 filming-run shots (file names from the lead), claims R11-R14. `docs/evidence/T-13/README.md` |
 
 ## Now
 - Phase: **T-01 complete** (2026-11-01 13:30 ET). Kernel boots, ring-3 isolation slice works, **kill check
