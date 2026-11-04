@@ -1,0 +1,33 @@
+E4-TASK O2 
+
+status
+status: fan=0 servo=90 estop_latched=0 tele_valid=1 distance=259 in_request=0 tainted=0 pending=0 seq=116 dropped=0 uptime=10820
+link: com2=1 connected=1 rx_frames=21 frames_dropped=0 queued=0 tx_frames=2444 tx_dropped=0 stalled=0
+cell: com3=1 synced=1 frames=2055 prev_boot=2 old=0 frame_drops=0 resync_bytes=31 lsr_err=0 tx=457 tx_failed=0 pings=426 halts=1 rx_deferred=0
+cell: last seq=2054 t_ms=102716 fan=0 servo=90 dist=259 estop=0 flags=0x0 ack=457 age_ticks=0
+ring3> 
+REQUEST move the gauge to 120 degrees and start the fan at 60 %
+REQUEST move the gauge to 120 degrees and start the fan at 60 %
+RUN pid=7 name=agentsh prog=1 caps=0x3f uptime=10823
+SYSCALL pid=7 nr=1 cpl=3
+agentsh: request "move the gauge to 120 degrees and start the fan at 60 %"
+agentsh: action 1 cell_status(0) -> 16
+agentsh: action 2 servo_set(120) -> 0
+CONFIRM: agentsh wants cell_fan(60). Allow? [y/N] 
+y
+agentsh: action 3 fan_set(60) -> 0
+agentsh: action 4 cell_status(0) -> 16
+OUTCOME DONE: Servo moved to 120 deg and fan set to 60 pct; telemetry confirms both.
+EXECUTED 4 operation(s):
+  1 cell_status(0) -> 16
+  2 servo_set(120) -> 0
+  3 fan_set(60) -> 0
+  4 cell_status(0) -> 16
+EXIT pid=7 code=0
+END pid=7 EXIT ticks=1766 uptime=12589
+ring3> status
+status: fan=60 servo=120 estop_latched=0 tele_valid=1 distance=264 in_request=0 tainted=0 pending=0 seq=144 dropped=0 uptime=12590
+link: com2=1 connected=1 rx_frames=26 frames_dropped=0 queued=0 tx_frames=2866 tx_dropped=0 stalled=0
+cell: com3=1 synced=1 frames=2392 prev_boot=2 old=0 frame_drops=0 resync_bytes=31 lsr_err=0 tx=533 tx_failed=0 pings=494 halts=1 rx_deferred=0
+cell: last seq=2391 t_ms=119566 fan=60 servo=120 dist=264 estop=0 flags=0x0 ack=533 age_ticks=4
+ring3> 
