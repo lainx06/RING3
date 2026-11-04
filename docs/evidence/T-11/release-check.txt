@@ -1,0 +1,182 @@
+# T-11 release check (item 6) at 335481d65462f79082c7e15c526a569fd112801f (T-11: LICENSE (MIT, D-87); release commit for Gate B)
+# clean git worktree of that commit; no key in the environment; started 2026-11-04T04:22Z
+
+$ git status --porcelain
+(empty)
+[PASS] worktree clean at the start
+
+$ uv sync --frozen
+ + ring3==0.1.0 (from file://<worktree>)
+ + ruff==0.17.3
+[PASS] uv sync
+
+$ make clean && make
+/usr/bin/llvm-objcopy-18 -O binary build/user/agentsh.elf build/user/agentsh.bin
+clang --target=i686-unknown-none-elf -ffreestanding -nostdlib -fno-pic -g -Wall -Wextra -Werror -Ikernel/include -c user/progs.S -o build/obj/user/progs.o
+ld.lld -m elf_i386 -nostdlib --gc-sections -T kernel/linker.ld -o build/kernel.elf build/obj/kernel/arch/i386/gdt.o build/obj/kernel/arch/i386/idt.o build/obj/kernel/arch/i386/paging.o build/obj/kernel/arch/i386/pic.o build/obj/kernel/arch/i386/pit.o build/obj/kernel/core/agentlink.o build/obj/kernel/core/audit.o build/obj/kernel/core/confirm.o build/obj/kernel/core/console.o build/obj/kernel/core/exec.o build/obj/kernel/core/interrupt.o build/obj/kernel/core/kmalloc.o build/obj/kernel/core/ktest.o build/obj/kernel/core/main.o build/obj/kernel/core/objstore.o build/obj/kernel/core/panic.o build/obj/kernel/core/pmm.o build/obj/kernel/core/printk.o build/obj/kernel/core/syscall.o build/obj/kernel/core/uaccess.o build/obj/kernel/lib/cobs.o build/obj/kernel/lib/crc16.o build/obj/kernel/lib/string.o build/obj/kernel/drivers/cellframe.o build/obj/kernel/drivers/device.o build/obj/kernel/drivers/linkprobe.o build/obj/kernel/drivers/serial.o build/obj/kernel/drivers/vga.o build/obj/kernel/ui/screen.o build/obj/kernel/ui/words.o build/obj/kernel/policy/policy.o build/obj/kernel/arch/i386/boot.o build/obj/kernel/arch/i386/isr.o build/obj/kernel/arch/i386/usermode.o build/obj/user/progs.o
+warnings: 0
+[PASS] clean build, 0 warnings
+
+$ make host-policy
+[PASS] host policy build + checks
+
+$ policy hash (ring3bridge.run.policy_sha256)
+4101a8cc305078722afb56a4eb09e2b4c3705e2d2c697b418c7ef02885cdef0b
+[PASS] policy hash unchanged from 747fa2d (4101a8cc30507872...)
+
+$ git diff --stat 747fa2d..HEAD -- kernel/policy abi firmware
+(empty)
+[PASS] kernel/policy, abi, firmware unchanged since 747fa2d
+
+$ replay every bundle: env -u MODEL_API_KEY unshare -rn (no network namespace) ring3 verify + replay
+replay/t03b-run3-planted-note: CHAIN OK: 173 records, 12 blobs
+[PASS] verify replay/t03b-run3-planted-note
+replay/t03b-run3-planted-note: REPLAY MATCH: 22 decisions from 29 tape events
+replay/t03b-run3-planted-note: tape events by kind: action=3, action_boundary=4, exec_end=1, exec_start=1, syscall=20
+[PASS] REPLAY MATCH replay/t03b-run3-planted-note
+replay/t04-run3-fan-limit: CHAIN OK: 2337 records, 15 blobs
+[PASS] verify replay/t04-run3-fan-limit
+replay/t04-run3-fan-limit: REPLAY MATCH: 33 decisions from 1082 tape events
+replay/t04-run3-fan-limit: tape events by kind: action=3, action_boundary=5, exec_end=2, exec_start=2, syscall=25, telemetry=1045
+[PASS] REPLAY MATCH replay/t04-run3-fan-limit
+replay/t04-run4-taint-prompt: CHAIN OK: 938 records, 9 blobs
+[PASS] verify replay/t04-run4-taint-prompt
+replay/t04-run4-taint-prompt: REPLAY MATCH: 21 decisions from 424 tape events
+replay/t04-run4-taint-prompt: tape events by kind: action=2, action_boundary=4, confirm=1, exec_end=1, exec_start=1, syscall=16, telemetry=399
+[PASS] REPLAY MATCH replay/t04-run4-taint-prompt
+
+$ secret scan (docs/evidence/T-04/live-run/scan_run_secrets.py) on the run evidence, bundles and LICENSE
+HIT docs/evidence/T-11/after/hw-harness.txt: key-shaped token b'test_hwcell_'... (43 chars)
+HIT docs/evidence/T-11/after/hw-harness.txt: key-shaped token b'test_hw_prom'... (56 chars)
+HIT docs/evidence/T-11/after/e4-o3-latch.txt: key-shaped token b'test_recorde'... (42 chars)
+HIT docs/evidence/T-11/after/e4-o3-latch.txt: key-shaped token b'test_recorde'... (46 chars)
+HIT docs/evidence/T-11/after/e4-o3-latch.txt: key-shaped token b'test_recorde'... (61 chars)
+HIT docs/evidence/T-11/after/e4-o3-latch.txt: key-shaped token b'test_never_l'... (53 chars)
+HIT docs/evidence/T-11/after/e4-o3-latch.txt: key-shaped token b'test_never_l'... (62 chars)
+HIT docs/evidence/T-11/after/e4-o3-latch.txt: key-shaped token b'test_latched'... (44 chars)
+HIT docs/evidence/T-11/after/e4-o3-latch.txt: key-shaped token b'test_reset_b'... (40 chars)
+HIT docs/evidence/T-11/after/e4-o3-latch.txt: key-shaped token b'test_latch_d'... (42 chars)
+HIT docs/evidence/T-11/after/e4-precheck.txt: key-shaped token b'test_late_te'... (47 chars)
+HIT docs/evidence/T-11/before/hw-harness.txt: key-shaped token b'test_hwcell_'... (43 chars)
+HIT docs/evidence/T-11/before/hw-harness.txt: key-shaped token b'test_hwcell_'... (43 chars)
+HIT docs/evidence/T-11/before/hw-harness.txt: key-shaped token b'test_hw_prom'... (56 chars)
+HIT docs/evidence/T-11/before/hw-harness.txt: key-shaped token b'test_hw_prom'... (56 chars)
+HIT docs/evidence/T-11/before/hw-harness.txt: key-shaped token b'test_hwcell_'... (43 chars)
+HIT docs/evidence/T-11/before/hw-harness.txt: key-shaped token b'test_hw_prom'... (56 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'test_recorde'... (42 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'test_recorde'... (42 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'test_recorde'... (46 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'test_recorde'... (46 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'test_recorde'... (61 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'/pytest-89/t'... (42 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'test_recorde'... (61 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'test_never_l'... (53 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'/pytest-89/t'... (42 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'test_never_l'... (53 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'test_never_l'... (62 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'/pytest-89/t'... (42 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'test_never_l'... (62 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'test_latched'... (44 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'/pytest-89/t'... (42 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'test_latched'... (44 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'test_reset_b'... (40 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'/pytest-89/t'... (42 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'test_reset_b'... (40 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'test_latch_d'... (42 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'/pytest-89/t'... (42 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'test_latch_d'... (42 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'test_recorde'... (42 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'test_recorde'... (46 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'test_recorde'... (61 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'test_never_l'... (53 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'test_never_l'... (62 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'test_latched'... (44 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'test_reset_b'... (40 chars)
+HIT docs/evidence/T-11/before/e4-o3-latch.txt: key-shaped token b'test_latch_d'... (42 chars)
+HIT docs/evidence/T-11/before/e4-precheck.txt: key-shaped token b'test_late_te'... (47 chars)
+HIT docs/evidence/T-11/before/e4-precheck.txt: key-shaped token b'test_late_te'... (47 chars)
+HIT docs/evidence/T-11/before/e4-precheck.txt: key-shaped token b'test_late_te'... (47 chars)
+scanned 88 file(s): 50 hit(s)
+[FAIL] secret scan 0 hits (exit 1)
+
+$ tools/check-paths.sh
+check-paths: OK (601 tracked files scanned)
+[PASS] no home paths / user name in tracked files
+
+$ uv run ruff check . && uv run ruff format --check .
+All checks passed!
+189 files already formatted
+[PASS] ruff
+
+$ uv run pytest (full default suite)
+SKIPPED [1] tests/test_link_hw.py:86: hardware test: set RING3_HW=1 (board attached)
+SKIPPED [2] tests/witness/test_inv_14_witness.py:80: raised by the verdict stage itself
+FAILED tests/test_inv_13_interlock_and_stale.py::test_firmware_restart_stale_until_3_frames
+1 failed, 875 passed, 6 skipped in 194.54s (0:03:14)
+(184 s)
+[FAIL] full default suite (exit 1)
+
+$ git status --porcelain
+(empty)
+[PASS] worktree clean after the suite
+
+$ make evals (E1-E3: uv run python tools/eval/run_all.py --suites e1,e2,e3)
+eval build: HEAD 335481d exported to build/eval/src
+  make (production): ok
+  make POLICY=permissive: ok
+  make TEST=1: ok
+  make TEST=1 POLICY=permissive: ok
+  make host-policy: ok
+wrote docs/evals/raw/e1.json
+wrote docs/evals/raw/e2.json
+wrote docs/evals/raw/e3.json
+rendered docs/evals/results.md (187 lines)
+(174 s)
+[PASS] make evals E1-E3, no must-pass failure
+
+$ git status --porcelain (make evals rewrites its raw files and results.md for the measured commit)
+ M docs/evals/raw/e1.json
+ M docs/evals/raw/e2.json
+ M docs/evals/raw/e3.json
+ M docs/evals/results.md
+?? evals-results.md.out
+?? evals.log
+after restoring docs/evals: (empty)
+[PASS] worktree clean at the end
+
+RELEASE CHECK: FAILURES at 335481d
+
+# ---------------------------------------------------------------------------------------------------------------
+# Addendum (same worktree, same commit 335481d, after the run above)
+
+## 1. The one failing test: tests/test_inv_13_interlock_and_stale.py::test_firmware_restart_stale_until_3_frames
+Intermittent, alone too: 5 isolated reruns -> pass, pass, FAIL, pass, pass; a second loop failed on try 2.
+Failing assertion (line 87), checked the moment the simulated board sees the FAN 0 frame:
+    assert c.sim.lcd == {0: "BOARD BOOT", 1: "fresh boot"}
+    AssertionError: {0: 'ALLOW servo 120', 1: 'within limits'} != {0: 'BOARD BOOT', 1: 'fresh boot'}
+Diagnostic (a throwaway copy of the test in the worktree, deleted, never committed): the frames the sim cell
+received after the board restart, relative to the FAN 0:
+    lcd_at_fan0={0: 'ALLOW servo 120', 1: 'within limits'} lcd_after_300ms={0: 'BOARD BOOT', 1: 'fresh boot'}
+    +    0.0 ms FAN 0
+    +    2.3 ms LCD 0 'BOARD BOOT'
+    +    2.3 ms LCD 1 'fresh boot'
+The kernel does what the test expects (FAN 0 first, then the BOARD BOOT panel, nothing else); the sim reads
+its socket every 2 ms, so the LCD frames can land after the test has already looked. A test-timing race, not
+a kernel defect. The kernel is unchanged since 747fa2d (`git diff --stat 747fa2d..335481d -- kernel` empty).
+NOT fixed: the file is an invariant test outside T-11's paths, and the card says stop and report. One-line fix
+for the lead (expectation unchanged): wait for the LCD frame before asserting, e.g.
+    c.sim.wait_frame(lambda f: f.type == T_LCD and f.body[1:] == b"fresh boot", timeout=1.0, start=n)
+
+## 2. Secret scan, split by what the files are
+The run above scanned the T-11 pytest transcripts together with the run evidence; the scanner's key-shape rule
+(any 40+ character [A-Za-z0-9_-] token) flags long pytest test ids there (50 hits). Scanner unchanged.
+$ scan_run_secrets.py replay docs/evals/e4 docs/evals/raw docs/evidence/T-08/real-* docs/evidence/T-09/hw-recheck* LICENSE
+scanned 82 file(s): 0 hit(s)
+$ classify every key-shaped token in docs/evidence/T-11/**/*.txt with the scanner's own patterns
+50 key-shaped token(s), 0 not a pytest test id (all are test function names or pytest tmp dir names); 0 needles
+(Authorization, Bearer, MODEL_API_KEY, api_key, Cookie, [REDACTED], ...)
+
+## Result
+Release check at 335481d: everything passes except the full default suite (875 passed, 1 failed, 6 skipped):
+one intermittent test-timing race, diagnosed above, outside this card's paths. Policy hash unchanged; all 3
+replay bundles REPLAY MATCH with no key and no network; secret scan 0 hits on the run evidence; git status clean.
