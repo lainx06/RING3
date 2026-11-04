@@ -42,6 +42,9 @@ MAX_FLUSH_S = 3.0  # give up this long after the flush started, whatever ``seen`
 MAX_FLUSH_GRABS = 300  # and never more grabs than this (a camera that never blocks can't spin forever)
 PACE_S = 0.005  # after a grab that did not wait (300 such grabs span >= 1.5 s)
 FRAME_TAG = b"ring3-frame:v3;"
+LATEST_WAIT_NS = int(LATEST_WAIT_S * 1e9)  # = the bridge's LATEST_WAIT_NS
+MAX_PROOF_NS = 10 * 10**9  # = the bridge's MAX_FLUSH_NS
+PROOF_MARGIN_NS = 10_000_000  # the helper writes only when the bridge's proof holds with 10 ms to spare
 POLL_S = 0.05
 JPEG_QUALITY = 92
 
@@ -53,6 +56,14 @@ def add_frame_comment(jpeg: bytes, nonce: str, seen_ns: int, cap_ns: int, live: 
     body = f"id={nonce};seen_ns={seen_ns};cap_ns={cap_ns};live={live};changed={changed}"
     payload = FRAME_TAG + body.encode("ascii")
     return jpeg[:2] + b"\xff\xfe" + (len(payload) + 2).to_bytes(2, "big") + payload + jpeg[2:]
+
+
+def proof_ok(live: int, changed: int, seen_ns: int, cap_ns: int, margin_ns: int = 0) -> bool:
+    """The bridge's freshness check (``capture.proof_ok``), same arithmetic on the same recorded fields; the
+    helper calls it with ``PROOF_MARGIN_NS`` before writing, so what it writes always passes the bridge."""
+    if cap_ns <= seen_ns or cap_ns - seen_ns > MAX_PROOF_NS:
+        return False
+    return live >= LIVE_GRABS_MIN or (changed == 1 and cap_ns - seen_ns >= LATEST_WAIT_NS + margin_ns)
 
 
 def frames_differ(a, b) -> bool:  # noqa: ANN001 - numpy arrays
@@ -77,14 +88,17 @@ class Grab:
         return f"grabs {self.grabs}, new {self.live}, grab time {rng}, changed {self.changed}"
 
 
-def grab_fresh(
-    cam, encode, seen: float, clock=time.monotonic, wall_ns=time.time_ns, sleep=time.sleep
-) -> Grab:  # noqa: ANN001
+def grab_fresh(  # noqa: ANN001
+    cam, encode, seen: float, clock=time.monotonic, wall_ns=time.time_ns, sleep=time.sleep, seen_ns=None
+) -> Grab:
     """A frame captured after ``seen`` (a ``clock()`` time), never a queued one. Two proofs, one per backend
     kind: queue backends (grab waits for the sensor once the queue is drained) -> >= LIVE_GRABS_MIN grabs that
     waited; latest-frame backends (grab never waits, returns the newest frame) -> >= LATEST_WAIT_S after seen
-    and the frame differs from one retrieved after seen (a frozen stream repeats it). Else nothing."""
+    and the frame differs from one retrieved after seen (a frozen stream repeats it). The decision to write
+    is ``proof_ok`` on the recorded ``seen_ns`` / ``cap_ns`` with ``PROOF_MARGIN_NS``: exactly what the bridge
+    checks (the monotonic clock only paces the loop). Else nothing."""
     g = Grab()
+    seen_ns = wall_ns() if seen_ns is None else seen_ns
     start = clock()
     ref = None
     while True:
@@ -104,13 +118,17 @@ def grab_fresh(
         after = t1 - seen
         if g.grabs >= FLUSH_GRABS and after >= MIN_AFTER_SEEN_S:
             if g.live >= LIVE_GRABS_MIN:
-                break
-            if after >= LATEST_WAIT_S:
                 ok, frame = cam.retrieve()
-                if ok and frames_differ(ref, frame):
-                    g.changed = 1
-                    g.cap_ns = wall_ns()
-                    g.jpeg = encode(frame)
+                cap_ns = wall_ns()
+                if ok and frame is not None and proof_ok(g.live, 0, seen_ns, cap_ns, PROOF_MARGIN_NS):
+                    g.cap_ns, g.jpeg = cap_ns, encode(frame)
+                    return g
+            elif after >= LATEST_WAIT_S:
+                ok, frame = cam.retrieve()
+                cap_ns = wall_ns()
+                changed = int(ok and frames_differ(ref, frame))
+                if changed and proof_ok(g.live, changed, seen_ns, cap_ns, PROOF_MARGIN_NS):
+                    g.changed, g.cap_ns, g.jpeg = 1, cap_ns, encode(frame)
                     return g
         if not waited:
             sleep(PACE_S)  # a grab that did not wait: pace the loop so the grab limit spans real time
@@ -120,13 +138,6 @@ def grab_fresh(
                 f"{'unchanged: frozen stream?' if ref is not None else 'not retrievable'})"
             )
             return g
-    g.cap_ns = wall_ns()
-    ok, frame = cam.retrieve()
-    if not ok or frame is None:
-        g.reason = "camera retrieve failed"
-        return g
-    g.jpeg = encode(frame)
-    return g
 
 
 def pending_requests(folder: Path) -> list[Path]:
@@ -149,7 +160,7 @@ def serve_once(folder: Path, cam, encode, info: str = "", log=print,  # noqa: AN
             log(f"request {nonce[:8]}: {info}wrote nothing: request body is not its id")
             continue
         seen, seen_ns = clock(), wall_ns()
-        g = grab_fresh(cam, encode, seen, clock, wall_ns)
+        g = grab_fresh(cam, encode, seen, clock, wall_ns, seen_ns=seen_ns)
         if g.jpeg is not None:
             tmp, out = folder / f"{nonce}.tmp.jpg", folder / f"{nonce}.jpg"
             tmp.write_bytes(add_frame_comment(g.jpeg, nonce, seen_ns, g.cap_ns, g.live, g.changed))

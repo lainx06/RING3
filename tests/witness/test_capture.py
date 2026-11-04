@@ -227,7 +227,7 @@ def _fake_clock(step):
 
 def test_helper_counts_live_grabs_only_after_the_request_was_seen():
     t, clock, Cam = _fake_clock(0.04)  # every grab waits 40 ms (a queue backend at 25 fps)
-    g = helper.grab_fresh(Cam(), encode, seen=100.0, clock=clock, wall_ns=lambda: 5)
+    g = helper.grab_fresh(Cam(), encode, seen=100.0, clock=clock, wall_ns=lambda: int(t[0] * 1e9))
     assert g.jpeg is not None and g.live >= 2 and Cam.grabs >= 6 and t[0] - 100.0 >= 0.1
     t[0], Cam.grabs = 100.0, 0  # request "seen" in the future: no grab counts, and the loop still ends
     g = helper.grab_fresh(Cam(), encode, seen=1e9, clock=clock, wall_ns=lambda: 5, sleep=lambda _s: None)
@@ -335,3 +335,57 @@ def test_helper_writes_atomically(tmp_path, monkeypatch):
     assert helper.serve_once(tmp_path, FakeCam(), encode, log=lambda _l: None) == 1
     assert seen == [(f"{NONCE}.tmp.jpg", f"{NONCE}.jpg", False)]
     assert read_frame_comment((tmp_path / f"{NONCE}.jpg").read_bytes())[0] == NONCE
+
+
+def test_helper_and_bridge_proof_agree():
+    """One proof, same arithmetic on both sides (the helper can't import the bridge)."""
+    from ring3bridge.witness import capture
+
+    s = 1_793_000_000_000_000_000
+    for live in (0, 1, 2, 3):
+        for changed in (0, 1):
+            for d in (-1, 0, 1, 244_000_000, 249_999_999, 250_000_000, 260_000_000, 10**10, 10**10 + 1):
+                h, b = helper.proof_ok(live, changed, s, s + d), capture.proof_ok(live, changed, s, s + d)
+                assert h == b, (live, changed, d)
+
+
+def test_regression_244_ms_helper_keeps_waiting_and_its_frame_passes_the_bridge():
+    """Real C922 on DSHOW (08baf2c): the helper wrote at 250 ms on its monotonic clock, but the recorded
+    fields gave 244 ms and the bridge refused (changed=1, 0 waiting grabs). Here the recorded seen_ns lags the
+    helper's own reference by 6 ms, grabs never wait, frames change: the helper must not write at 244 ms,
+    and the frame it then writes must pass the bridge's unchanged 250 ms check."""
+    from ring3bridge.witness import capture
+
+    t = [100.0]
+
+    def clock():
+        return t[0]
+
+    def wall_ns():
+        return int(t[0] * 1e9)
+
+    def sleep(dt):
+        t[0] += dt
+
+    class Cam:  # a latest-frame backend: grab never waits, every retrieve is a new (noisy) frame
+        n = 0
+
+        def grab(self):
+            t[0] += 0.001
+            return True
+
+        def retrieve(self):
+            Cam.n += 1
+            return True, np.full((8, 8, 3), Cam.n % 251, np.uint8)
+
+    seen = clock()
+    seen_ns = wall_ns() + 6_000_000  # recorded 6 ms after the helper's own reference point
+    # the exact refused case: 244 ms on the recorded fields fails on both sides
+    assert not helper.proof_ok(0, 1, seen_ns, seen_ns + 244_000_000, helper.PROOF_MARGIN_NS)
+    assert not capture.proof_ok(0, 1, seen_ns, seen_ns + 244_000_000)
+    g = helper.grab_fresh(Cam(), encode, seen, clock, wall_ns, sleep, seen_ns=seen_ns)
+    assert g.jpeg is not None and g.changed == 1 and g.live == 0
+    assert g.cap_ns - seen_ns >= 260_000_000  # waited past the 250 ms on the recorded fields, with margin
+    assert capture.proof_ok(g.live, g.changed, seen_ns, g.cap_ns)  # what it wrote passes the bridge
+    # the old rule (250 ms on the monotonic clock) would have written at a recorded 244..250 ms: refused
+    assert (seen + 0.25) * 1e9 - seen_ns < capture.LATEST_WAIT_NS

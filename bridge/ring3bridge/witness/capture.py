@@ -46,6 +46,14 @@ MAX_FRAME_BYTES = 16 << 20
 CLOCK_SKEW_S = 120.0  # cross-clock sanity only (WSL2 vs Windows clocks can drift); the proof is same-clock
 
 
+def proof_ok(live: int, changed: int, seen_ns: int, cap_ns: int) -> bool:
+    """The freshness proof on the helper's recorded fields. The helper's ``proof_ok`` is the same arithmetic
+    (it runs standalone on Windows and cannot import this); a test keeps the two equal."""
+    if cap_ns <= seen_ns or cap_ns - seen_ns > MAX_FLUSH_NS:
+        return False
+    return live >= LIVE_GRABS_MIN or (changed == 1 and cap_ns - seen_ns >= LATEST_WAIT_NS)
+
+
 def add_nonce_comment(jpeg: bytes, nonce: str) -> bytes:
     """Insert a COM segment holding the nonce right after SOI (the helper has its own copy of this)."""
     if not jpeg.startswith(b"\xff\xd8") or not NONCE_RE.fullmatch(nonce):
@@ -138,7 +146,7 @@ def check_frame(jpg: Path, nonce: str, t_req: float) -> tuple[np.ndarray, bytes]
         raise CantVerify(STALE_FRAME, "frame captured before the helper saw the request")
     if cap_ns < int((t_req - CLOCK_SKEW_S) * 1e9):
         raise CantVerify(STALE_FRAME, "frame captured before the request")
-    if live < LIVE_GRABS_MIN and not (changed and cap_ns - seen_ns >= LATEST_WAIT_NS):
+    if not proof_ok(live, changed, seen_ns, cap_ns):
         raise CantVerify(
             STALE_FRAME,
             f"no freshness proof ({live} waiting grab(s), changed={changed}, "

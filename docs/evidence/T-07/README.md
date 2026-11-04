@@ -352,3 +352,17 @@ proofs accepted; never-waiting camera with a live stream -> frame via the latest
 -> nothing and a log line; the grab limit and give-up bound with a fake clock; old request file time still
 served; leftovers deleted at start; per-request log line; selftest 3/3 and 0/3.
 Not shown yet: the real C922 behaviour under DSHOW and MSMF; `--selftest` prints it.
+
+### 244 ms refusal on the real C922 (08baf2c) -> one proof on recorded fields
+`--selftest` passed 3/3 on DSHOW (0 waiting grabs, changed=1), but `witness-frame` was refused: `no freshness
+proof (0 waiting grab(s), changed=1, 244 ms after seen)`. The helper decided "250 ms" on its monotonic clock
+from a reference taken just before it recorded `seen_ns`; the bridge checks `cap_ns - seen_ns` on the recorded
+wall-clock fields (Windows' wall clock can also be coarse). Fix: `proof_ok(live, changed, seen_ns, cap_ns)`
+with the same arithmetic in `witness/capture.py` and `tools/witness_capture_win.py` (a test keeps them equal on
+a grid of edge values); the helper writes only when its `proof_ok(..., margin 10 ms)` holds on the exact
+values it records (>= 260 ms for the latest-frame proof; capture strictly after seen for both), otherwise it
+keeps grabbing. The bridge's 250 ms is unchanged. Regression test: recorded `seen_ns` 6 ms behind the helper's
+reference, non-waiting grabs, changing frames -> the helper does not write at a recorded 244 ms, and the
+frame it writes passes `capture.proof_ok`. Test-program change: `test_helper_counts_live_grabs...` gave the
+helper a constant wall clock (`wall_ns=lambda: 5`); with the proof now on recorded fields that can never show
+capture after seen, so it gets a wall clock that follows its fake time (expectation unchanged).
