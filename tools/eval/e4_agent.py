@@ -11,7 +11,8 @@ COM2 for 30 s), then boots QEMU with the cell on COM3 and types the fixed reques
 time. Every CONFIRM prompt is shown to the operator, who types the answer (the script never answers for the
 human). Physical steps (object at the sensor, E-stop, ECHO wire) are asked for before the request and wait
 for Enter. A presence task (O2) is typed only when the kernel's `status` shows a fresh distance < 100 mm, and
-the run stops unless the beam reads clear again after the object is removed (D-85).
+the run stops unless the beam reads clear again after the object is removed (D-85); both checks first wait up
+to 10 s for tele_valid=1 (just after a board reset the telemetry is not yet valid, D-86).
 Afterwards: `ring3 verify` + `ring3 replay` of the run, the checkers, docs/evals/raw/e4-<set>.json (a run with
 --only writes e4-<set>-<ids>.json, so it never overwrites the full run), and results.md is re-rendered.
 This script never reads a key; `ring3 run` does, in its own process.
@@ -41,6 +42,7 @@ CONFIRM_ANSWER_S = 25.0  # the kernel's prompt timeout is 30 s (kernel/include/e
 END_RX = r"^END pid=\d+ (\S+) ticks=(\d+) uptime=(\d+)$"
 END_LINE = r"^END pid=\d+ \S+ ticks=\d+ uptime=\d+\n"
 CONFIRM_RX = r"CONFIRM: (.*?)Allow\? \[y/N\] "
+FRESH_WAIT_S = 10.0  # D-86: how long a status check waits for tele_valid=1 after a board reset
 
 
 def say(msg: str) -> None:
@@ -192,6 +194,20 @@ def kernel_status(s) -> dict:
     return e4_tasks.parse_status(m.group(0)).get("kernel", {})
 
 
+def fresh_status(
+    s, k: dict, timeout: float = FRESH_WAIT_S, poll_s: float = 0.5, clock=time.monotonic, sleep=time.sleep
+) -> dict:
+    """D-86: the kernel status `k` the script just read, or, while it shows tele_valid=0 (the board has just
+    reset and the policy waits for TELE_SYNC_FRAMES frames), `status` again every `poll_s` for up to `timeout`
+    seconds. Returns the first status with tele_valid=1, else the last one read (the caller then fails
+    closed). The distance is judged only on what this returns."""
+    deadline = clock() + timeout
+    while k.get("tele_valid") != 1 and clock() < deadline:
+        sleep(poll_s)
+        k = kernel_status(s)
+    return k
+
+
 def _sh(cmd: list[str]) -> str:
     p = subprocess.run(cmd, cwd=REPO, capture_output=True, text=True, check=False)
     return (p.stdout + p.stderr).strip()
@@ -280,7 +296,8 @@ def go(a: argparse.Namespace) -> int:
                     s.prompt()
                     pre = s.output[com1_mark:]
                     if t.presence:
-                        k = e4_tasks.parse_status(pre).get("kernel", {})
+                        k = fresh_status(s, e4_tasks.parse_status(pre).get("kernel", {}))
+                        pre = s.output[com1_mark:]
                         if not e4_tasks.presence_ok(k):
                             stopped = (
                                 f"{t.id}: the kernel's status shows distance={k.get('distance')} "
@@ -321,7 +338,7 @@ def go(a: argparse.Namespace) -> int:
                         input(
                             f"\n>>> {t.id}: remove the object from in front of the sensor, then press Enter "
                         )
-                        k = kernel_status(s)
+                        k = fresh_status(s, kernel_status(s))
                         if not e4_tasks.clear_ok(k):
                             stopped = (
                                 f"{t.id}: after removing the object the kernel's status shows "

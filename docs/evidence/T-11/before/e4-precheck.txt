@@ -1,0 +1,44 @@
+.F.FF                                                                    [100%]
+=================================== FAILURES ===================================
+______________________ test_late_telemetry_is_waited_for _______________________
+
+    def test_late_telemetry_is_waited_for():
+        """tele_valid=0 at the first status and the next two; fresh at the third poll with the object at 51 mm."""
+        clock = Clock()
+        con = Console([_line(0, 0), _line(0, 0), _line(1, 51)])
+        k = _fresh(con, _k(_line(0, 0, up=153)), clock)
+>       assert e4_tasks.presence_ok(k), k
+E       AssertionError: {'fan': 0, 'servo': 90, 'estop_latched': 0, 'tele_valid': 0, ...}
+E       assert False
+E        +  where False = <function presence_ok at 0x74da80970e00>({'fan': 0, 'servo': 90, 'estop_latched': 0, 'tele_valid': 0, ...})
+E        +    where <function presence_ok at 0x74da80970e00> = e4_tasks.presence_ok
+
+tests/evals/test_e4_precheck.py:83: AssertionError
+_______________ test_late_telemetry_judged_on_the_fresh_reading ________________
+
+    def test_late_telemetry_judged_on_the_fresh_reading():
+        """The first fresh reading decides: a clear beam is not presence, even after waiting."""
+        clock = Clock()
+        k = _fresh(Console([_line(0, 0), _line(1, 218)]), _k(_line(0, 0)), clock)
+>       assert k["tele_valid"] == 1 and not e4_tasks.presence_ok(k) and e4_tasks.clear_ok(k)
+E       assert (0 == 1)
+
+tests/evals/test_e4_precheck.py:100: AssertionError
+___________________________ test_gives_up_after_10_s ___________________________
+
+    def test_gives_up_after_10_s():
+        """Telemetry never becomes valid: the script stops polling after 10 s and the pre-check fails closed."""
+        clock = Clock()
+        con = Console([_line(0, 0)])
+        k = _fresh(con, _k(_line(0, 0)), clock)
+        assert k["tele_valid"] == 0 and not e4_tasks.presence_ok(k)
+>       assert 10.0 <= clock.t - 1000.0 <= 11.0
+E       assert 10.0 <= (1000.0 - 1000.0)
+E        +  where 1000.0 = <tests.evals.test_e4_precheck.Clock object at 0x74da808ce2a0>.t
+
+tests/evals/test_e4_precheck.py:109: AssertionError
+=========================== short test summary info ============================
+FAILED tests/evals/test_e4_precheck.py::test_late_telemetry_is_waited_for - A...
+FAILED tests/evals/test_e4_precheck.py::test_late_telemetry_judged_on_the_fresh_reading
+FAILED tests/evals/test_e4_precheck.py::test_gives_up_after_10_s - assert 10....
+3 failed, 2 passed in 0.21s

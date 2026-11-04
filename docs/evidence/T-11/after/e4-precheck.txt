@@ -1,0 +1,14 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0 -- <repo>/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: <repo>
+configfile: pyproject.toml
+collecting ... collected 5 items
+
+tests/evals/test_e4_precheck.py::test_recorded_stop_was_tele_valid_0 PASSED [ 20%]
+tests/evals/test_e4_precheck.py::test_late_telemetry_is_waited_for PASSED [ 40%]
+tests/evals/test_e4_precheck.py::test_fresh_at_once_types_nothing_more PASSED [ 60%]
+tests/evals/test_e4_precheck.py::test_late_telemetry_judged_on_the_fresh_reading PASSED [ 80%]
+tests/evals/test_e4_precheck.py::test_gives_up_after_10_s PASSED         [100%]
+
+============================== 5 passed in 0.19s ===============================
