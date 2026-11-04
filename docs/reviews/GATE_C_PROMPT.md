@@ -1,0 +1,13 @@
+You are the release reviewer for RING3's late additions (Gate C). Gate B (D-96/D-97) reviewed and cleared everything up to `7b3c43c`. Review ONLY what changed since then: `git diff 7b3c43c..HEAD` (T-17 counterfactual + permissive sim, T-16 vision witness + servo map, T-18 graphics screen in the kernel if merged, T-19 voice requests if merged). Read-only: don't edit, commit, or make network calls; don't open `.env` files.
+
+Context: `CLAUDE.md`, `docs/INVARIANTS.md`, `docs/DECISIONS.md` D-98 to the end, the evidence READMEs under `docs/evidence/T-16/`, `T-17/`, `T-18/`, `T-19/`, and the newest `release-check.txt`.
+
+Answer each with yes/no and evidence (file:line):
+1. Keys and spend in the new adapters (`bridge/ring3bridge/models/vision.py`, and the transcription adapter if present): is the key read only in `models/`, redacted on decoded strings like `muse_spark.py`, and absent from events, blobs, exceptions and the screen? Is a ledger reservation made before every call, with the cap enforced and no retry?
+2. Untrusted model/voice output: is the vision reply validated exactly (the schema, no extra fields, no lenient parsing)? Can any witness or voice result reach the kernel other than as an operator-typed request line? Can voice ever send while a CONFIRM is pending, send a bare y/n, or send without the operator's Enter?
+3. Graphics kernel code (`kernel/drivers/gfxdev.c`, `kernel/ui/gfx.c`, `paging_map_kernel()`): are the framebuffer and back-buffer mappings supervisor-only and unable to overlap user memory or the kernel image? Are the PCI/DISPI/font reads bounded, with failure falling back to text with no panic? Does rendering run with interrupts enabled, so the timer tick and its lease check can preempt it? Is there any change to `decide()`, policy state, the syscall gate, `uaccess`, the frame parsers or serial output?
+4. Permissive sim (`T-17`): can it ever run against the real board, or present permissive results as RING3's? Is the label present everywhere it is claimed?
+5. Published data: do any new committed files hold secrets, home paths, user names, or personal recordings (audio, photos of people)?
+6. Release check: does the newest `release-check.txt` cover HEAD (or an ancestor with no later changes to `kernel/`, `user/`, `bridge/`, `tools/`), with the suite, the replays, the policy hash and the secret scan all passing?
+
+Output: for each question, "Qn: no issue" or findings. Each finding: severity (BLOCKER = must fix before publishing; MAJOR; MINOR), file:line, the concrete trigger, and the smallest fix in one sentence. At most 10 findings, most severe first. No praise, no summaries.
