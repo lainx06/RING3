@@ -6,7 +6,7 @@ import time
 
 from tests.cellharness import cellcmd, decisions, estop_reset, last_request, results, start
 from tests.qemu import EXIT_PASS, audit_lines, record_evidence
-from tests.sim_cell import NO_ECHO, T_FAN
+from tests.sim_cell import NO_ECHO, T_FAN, T_LCD
 
 
 def test_inv_13_interlock_and_stale():
@@ -84,6 +84,8 @@ def test_firmware_restart_stale_until_3_frames():
         c.s.prompt()
         halt = c.sim.wait_fan(0, timeout=1.0, start=n)
         assert halt is not None
+        # D-89: the panel frames land a few ms after FAN 0; wait for line 1 (sent after line 0), then check
+        c.sim.wait_frame(lambda f: f.type == T_LCD and f.body[0] == 1, timeout=1.0, start=n)
         assert c.sim.lcd == {0: "BOARD BOOT", 1: "fresh boot"}
         t = cellcmd(c, "wait 110; fan 60; servo 120")  # > 1 s after the boot (past the rate rule)
         assert results(t)[1:] == [("fan 60", -200), ("servo 120", -200)]
