@@ -1,0 +1,8 @@
+# full default suite on branch gfx at 5349b1c (text mode default; T-18 tests included), 2026-11-04
+$ uv run pytest -q
+SKIPPED [1] tests/test_inv_13_hw.py:105: hardware test: set RING3_HW=1 (board attached)
+SKIPPED [1] tests/test_inv_13_hw.py:157: hardware test: set RING3_HW=1 (board attached)
+SKIPPED [1] tests/test_inv_13_hw.py:215: hardware test: set RING3_HW=1 (board attached)
+SKIPPED [1] tests/test_link_hw.py:86: hardware test: set RING3_HW=1 (board attached)
+SKIPPED [2] tests/witness/test_inv_14_witness.py:80: raised by the verdict stage itself
+978 passed, 6 skipped in 239.86s (0:03:59)

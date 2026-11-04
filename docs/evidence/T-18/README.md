@@ -129,7 +129,7 @@ here (no filming run), the command is in the Makefile for the user.
 
 | | Result | Evidence |
 |---|---|---|
-| A1 | text-mode default suite: see `pytest.txt` (this branch) ; policy hash unchanged; replays in the suite | `pytest.txt` |
+| A1 | **pass**: full default suite on this branch **978 passed, 6 skipped** (946 before + 32 T-18; text mode default; replay-match tests inside); policy hash `4101a8cc...` unchanged; ruff clean; `check-paths` OK | `pytest.txt` |
 | A2 | golden-image and fan tests pass; render: steady-state max 1.4-1.8 ms, outliers from host stalls, see above | `render-time.txt`, `host-*.png` |
 | A3 | `fbpoke` / `bbpoke`: PROC_FAULT vector 14 at the window address, 0 PANIC; `-vga none` falls back to text | `sim-after-fault.png`, test transcript |
 | A4 | sim-cell PNGs of every state; no banned words; original design | `sim-*.png` |
