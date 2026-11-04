@@ -87,7 +87,8 @@ loop with a scripted model, fake transcription transport).
 | No hidden listening | `test_recorder_and_helper.py`: no request, no microphone; closed after each recording; leftovers deleted at start; helper's own 15 s cap; REC only after the helper's acknowledgement |
 | Byte for byte | every byte value both ways (`test_console_core.py`, pty and pipes in `test_console_serve.py`); real kernel: the same keystrokes through `-serial stdio` and the proxy, same transcript apart from counters, on both images |
 
-**Fails-before for the guards:** `guards-fail-before.txt`. Each guard turned off in the source in turn (the diff is
+**Fails-before for the guards:** `guards-fail-before.txt` (run before `--tidy-echo` and the rebase; neither touches a
+guard). Each guard turned off in the source in turn (the diff is
 in the file), the tests run, the source restored: G1 CONFIRM 17 fail, G2 bare answer 30 fail, G3 Enter 7 fail, and
 the end-to-end test on the real kernel fails in all three.
 
@@ -119,9 +120,8 @@ pass, `avg_us` staying at 36-47 (`max_us` seen: 1091-2570).
 
 So it predates this card and fails at about the same rate without it. `kernel/` is identical to `a639f42` and the
 test uses no voice code. It fits the TCG host stalls T-18 measured, with other sessions' QEMUs on this machine; that
-cause is inferred, the rate is measured. The assertion is unchanged. `suite.txt` is the last full run, at `f3258d4`:
-1131 passed, 0 failed, 6 skipped (hardware). The run before it, at `35c66b4`, had this one failure and no other. For the
-lead: on this host a full suite can show this failure with nothing wrong in the change under test.
+cause is inferred, the rate is measured. The assertion is unchanged. For the lead: on this host a full suite can show
+this one failure with nothing wrong in the change under test. `suite.txt` is the last full run, after the rebase.
 
 ## A3. The live run (run by the user, read by the builder)
 

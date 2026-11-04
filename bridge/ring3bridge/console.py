@@ -116,8 +116,8 @@ class Core:
         """kernel/core/audit.c may_print() breaks the input line for every queued telemetry record, on the
         production image too, where the record prints nothing: typed characters land one per line. With the
         flag on, a CR LF at an open input line (from the kernel's ``ring3> `` to the Enter key) is not drawn.
-        The first byte that isn't the echo of a typed key closes the input line and starts on a line of its own,
-        so only CR LF ever goes missing. The guards read the raw output, never this."""
+        The first byte that isn't the echo of a typed key closes the input line and starts on a line of its
+        own, so only CR LF ever goes missing. The guards read the raw output, never this."""
         out = bytearray()
         for b in data:
             if self.input_open:
