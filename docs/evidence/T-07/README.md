@@ -387,3 +387,11 @@ Geometry check (model: bar 8.6 mm wide as measured in `probe-20261103-220356`, t
 edge <= 7.4 vs 8.0); tail 1-2 mm -> passes with wide ones (centre >= 7.1-7.7, edge <= 3.3-4.3); far side <= 20.7
 vs 25.75 in all cases. No threshold change proposed. Open: SAM's detection of the fully taped arm with
 "black bar" (it found the half-taped arm at c 0.58).
+
+### D-82 (a) "long axis from the mask": not implementable yet (mask format)
+Tried on the recorded payloads (free): the 85-character alphabet in ASCII order decodes cleanly in 5-char
+groups, and the first 4 decoded bytes are a big-endian length equal to the rest (servo 3936 of 3940; squares
+130 and 1209). The body after the header is not zlib / raw deflate / gzip, and read as LEB128 run lengths it
+does not sum to H x W; a 23 x 25 mask of an almost full square takes 130 bytes (its raw bitmap would be 72),
+so it is some other lossless encoding the docs do not describe. Without a documented decoder the mask's long
+axis can't be measured, so D-82 (a) was not applied and the arm filter is unchanged. (b) skipped (time-box).
