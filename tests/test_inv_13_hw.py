@@ -64,13 +64,19 @@ class HwCell:
 
     def __init__(self) -> None:
         self.s = Session(append=HW_QUOTAS, com3=PORT, timeout=60)
-        self.s.expect(r"^cell: COM3 present.*$")
-        say("waiting for the board's boot (the port open resets it) ...")
-        m = self.s.expect(r"^AUDIT seq=\d+ tick=(\d+) sys=telemetry target=0 decision=BOARD_BOOT .*$", 15)
-        say(f"BOARD_BOOT at tick {m.group(1)}")
-        self.s.prompt()
-        time.sleep(0.5)
-        self.status()
+        try:
+            self.s.expect(r"^cell: COM3 present.*$")
+            say("waiting for the board's boot (the port open resets it) ...")
+            m = self.s.expect(r"^AUDIT seq=\d+ tick=(\d+) sys=telemetry target=0 decision=BOARD_BOOT .*$", 15)
+            say(f"BOARD_BOOT at tick {m.group(1)}")
+            self.s.prompt()
+            time.sleep(0.5)
+            self.status()
+        except BaseException:
+            # D-75: a failed setup never reaches `with`, so __exit__ would not run; stop QEMU here, or it
+            # keeps the Uno's port open and the next run sees two readers (bad frames)
+            self.s.__exit__(None, None, None)
+            raise
 
     def status(self) -> str:
         self.s.send("status")
@@ -80,7 +86,10 @@ class HwCell:
         return m.group(0)
 
     def start_fan(self, script: str = "fan 60; wait 1500") -> None:
-        say("keep the sensor clear; the fan starts at 60 % after you answer y on this console")
+        say(
+            "keep the sensor clear; the fan starts at 60 %: the script answers y at the console itself "
+            "(nothing to type)"
+        )
         self.s.send(f"run cellcmd {script}")
         self.s.expect(r"CONFIRM: cellcmd wants cell_fan\(60\)\. Allow\? \[y/N\] ", 30)
         self.s.send("y")
@@ -122,7 +131,10 @@ def test_inv_13_hw_interlock_stop():
         start_pos = hw.s.pos
         m = hw.s.expect(r"(CONFIRM: cellcmd wants cell_fan\(60\)\. Allow\? \[y/N\] )|(^END pid=\d+ .*$)", 30)
         if m.group(0).startswith("CONFIRM"):
-            say("the first-fan question again after the hazard stop (D-53): answering n")
+            say(
+                "the first-fan question again after the hazard stop (D-53): the script answers n itself "
+                "(nothing to type)"
+            )
             hw.s.send("n")
             hw.s.expect(r"^END pid=\d+ \S+ ticks=\d+ uptime=\d+$", 30)
         t2 = hw.s.output[start_pos : hw.s.pos]
@@ -164,7 +176,10 @@ def test_inv_13_estop_cuts_fan():
         t = cellcmd(hw, "fan 60; servo 100; halt")
         assert results(t) == [("fan 60", -200), ("servo 100", -200), ("halt", 0)]
         assert decisions(t, "cell_fan") == [("cell_fan", "DENY_ESTOP", "estop")]
-        say("button still pressed: the reset must be refused; answer y to the next prompt")
+        say(
+            "keep the button pressed: the script asks for the reset and answers y itself (nothing to type); "
+            "the kernel must refuse it"
+        )
         hw.s.send("estop reset")
         hw.s.expect(CONSOLE_CONFIRM, 30)
         hw.s.send("y")
@@ -172,7 +187,10 @@ def test_inv_13_estop_cuts_fan():
         say(f"estop reset while pressed -> {m.group(1)}")
         hw.s.prompt()
         assert m.group(1) == "DENY_ESTOP estop_button"
-        say("release the E-stop now; the reset is asked again in 3 s: answer y")
+        say(
+            "release the E-stop now; in 3 s the script asks for the reset again and answers y itself "
+            "(nothing to type)"
+        )
         time.sleep(3.0)
         hw.s.send("estop reset")
         hw.s.expect(CONSOLE_CONFIRM, 30)

@@ -1,0 +1,75 @@
+FFF                                                                      [100%]
+=================================== FAILURES ===================================
+_________________ test_hwcell_stops_its_qemu_when_setup_fails __________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x730b45842930>
+
+    def test_hwcell_stops_its_qemu_when_setup_fails(monkeypatch):
+        """No board attached: `cell: COM3 present` never comes, setup raises, and the QEMU it started is gone."""
+        made: list[Session] = []
+    
+        def no_board(**kw: object) -> Session:
+            s = Session(append=str(kw.get("append", "")), timeout=3)  # no COM3 at all: the kernel says absent
+            made.append(s)
+            return s
+    
+        monkeypatch.setattr(hw, "Session", no_board)
+        try:
+            with pytest.raises(AssertionError, match="COM3 present"):
+                hw.HwCell()
+            assert len(made) == 1
+>           assert made[0].proc.poll() is not None, "HwCell left its QEMU running after a failed setup"
+E           AssertionError: HwCell left its QEMU running after a failed setup
+E           assert None is not None
+E            +  where None = poll()
+E            +    where poll = <Popen: returncode: None args: ['qemu-system-i386', '-kernel', 'build/kernel...>.poll
+E            +      where <Popen: returncode: None args: ['qemu-system-i386', '-kernel', 'build/kernel...> = <tests.qemu.Session object at 0x730b45842990>.proc
+
+tests/test_hw_harness.py:33: AssertionError
+____________________ test_start_fan_says_the_script_answers ____________________
+
+capsys = <_pytest.capture.CaptureFixture object at 0x730b458419a0>
+
+    def test_start_fan_says_the_script_answers(capsys):
+        """`start_fan` types the `y` itself, so its message must not ask the user to answer."""
+        cell = object.__new__(hw.HwCell)
+        cell.s = _ScriptedSession()  # type: ignore[assignment]
+        cell.start_fan()
+        said = capsys.readouterr().out
+        assert "y" in cell.s.sent  # the script answers the console itself
+>       assert "you answer" not in said and "answer y" not in said.replace("answers y", ""), said
+E       AssertionError: 
+E         >>> keep the sensor clear; the fan starts at 60 % after you answer y on this console
+E         
+E       assert ('you answer' not in '\n>>> keep ...is console\n'
+E         
+E         'you answer' is contained here:
+E         ?           -
+E           0 % after you answer y on this console
+E         ?            +++++++++++)
+
+tests/test_hw_harness.py:63: AssertionError
+_ test_hw_prompts_never_ask_for_an_answer_the_script_types[tests/test_inv_13_hw.py] _
+
+path = 'tests/test_inv_13_hw.py'
+
+    @pytest.mark.parametrize("path", ["tests/test_inv_13_hw.py"])
+    def test_hw_prompts_never_ask_for_an_answer_the_script_types(path):
+        """D-75: every message that mentions an answer says the script types it and the user types nothing.
+        (Questions the user really answers use input(), not say().)"""
+        texts = _say_texts(path)
+        assert texts, "no say() messages found"
+        bad = [t for t in texts if re.search(r"\banswer", t) and not ("the script" in t and "nothing to type" in t)]
+>       assert bad == [], bad
+E       AssertionError: ['keep the sensor clear; the fan starts at 60 % after you answer y on this console', 'button still pressed: the reset ...; the reset is asked again in 3 s: answer y', 'the first-fan question again after the hazard stop (D-53): answering n']
+E       assert ['keep the se... answering n'] == []
+E         
+E         Left contains 4 more items, first extra item: 'keep the sensor clear; the fan starts at 60 % after you answer y on this console'
+E         Use -v to get more diff
+
+tests/test_hw_harness.py:86: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_hw_harness.py::test_hwcell_stops_its_qemu_when_setup_fails
+FAILED tests/test_hw_harness.py::test_start_fan_says_the_script_answers - Ass...
+FAILED tests/test_hw_harness.py::test_hw_prompts_never_ask_for_an_answer_the_script_types[tests/test_inv_13_hw.py]
+3 failed in 3.26s

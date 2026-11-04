@@ -1,0 +1,12 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0 -- <repo>/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: <repo>
+configfile: pyproject.toml
+collecting ... collected 3 items
+
+tests/test_hw_harness.py::test_hwcell_stops_its_qemu_when_setup_fails PASSED [ 33%]
+tests/test_hw_harness.py::test_start_fan_says_the_script_answers PASSED  [ 66%]
+tests/test_hw_harness.py::test_hw_prompts_never_ask_for_an_answer_the_script_types[tests/test_inv_13_hw.py] PASSED [100%]
+
+============================== 3 passed in 3.22s ===============================
